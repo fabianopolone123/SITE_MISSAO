@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Registration, Volunteer
+from .models import FinancialTransaction, Registration, Volunteer
 
 
 class VolunteerInline(admin.TabularInline):
@@ -18,3 +18,10 @@ class RegistrationAdmin(admin.ModelAdmin):
 class VolunteerAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'cpf', 'email', 'phone', 'registration')
     search_fields = ('full_name', 'cpf', 'email')
+
+
+@admin.register(FinancialTransaction)
+class FinancialTransactionAdmin(admin.ModelAdmin):
+    list_display = ('transaction_date', 'transaction_type', 'category', 'amount')
+    list_filter = ('transaction_type', 'category', 'transaction_date')
+    search_fields = ('category', 'description')

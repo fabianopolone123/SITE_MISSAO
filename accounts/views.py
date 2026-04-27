@@ -1,11 +1,12 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Count, Q
+from django.contrib import messages
+from django.db.models import Count, Q, Sum
 from django.forms import formset_factory
 from django.shortcuts import redirect, render
 
-from .forms import SignUpForm, VolunteerForm
-from .models import Registration, Volunteer
+from .forms import FinancialTransactionForm, SignUpForm, VolunteerForm
+from .models import FinancialTransaction, Registration, Volunteer
 
 
 def is_admin_user(user):
@@ -80,3 +81,33 @@ def admin_dashboard(request):
         ).count(),
     }
     return render(request, 'registration/admin_dashboard.html', context)
+
+
+@user_passes_test(is_admin_user, login_url='login')
+def financial_dashboard(request):
+    if request.method == 'POST':
+        form = FinancialTransactionForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Lancamento financeiro cadastrado com sucesso.')
+            return redirect('financial_dashboard')
+    else:
+        form = FinancialTransactionForm()
+
+    transactions = FinancialTransaction.objects.all()
+    total_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
+    total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
+    balance = total_income - total_expenses
+
+    context = {
+        'form': form,
+        'transactions': transactions,
+        'total_income': total_income,
+        'total_expenses': total_expenses,
+        'balance': balance,
+        'expense_count': transactions.filter(transaction_type='saida').count(),
+        'receipt_count': transactions.exclude(receipt='').count(),
+        'category_summary': transactions.values('category', 'transaction_type').annotate(total=Sum('amount')).order_by('category'),
+    }
+    return render(request, 'registration/financial_dashboard.html', context)

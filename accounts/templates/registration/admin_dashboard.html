@@ -17,6 +17,11 @@
             <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
         </header>
 
+        <nav class="admin-menu" aria-label="Menu do painel administrativo">
+            <a class="menu-item active" href="{% url 'admin_dashboard' %}">Inscritos</a>
+            <a class="menu-item" href="{% url 'financial_dashboard' %}">Financeiro</a>
+        </nav>
+
         <section class="report-grid">
             <article class="report-card">
                 <span>Inscri&ccedil;&otilde;es</span>

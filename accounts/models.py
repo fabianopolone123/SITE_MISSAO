@@ -12,6 +12,11 @@ GENDER_CHOICES = [
     ('feminino', 'Feminino'),
 ]
 
+FINANCIAL_TRANSACTION_TYPES = [
+    ('entrada', 'Entrada'),
+    ('saida', 'Saida'),
+]
+
 
 class Registration(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -90,3 +95,21 @@ class Volunteer(models.Model):
 
     def __str__(self):
         return self.full_name
+
+
+class FinancialTransaction(models.Model):
+    transaction_type = models.CharField('Tipo', max_length=10, choices=FINANCIAL_TRANSACTION_TYPES)
+    category = models.CharField('Categoria', max_length=120)
+    description = models.TextField('Descricao')
+    amount = models.DecimalField('Valor', max_digits=10, decimal_places=2)
+    transaction_date = models.DateField('Data')
+    receipt = models.FileField('Comprovante', upload_to='comprovantes/', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Lancamento financeiro'
+        verbose_name_plural = 'Lancamentos financeiros'
+        ordering = ['-transaction_date', '-created_at']
+
+    def __str__(self):
+        return f'{self.get_transaction_type_display()} - {self.category} - R$ {self.amount}'

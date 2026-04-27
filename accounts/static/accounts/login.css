@@ -302,6 +302,33 @@ button:focus {
     margin-bottom: 20px;
 }
 
+.admin-menu {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.menu-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.menu-item.active,
+.menu-item:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
 .report-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -340,6 +367,11 @@ button:focus {
 
 .admin-section h2 {
     margin: 0 0 14px;
+}
+
+.finance-form {
+    display: grid;
+    gap: 16px;
 }
 
 .table-wrap {
@@ -381,6 +413,13 @@ th {
     padding: 10px 12px;
 }
 
+.success-alert {
+    border-color: rgba(27, 111, 93, 0.24);
+    background: rgba(27, 111, 93, 0.08);
+    color: var(--primary-dark);
+    margin-bottom: 18px;
+}
+
 @media (max-width: 480px) {
     .login-panel {
         padding: 24px;
@@ -412,5 +451,9 @@ th {
 
     .report-grid {
         grid-template-columns: 1fr;
+    }
+
+    .admin-menu {
+        flex-direction: column;
     }
 }

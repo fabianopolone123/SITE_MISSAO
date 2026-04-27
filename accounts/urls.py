@@ -9,4 +9,5 @@ urlpatterns = [
     path('cadastre-se/', views.signup, name='signup'),
     path('cadastro/finalizado/', views.signup_success, name='signup_success'),
     path('painel/', views.admin_dashboard, name='admin_dashboard'),
+    path('painel/financeiro/', views.financial_dashboard, name='financial_dashboard'),
 ]

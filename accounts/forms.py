@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Volunteer, YES_NO_CHOICES
+from .models import FinancialTransaction, Volunteer, YES_NO_CHOICES
 
 
 class SignUpForm(UserCreationForm):
@@ -57,3 +57,26 @@ class VolunteerForm(forms.ModelForm):
             'work_evangelism',
         ]:
             self.fields[field_name].widget.attrs['class'] = 'checkbox-control'
+
+
+class FinancialTransactionForm(forms.ModelForm):
+    class Meta:
+        model = FinancialTransaction
+        fields = ['transaction_type', 'category', 'description', 'amount', 'transaction_date', 'receipt']
+        widgets = {
+            'transaction_date': forms.DateInput(attrs={'type': 'date'}),
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+        labels = {
+            'transaction_type': 'Tipo',
+            'category': 'Categoria',
+            'description': 'Descricao',
+            'amount': 'Valor',
+            'transaction_date': 'Data',
+            'receipt': 'Anexar comprovante',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault('class', 'form-control')

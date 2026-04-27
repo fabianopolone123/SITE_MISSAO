@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body>
+    <main class="admin-page">
+        <header class="admin-header">
+            <div>
+                <p class="eyebrow">Painel administrativo</p>
+                <h1>Financeiro</h1>
+            </div>
+            <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+        </header>
+
+        <nav class="admin-menu" aria-label="Menu do painel administrativo">
+            <a class="menu-item" href="{% url 'admin_dashboard' %}">Inscritos</a>
+            <a class="menu-item active" href="{% url 'financial_dashboard' %}">Financeiro</a>
+        </nav>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="form-alert success-alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <section class="report-grid">
+            <article class="report-card">
+                <span>Entradas</span>
+                <strong>R$ {{ total_income|floatformat:2 }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Custos</span>
+                <strong>R$ {{ total_expenses|floatformat:2 }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Saldo</span>
+                <strong>R$ {{ balance|floatformat:2 }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Comprovantes</span>
+                <strong>{{ receipt_count }}</strong>
+            </article>
+        </section>
+
+        <section class="admin-section">
+            <h2>Cadastrar custo ou entrada</h2>
+            <form method="post" enctype="multipart/form-data" class="finance-form" novalidate>
+                {% csrf_token %}
+                <div class="form-grid">
+                    {% for field in form %}
+                        <div class="field {% if field.name == 'description' or field.name == 'receipt' %}wide{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="submit">Cadastrar lan&ccedil;amento</button>
+            </form>
+        </section>
+
+        <section class="admin-section">
+            <h2>Relat&oacute;rio por categoria</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Categoria</th>
+                            <th>Tipo</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in category_summary %}
+                            <tr>
+                                <td>{{ item.category }}</td>
+                                <td>{{ item.transaction_type|title }}</td>
+                                <td>R$ {{ item.total|floatformat:2 }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3">Nenhum lan&ccedil;amento financeiro cadastrado.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>Extrato financeiro</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Categoria</th>
+                            <th>Descri&ccedil;&atilde;o</th>
+                            <th>Valor</th>
+                            <th>Comprovante</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.transaction_date|date:"d/m/Y" }}</td>
+                                <td>{{ transaction.get_transaction_type_display }}</td>
+                                <td>{{ transaction.category }}</td>
+                                <td>{{ transaction.description }}</td>
+                                <td>R$ {{ transaction.amount|floatformat:2 }}</td>
+                                <td>
+                                    {% if transaction.receipt %}
+                                        <a href="{{ transaction.receipt.url }}" target="_blank" rel="noopener">Abrir</a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6">Nenhum lan&ccedil;amento financeiro cadastrado.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
