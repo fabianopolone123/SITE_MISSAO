@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
@@ -60,6 +62,11 @@ class VolunteerForm(forms.ModelForm):
 
 
 class FinancialTransactionForm(forms.ModelForm):
+    amount = forms.CharField(
+        label='Valor',
+        widget=forms.TextInput(attrs={'inputmode': 'decimal', 'placeholder': '0,00'}),
+    )
+
     class Meta:
         model = FinancialTransaction
         fields = ['transaction_type', 'category', 'description', 'amount', 'transaction_date', 'receipt']
@@ -80,3 +87,14 @@ class FinancialTransactionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs.setdefault('class', 'form-control')
+
+        self.fields['amount'].widget.attrs['class'] = 'form-control money-input'
+
+    def clean_amount(self):
+        amount = str(self.cleaned_data['amount'])
+        normalized_amount = amount.replace('.', '').replace(',', '.')
+
+        try:
+            return Decimal(normalized_amount)
+        except InvalidOperation:
+            raise forms.ValidationError('Informe um valor valido no formato 1.234,56.')
