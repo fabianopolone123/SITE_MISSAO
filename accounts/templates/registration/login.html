@@ -18,28 +18,39 @@
                 </div>
             </div>
 
-            <form method="post" class="login-form" novalidate>
-                {% csrf_token %}
+            {% if user.is_authenticated %}
+                <div class="logged-panel">
+                    <p>Voc&ecirc; j&aacute; est&aacute; logado como <strong>{{ user.username }}</strong>.</p>
+                    <a class="primary-link-button" href="{% url logged_redirect_url %}">Entrar direto</a>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="secondary-button full-button">Sair</button>
+                    </form>
+                </div>
+            {% else %}
+                <form method="post" class="login-form" novalidate>
+                    {% csrf_token %}
 
-                {% if form.non_field_errors %}
-                    <div class="form-alert">
-                        {{ form.non_field_errors }}
-                    </div>
-                {% endif %}
+                    {% if form.non_field_errors %}
+                        <div class="form-alert">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
 
-                <label for="{{ form.username.id_for_label }}">Usu&aacute;rio</label>
-                {{ form.username }}
-                {{ form.username.errors }}
+                    <label for="{{ form.username.id_for_label }}">Usu&aacute;rio</label>
+                    {{ form.username }}
+                    {{ form.username.errors }}
 
-                <label for="{{ form.password.id_for_label }}">Senha</label>
-                {{ form.password }}
-                {{ form.password.errors }}
+                    <label for="{{ form.password.id_for_label }}">Senha</label>
+                    {{ form.password }}
+                    {{ form.password.errors }}
 
-                <button type="submit">Entrar</button>
-            </form>
+                    <button type="submit">Entrar</button>
+                </form>
 
-            <a class="secondary-action" href="{% url 'signup' %}">Cadastre-se</a>
-            <a class="secondary-action admin-action" href="{% url 'admin_dashboard' %}">Painel ADM</a>
+                <a class="secondary-action" href="{% url 'signup' %}">Cadastre-se</a>
+                <a class="secondary-action admin-action" href="{% url 'admin_dashboard' %}">Painel ADM</a>
+            {% endif %}
         </section>
     </main>
 </body>

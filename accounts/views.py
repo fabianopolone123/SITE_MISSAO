@@ -1,4 +1,5 @@
 from django.contrib.auth import login
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.db.models import Count, Q, Sum
@@ -11,6 +12,15 @@ from .models import FinancialTransaction, Registration, Volunteer
 
 def is_admin_user(user):
     return user.is_authenticated and user.is_staff
+
+
+class SmartLoginView(LoginView):
+    template_name = 'registration/login.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['logged_redirect_url'] = 'admin_dashboard' if self.request.user.is_staff else 'signup_success'
+        return context
 
 
 def signup(request):
