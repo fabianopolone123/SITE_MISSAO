@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Missão Andrews - Cadastro</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body>
+    <main class="login-page">
+        <section class="login-panel" aria-labelledby="login-title">
+            <div class="brand">
+                <span class="brand-mark">MA</span>
+                <div>
+                    <p class="eyebrow">Sistema de cadastro</p>
+                    <h1 id="login-title">Missão Andrews - Cadastro</h1>
+                </div>
+            </div>
+
+            <form method="post" class="login-form" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="form-alert">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <label for="{{ form.username.id_for_label }}">Usuário</label>
+                {{ form.username }}
+                {{ form.username.errors }}
+
+                <label for="{{ form.password.id_for_label }}">Senha</label>
+                {{ form.password }}
+                {{ form.password.errors }}
+
+                <button type="submit">Entrar</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>
