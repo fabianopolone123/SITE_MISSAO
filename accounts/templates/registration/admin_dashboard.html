@@ -1,0 +1,123 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel ADM | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body>
+    <main class="admin-page">
+        <header class="admin-header">
+            <div>
+                <p class="eyebrow">Painel administrativo</p>
+                <h1>Relat&oacute;rios de inscritos</h1>
+            </div>
+            <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+        </header>
+
+        <section class="report-grid">
+            <article class="report-card">
+                <span>Inscri&ccedil;&otilde;es</span>
+                <strong>{{ registration_count }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Volunt&aacute;rios</span>
+                <strong>{{ volunteer_count }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Question&aacute;rios com "N&atilde;o"</span>
+                <strong>{{ pending_questionnaire_count }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Sa&uacute;de</span>
+                <strong>{{ health_count }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Educa&ccedil;&atilde;o</span>
+                <strong>{{ education_count }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Aux&iacute;lio geral</span>
+                <strong>{{ general_help_count }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Evangelismo</span>
+                <strong>{{ evangelism_count }}</strong>
+            </article>
+        </section>
+
+        <section class="admin-section">
+            <h2>Inscri&ccedil;&otilde;es por login</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usu&aacute;rio</th>
+                            <th>E-mail</th>
+                            <th>Data</th>
+                            <th>Volunt&aacute;rios</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for registration in registrations %}
+                            <tr>
+                                <td>{{ registration.user.username }}</td>
+                                <td>{{ registration.user.email|default:"-" }}</td>
+                                <td>{{ registration.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>{{ registration.total_volunteers }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4">Nenhuma inscri&ccedil;&atilde;o encontrada.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>Lista de volunt&aacute;rios</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Telefone</th>
+                            <th>E-mail</th>
+                            <th>Forma&ccedil;&atilde;o</th>
+                            <th>&Aacute;reas</th>
+                            <th>Login</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for volunteer in volunteers %}
+                            <tr>
+                                <td>{{ volunteer.full_name }}</td>
+                                <td>{{ volunteer.cpf }}</td>
+                                <td>{{ volunteer.phone }}</td>
+                                <td>{{ volunteer.email }}</td>
+                                <td>{{ volunteer.education|default:"-" }}</td>
+                                <td>
+                                    {% if volunteer.work_health %}Sa&uacute;de{% endif %}
+                                    {% if volunteer.work_education %}{% if volunteer.work_health %}, {% endif %}Educa&ccedil;&atilde;o{% endif %}
+                                    {% if volunteer.work_general_help %}{% if volunteer.work_health or volunteer.work_education %}, {% endif %}Aux&iacute;lio geral{% endif %}
+                                    {% if volunteer.work_evangelism %}{% if volunteer.work_health or volunteer.work_education or volunteer.work_general_help %}, {% endif %}Evangelismo{% endif %}
+                                </td>
+                                <td>{{ volunteer.registration.user.username }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7">Nenhum volunt&aacute;rio encontrado.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,101 @@
+{{ form.non_field_errors }}
+
+<div class="form-section compact-section">
+    <h3>Dados pessoais</h3>
+    <div class="form-grid">
+        <div class="field wide">
+            <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+            {{ form.full_name }} {{ form.full_name.errors }}
+        </div>
+        <div class="field">
+            <label for="{{ form.birth_date.id_for_label }}">{{ form.birth_date.label }}</label>
+            {{ form.birth_date }} {{ form.birth_date.errors }}
+        </div>
+        <div class="field">
+            <label for="{{ form.gender.id_for_label }}">{{ form.gender.label }}</label>
+            {{ form.gender }} {{ form.gender.errors }}
+        </div>
+        <div class="field wide">
+            <label for="{{ form.full_address.id_for_label }}">{{ form.full_address.label }}</label>
+            {{ form.full_address }} {{ form.full_address.errors }}
+        </div>
+        <div class="field">
+            <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+            {{ form.phone }} {{ form.phone.errors }}
+        </div>
+        <div class="field">
+            <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+            {{ form.email }} {{ form.email.errors }}
+        </div>
+        <div class="field">
+            <label for="{{ form.identity_document.id_for_label }}">{{ form.identity_document.label }}</label>
+            {{ form.identity_document }} {{ form.identity_document.errors }}
+        </div>
+        <div class="field">
+            <label for="{{ form.cpf.id_for_label }}">{{ form.cpf.label }}</label>
+            {{ form.cpf }} {{ form.cpf.errors }}
+        </div>
+        <div class="field">
+            <label for="{{ form.guardian_name.id_for_label }}">{{ form.guardian_name.label }} (se menor)</label>
+            {{ form.guardian_name }} {{ form.guardian_name.errors }}
+        </div>
+        <div class="field">
+            <label for="{{ form.guardian_phone.id_for_label }}">{{ form.guardian_phone.label }}</label>
+            {{ form.guardian_phone }} {{ form.guardian_phone.errors }}
+        </div>
+    </div>
+</div>
+
+<div class="form-section compact-section">
+    <h3>Informa&ccedil;&otilde;es m&eacute;dicas relevantes</h3>
+    <div class="form-grid">
+        <div class="field wide">
+            <label for="{{ form.allergies.id_for_label }}">{{ form.allergies.label }}</label>
+            {{ form.allergies }} {{ form.allergies.errors }}
+        </div>
+        <div class="field wide">
+            <label for="{{ form.medication_in_use.id_for_label }}">{{ form.medication_in_use.label }}</label>
+            {{ form.medication_in_use }} {{ form.medication_in_use.errors }}
+        </div>
+        <div class="field wide">
+            <label for="{{ form.special_notes.id_for_label }}">{{ form.special_notes.label }}</label>
+            {{ form.special_notes }} {{ form.special_notes.errors }}
+        </div>
+    </div>
+</div>
+
+<div class="form-section compact-section">
+    <h3>&Aacute;rea de atua&ccedil;&atilde;o e forma&ccedil;&atilde;o</h3>
+    <div class="checkbox-group">
+        <span>Qual &aacute;rea voc&ecirc; deseja atuar:</span>
+        <label>{{ form.work_health }} {{ form.work_health.label }}</label>
+        <label>{{ form.work_education }} {{ form.work_education.label }}</label>
+        <label>{{ form.work_general_help }} {{ form.work_general_help.label }}</label>
+        <label>{{ form.work_evangelism }} {{ form.work_evangelism.label }}</label>
+    </div>
+    <div class="field wide">
+        <label for="{{ form.education.id_for_label }}">{{ form.education.label }}</label>
+        {{ form.education }} {{ form.education.errors }}
+    </div>
+</div>
+
+<div class="form-section compact-section">
+    <h3>Question&aacute;rio</h3>
+    <div class="question-list">
+        <div class="question"><span>1 - {{ form.wants_to_participate.label }}</span>{{ form.wants_to_participate }} {{ form.wants_to_participate.errors }}</div>
+        <div class="question"><span>2 - {{ form.understands_no_payment.label }}</span>{{ form.understands_no_payment }} {{ form.understands_no_payment.errors }}</div>
+        <div class="question"><span>3 - {{ form.aware_pays_tickets.label }}</span>{{ form.aware_pays_tickets }} {{ form.aware_pays_tickets.errors }}</div>
+        <div class="question"><span>4 - {{ form.aware_pays_project_fee.label }}</span>{{ form.aware_pays_project_fee }} {{ form.aware_pays_project_fee.errors }}</div>
+        <div class="question"><span>5 - {{ form.aware_documents_vaccines.label }}</span>{{ form.aware_documents_vaccines }} {{ form.aware_documents_vaccines.errors }}</div>
+        <div class="question"><span>6 - {{ form.aware_non_refundable_fee.label }}</span>{{ form.aware_non_refundable_fee }} {{ form.aware_non_refundable_fee.errors }}</div>
+    </div>
+</div>
+
+<div class="form-section compact-section">
+    <h3>Declara&ccedil;&atilde;o</h3>
+    <p class="section-note">Ao preencher esta ficha, concordo em seguir as diretrizes e regulamentos estabelecidos para a viagem.</p>
+    <div class="field wide">
+        <label for="{{ form.city_and_date.id_for_label }}">{{ form.city_and_date.label }}</label>
+        {{ form.city_and_date }} {{ form.city_and_date.errors }}
+    </div>
+</div>

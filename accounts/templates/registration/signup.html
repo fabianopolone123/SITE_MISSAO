@@ -1,0 +1,115 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastre-se | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body>
+    <main class="signup-page">
+        <form method="post" class="signup-shell" id="signup-form" novalidate>
+            {% csrf_token %}
+            {{ formset.management_form }}
+
+            <header class="signup-header">
+                <div>
+                    <p class="eyebrow">Instituto Miss&atilde;o Andrews</p>
+                    <h1>Ficha de Inscri&ccedil;&atilde;o Amazonas Sem Fronteiras 2025</h1>
+                </div>
+                <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+            </header>
+
+            <section class="form-section">
+                <h2>Acesso ao sistema</h2>
+                <p class="section-note">Este usu&aacute;rio e senha ser&atilde;o usados para acessar o cadastro de todos os volunt&aacute;rios deste envio.</p>
+                <div class="form-grid">
+                    {% for field in user_form %}
+                        <div class="field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <div id="volunteer-forms">
+                {% for volunteer_form in formset %}
+                    <section class="volunteer-card">
+                        <div class="volunteer-title">
+                            <h2>Volunt&aacute;rio {{ forloop.counter }}</h2>
+                        </div>
+                        {% include "registration/partials/volunteer_fields.html" with form=volunteer_form %}
+                    </section>
+                {% endfor %}
+            </div>
+
+            <template id="empty-form-template">
+                <section class="volunteer-card">
+                    <div class="volunteer-title">
+                        <h2>Volunt&aacute;rio __NUMBER__</h2>
+                        <button type="button" class="link-button remove-volunteer">Remover</button>
+                    </div>
+                    {% include "registration/partials/volunteer_fields.html" with form=formset.empty_form %}
+                </section>
+            </template>
+
+            <div class="signup-actions">
+                <button type="button" class="secondary-button" id="add-volunteer">Adicionar volunt&aacute;rio</button>
+                <button type="submit">Finalizar cadastro</button>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        const addButton = document.querySelector('#add-volunteer');
+        const formsContainer = document.querySelector('#volunteer-forms');
+        const signupForm = document.querySelector('#signup-form');
+        const template = document.querySelector('#empty-form-template');
+        const totalForms = document.querySelector('#id_volunteers-TOTAL_FORMS');
+
+        addButton.addEventListener('click', () => {
+            const formIndex = Number(totalForms.value);
+            const html = template.innerHTML
+                .replaceAll('__prefix__', formIndex)
+                .replaceAll('__NUMBER__', formIndex + 1);
+            formsContainer.insertAdjacentHTML('beforeend', html);
+            totalForms.value = formIndex + 1;
+        });
+
+        formsContainer.addEventListener('click', (event) => {
+            if (!event.target.classList.contains('remove-volunteer')) {
+                return;
+            }
+            event.target.closest('.volunteer-card').remove();
+            const cards = formsContainer.querySelectorAll('.volunteer-card');
+            cards.forEach((card, index) => {
+                card.querySelector('h2').textContent = `Voluntario ${index + 1}`;
+                card.querySelectorAll('input, select, textarea, label').forEach((element) => {
+                    ['name', 'id', 'for'].forEach((attribute) => {
+                        const value = element.getAttribute(attribute);
+                        if (value) {
+                            element.setAttribute(attribute, value.replace(/volunteers-\d+-/g, `volunteers-${index}-`));
+                        }
+                    });
+                });
+            });
+            totalForms.value = cards.length;
+        });
+
+        signupForm.addEventListener('submit', (event) => {
+            const volunteerCount = formsContainer.querySelectorAll('.volunteer-card').length;
+
+            if (volunteerCount === 1) {
+                const confirmed = confirm('Voce cadastrou apenas um voluntario. Deseja finalizar mesmo assim, sem adicionar mais um voluntario?');
+
+                if (!confirmed) {
+                    event.preventDefault();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

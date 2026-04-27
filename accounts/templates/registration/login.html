@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Missão Andrews - Cadastro</title>
+    <title>Miss&atilde;o Andrews - Cadastro</title>
     <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
 </head>
 <body>
@@ -14,7 +14,7 @@
                 <span class="brand-mark">MA</span>
                 <div>
                     <p class="eyebrow">Sistema de cadastro</p>
-                    <h1 id="login-title">Missão Andrews - Cadastro</h1>
+                    <h1 id="login-title">Miss&atilde;o Andrews - Cadastro</h1>
                 </div>
             </div>
 
@@ -27,7 +27,7 @@
                     </div>
                 {% endif %}
 
-                <label for="{{ form.username.id_for_label }}">Usuário</label>
+                <label for="{{ form.username.id_for_label }}">Usu&aacute;rio</label>
                 {{ form.username }}
                 {{ form.username.errors }}
 
@@ -37,6 +37,9 @@
 
                 <button type="submit">Entrar</button>
             </form>
+
+            <a class="secondary-action" href="{% url 'signup' %}">Cadastre-se</a>
+            <a class="secondary-action admin-action" href="{% url 'admin_dashboard' %}">Painel ADM</a>
         </section>
     </main>
 </body>
