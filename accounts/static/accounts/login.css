@@ -78,10 +78,9 @@ body {
 }
 
 .hero-logo {
-    width: min(280px, 70vw);
+    width: min(250px, 70vw);
     height: auto;
-    border-radius: 8px;
-    box-shadow: 0 20px 52px rgba(0, 0, 0, 0.34);
+    filter: drop-shadow(0 20px 32px rgba(0, 0, 0, 0.42));
 }
 
 .hero-copy {
@@ -127,20 +126,20 @@ body {
 .brand-mark {
     width: 62px;
     height: 62px;
-    object-fit: cover;
-    border-radius: 8px;
-    background: #ffffff;
-    border: 1px solid rgba(47, 104, 68, 0.18);
+    object-fit: contain;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
 }
 
 .page-logo {
     width: 118px;
     height: 88px;
     object-fit: contain;
-    border-radius: 8px;
-    background: #ffffff;
-    border: 1px solid var(--line);
-    box-shadow: var(--shadow-soft);
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
 }
 
 .eyebrow {
