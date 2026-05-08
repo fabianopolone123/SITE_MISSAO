@@ -23,6 +23,7 @@
 
 html {
     min-height: 100%;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -201,6 +202,7 @@ label {
 input,
 select,
 textarea {
+    min-width: 0;
     width: 100%;
     border: 1px solid var(--line);
     border-radius: 6px;
@@ -225,6 +227,7 @@ textarea:focus {
 
 button,
 .primary-link-button {
+    width: fit-content;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -515,6 +518,8 @@ button:focus,
 
 .table-wrap {
     overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -565,38 +570,73 @@ td a {
 }
 
 @media (max-width: 860px) {
+    .auth-body,
+    .form-body,
+    .admin-body {
+        background-attachment: scroll;
+    }
+
     .auth-page {
         grid-template-columns: 1fr;
         justify-items: center;
+        align-content: center;
+        gap: 22px;
+        width: 100%;
     }
 
     .login-hero {
         min-height: auto;
-        width: min(100%, 430px);
-        gap: 24px;
+        width: min(100%, 520px);
+        align-items: center;
+        gap: 18px;
+        padding: 0;
+        text-align: center;
+    }
+
+    .hero-logo {
+        width: min(210px, 58vw);
+    }
+
+    .hero-copy {
+        max-width: 440px;
     }
 
     .hero-copy h2 {
-        font-size: 2.4rem;
+        font-size: 2.25rem;
+        line-height: 1.05;
+    }
+
+    .hero-copy p:last-child {
+        max-width: none;
+        font-size: 1rem;
     }
 
     .report-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .signup-header,
+    .admin-header {
+        align-items: flex-start;
+    }
 }
 
 @media (max-width: 560px) {
+    body {
+        overflow-x: hidden;
+    }
+
     .login-page,
     .signup-page,
     .admin-page {
-        padding: 16px;
+        padding: 14px;
     }
 
     .login-panel,
     .form-section,
     .volunteer-card,
     .admin-section {
-        padding: 18px;
+        padding: 16px;
     }
 
     .brand,
@@ -605,13 +645,65 @@ td a {
     .admin-header,
     .signup-actions,
     .volunteer-title {
-        align-items: stretch;
+        align-items: center;
         flex-direction: column;
+        text-align: center;
+    }
+
+    .brand {
+        margin-bottom: 22px;
+    }
+
+    .brand-mark {
+        width: 76px;
+        height: 76px;
+    }
+
+    .login-panel {
+        width: 100%;
+        max-width: 390px;
+    }
+
+    .login-form,
+    .logged-panel {
+        width: 100%;
+    }
+
+    .hero-logo {
+        width: min(176px, 54vw);
+    }
+
+    .hero-copy h2 {
+        font-size: 1.8rem;
+    }
+
+    .hero-copy p:last-child {
+        display: none;
+    }
+
+    h1 {
+        font-size: 1.24rem;
+    }
+
+    .signup-header,
+    .admin-header {
+        padding: 16px;
+        text-align: center;
+    }
+
+    .signup-header h1,
+    .admin-header h1 {
+        font-size: 1.32rem;
+    }
+
+    .back-link {
+        width: 100%;
+        margin-top: 4px;
     }
 
     .page-logo {
-        width: 138px;
-        height: 96px;
+        width: 126px;
+        height: auto;
     }
 
     .form-grid,
@@ -623,7 +715,93 @@ td a {
         flex-direction: column;
     }
 
+    .menu-item,
+    button,
+    .primary-link-button,
+    .secondary-button,
+    .link-button {
+        width: 100%;
+    }
+
     .admin-action {
         margin-left: 0;
+    }
+
+    .secondary-action {
+        width: 100%;
+        margin-top: 14px;
+    }
+
+    .checkbox-group {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .checkbox-group label,
+    .question li label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-align: left;
+    }
+
+    .checkbox-control,
+    .question input[type='radio'] {
+        flex: 0 0 auto;
+        margin: 0;
+    }
+
+    .question ul {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .report-card {
+        text-align: center;
+    }
+
+    .report-card strong {
+        font-size: 1.75rem;
+    }
+
+    table {
+        min-width: 680px;
+    }
+}
+
+@media (max-width: 380px) {
+    .login-page,
+    .signup-page,
+    .admin-page {
+        padding: 10px;
+    }
+
+    .login-panel,
+    .form-section,
+    .volunteer-card,
+    .admin-section,
+    .signup-header,
+    .admin-header {
+        padding: 14px;
+    }
+
+    .hero-logo {
+        width: 150px;
+    }
+
+    .brand-mark {
+        width: 68px;
+        height: 68px;
+    }
+
+    h1 {
+        font-size: 1.14rem;
+    }
+
+    input,
+    select,
+    textarea {
+        padding: 11px;
     }
 }

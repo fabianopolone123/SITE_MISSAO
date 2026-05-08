@@ -89,7 +89,7 @@
             event.target.closest('.volunteer-card').remove();
             const cards = formsContainer.querySelectorAll('.volunteer-card');
             cards.forEach((card, index) => {
-                card.querySelector('h2').textContent = `Voluntario ${index + 1}`;
+                card.querySelector('h2').textContent = `Voluntário ${index + 1}`;
                 card.querySelectorAll('input, select, textarea, label').forEach((element) => {
                     ['name', 'id', 'for'].forEach((attribute) => {
                         const value = element.getAttribute(attribute);
@@ -106,7 +106,7 @@
             const volunteerCount = formsContainer.querySelectorAll('.volunteer-card').length;
 
             if (volunteerCount === 1) {
-                const confirmed = confirm('Voce cadastrou apenas um voluntario. Deseja finalizar mesmo assim, sem adicionar mais um voluntario?');
+                const confirmed = confirm('Você cadastrou apenas um voluntário. Deseja finalizar mesmo assim, sem adicionar mais um voluntário?');
 
                 if (!confirmed) {
                     event.preventDefault();
