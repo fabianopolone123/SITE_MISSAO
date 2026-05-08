@@ -7,16 +7,19 @@
     <title>Cadastre-se | Miss&atilde;o Andrews</title>
     <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
 </head>
-<body>
+<body class="form-body">
     <main class="signup-page">
         <form method="post" class="signup-shell" id="signup-form" novalidate>
             {% csrf_token %}
             {{ formset.management_form }}
 
             <header class="signup-header">
-                <div>
-                    <p class="eyebrow">Instituto Miss&atilde;o Andrews</p>
-                    <h1>Ficha de Inscri&ccedil;&atilde;o Amazonas Sem Fronteiras 2025</h1>
+                <div class="page-brand">
+                    <img class="page-logo" src="{% static 'accounts/images/logo-full.jpeg' %}" alt="Miss&atilde;o Andrews">
+                    <div>
+                        <p class="eyebrow">Instituto Miss&atilde;o Andrews</p>
+                        <h1>Ficha de Inscri&ccedil;&atilde;o Amazonas Sem Fronteiras 2026</h1>
+                    </div>
                 </div>
                 <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
             </header>

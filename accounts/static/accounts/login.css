@@ -1,75 +1,176 @@
 :root {
     color-scheme: light;
-    --background: #f4f7fb;
-    --panel: #ffffff;
-    --text: #1f2937;
-    --muted: #667085;
-    --primary: #1b6f5d;
-    --primary-dark: #145346;
-    --border: #d7dee8;
+    --ink: #101513;
+    --ink-soft: #27322d;
+    --muted: #647067;
+    --panel: rgba(255, 255, 255, 0.94);
+    --panel-solid: #ffffff;
+    --line: #dbe3de;
+    --field: #fbfcfa;
+    --green: #2f6844;
+    --green-dark: #1d442c;
+    --green-soft: #e8f0eb;
+    --orange: #d95d18;
+    --orange-dark: #a94210;
     --danger: #b42318;
-    --shadow: 0 18px 50px rgba(17, 24, 39, 0.12);
+    --shadow: 0 18px 48px rgba(16, 21, 19, 0.16);
+    --shadow-soft: 0 10px 30px rgba(16, 21, 19, 0.08);
 }
 
 * {
     box-sizing: border-box;
 }
 
+html {
+    min-height: 100%;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
     font-family: Arial, Helvetica, sans-serif;
+    color: var(--ink);
+}
+
+.auth-body {
     background:
-        linear-gradient(135deg, rgba(27, 111, 93, 0.14), transparent 36%),
-        linear-gradient(315deg, rgba(32, 80, 129, 0.12), transparent 38%),
-        var(--background);
-    color: var(--text);
+        linear-gradient(90deg, rgba(7, 10, 9, 0.18), rgba(7, 10, 9, 0.74)),
+        url("images/amazon-dark-event.jpeg") center / cover fixed no-repeat,
+        #101513;
+}
+
+.form-body,
+.admin-body {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(245, 247, 243, 0.96)),
+        url("images/amazon-light.jpeg") top center / cover fixed no-repeat,
+        #f5f7f3;
 }
 
 .login-page {
     min-height: 100vh;
     display: grid;
     place-items: center;
-    padding: 24px;
+    padding: 28px;
+}
+
+.auth-page {
+    grid-template-columns: minmax(280px, 1fr) minmax(320px, 430px);
+    align-items: center;
+    gap: clamp(24px, 5vw, 72px);
+    width: min(1180px, 100%);
+    margin: 0 auto;
+}
+
+.success-page {
+    background:
+        linear-gradient(90deg, rgba(7, 10, 9, 0.72), rgba(7, 10, 9, 0.38)),
+        url("images/amazon-dark-clean.jpeg") center / cover fixed no-repeat;
+}
+
+.login-hero {
+    color: #ffffff;
+    min-height: 440px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 18px 0;
+}
+
+.hero-logo {
+    width: min(280px, 70vw);
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 20px 52px rgba(0, 0, 0, 0.34);
+}
+
+.hero-copy {
+    max-width: 560px;
+}
+
+.hero-copy h2 {
+    margin: 8px 0 12px;
+    font-size: clamp(2rem, 4vw, 4.4rem);
+    line-height: 0.98;
+    color: #ffffff;
+}
+
+.hero-copy p:last-child {
+    margin: 0;
+    max-width: 470px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 1.05rem;
+    line-height: 1.6;
 }
 
 .login-panel {
     width: min(100%, 430px);
     background: var(--panel);
-    border: 1px solid rgba(215, 222, 232, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.72);
     border-radius: 8px;
     box-shadow: var(--shadow);
-    padding: 32px;
+    padding: 30px;
+    backdrop-filter: blur(12px);
 }
 
-.brand {
+.brand,
+.page-brand {
     display: flex;
     align-items: center;
     gap: 16px;
+}
+
+.brand {
     margin-bottom: 28px;
 }
 
 .brand-mark {
-    display: inline-grid;
-    width: 54px;
-    height: 54px;
-    place-items: center;
+    width: 62px;
+    height: 62px;
+    object-fit: cover;
     border-radius: 8px;
-    background: var(--primary);
-    color: #ffffff;
-    font-weight: 700;
+    background: #ffffff;
+    border: 1px solid rgba(47, 104, 68, 0.18);
+}
+
+.page-logo {
+    width: 118px;
+    height: 88px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-soft);
 }
 
 .eyebrow {
-    margin: 0 0 4px;
-    color: var(--muted);
-    font-size: 0.84rem;
+    margin: 0 0 5px;
+    color: var(--orange);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.login-hero .eyebrow {
+    color: #f47a2b;
+}
+
+h1,
+h2,
+h3 {
+    color: var(--ink);
 }
 
 h1 {
     margin: 0;
     font-size: 1.45rem;
-    line-height: 1.2;
+    line-height: 1.22;
+}
+
+h2,
+h3 {
+    margin-top: 0;
 }
 
 .login-form {
@@ -82,10 +183,15 @@ h1 {
     gap: 14px;
 }
 
-.logged-panel p {
+.logged-panel p,
+.section-note {
     margin: 0;
     color: var(--muted);
-    line-height: 1.5;
+    line-height: 1.55;
+}
+
+.section-note {
+    margin-bottom: 16px;
 }
 
 label {
@@ -93,54 +199,57 @@ label {
     font-size: 0.92rem;
 }
 
-input {
+input,
+select,
+textarea {
     width: 100%;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 6px;
     padding: 12px 13px;
-    font-size: 1rem;
-    color: var(--text);
+    font: inherit;
+    color: var(--ink);
+    background: var(--field);
+}
+
+textarea {
+    min-height: 96px;
+    resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 3px solid rgba(217, 93, 24, 0.18);
+    border-color: var(--orange);
     background: #ffffff;
 }
 
-input:focus {
-    outline: 3px solid rgba(27, 111, 93, 0.18);
-    border-color: var(--primary);
-}
-
-button {
-    margin-top: 12px;
-    border: 0;
-    border-radius: 6px;
-    padding: 13px 16px;
-    background: var(--primary);
-    color: #ffffff;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-button:hover,
-button:focus {
-    background: var(--primary-dark);
-}
-
+button,
 .primary-link-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-height: 46px;
+    border: 0;
     border-radius: 6px;
-    padding: 13px 16px;
-    background: var(--primary);
+    padding: 12px 16px;
+    background: var(--green);
     color: #ffffff;
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 800;
     text-decoration: none;
+    cursor: pointer;
 }
 
+button {
+    margin-top: 12px;
+}
+
+button:hover,
+button:focus,
 .primary-link-button:hover,
 .primary-link-button:focus {
-    background: var(--primary-dark);
+    background: var(--green-dark);
 }
 
 .full-button {
@@ -153,14 +262,14 @@ button:focus {
     align-items: center;
     justify-content: center;
     margin-top: 16px;
-    color: var(--primary);
-    font-weight: 700;
+    color: var(--green-dark);
+    font-weight: 800;
     text-decoration: none;
 }
 
 .secondary-action:hover,
 .back-link:hover {
-    color: var(--primary-dark);
+    color: var(--orange-dark);
     text-decoration: underline;
 }
 
@@ -178,24 +287,38 @@ button:focus {
     margin: 0 auto;
 }
 
-.signup-header {
+.signup-header,
+.admin-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 20px;
     margin-bottom: 20px;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(219, 227, 222, 0.78);
+    border-radius: 8px;
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(10px);
 }
 
-.signup-header h1 {
-    font-size: 1.7rem;
+.signup-header h1,
+.admin-header h1 {
+    font-size: clamp(1.35rem, 2vw, 1.85rem);
+}
+
+.form-section,
+.volunteer-card,
+.report-card,
+.admin-section {
+    background: var(--panel-solid);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow-soft);
 }
 
 .form-section,
 .volunteer-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
     padding: 24px;
     margin-bottom: 18px;
 }
@@ -203,18 +326,14 @@ button:focus {
 .compact-section {
     box-shadow: none;
     padding: 18px;
+    background: #fbfcfa;
 }
 
 .form-section h2,
 .volunteer-card h2,
-.form-section h3 {
+.form-section h3,
+.admin-section h2 {
     margin: 0 0 14px;
-}
-
-.section-note {
-    margin: 0 0 16px;
-    color: var(--muted);
-    line-height: 1.5;
 }
 
 .form-grid {
@@ -240,27 +359,34 @@ button:focus {
     gap: 16px;
 }
 
+.volunteer-title {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+}
+
 .signup-actions {
     margin: 22px 0 8px;
 }
 
 .secondary-button,
 .link-button {
-    background: #eef4f2;
-    color: var(--primary);
-    border: 1px solid rgba(27, 111, 93, 0.2);
+    background: var(--green-soft);
+    color: var(--green-dark);
+    border: 1px solid rgba(47, 104, 68, 0.22);
 }
 
 .secondary-button:hover,
 .secondary-button:focus,
 .link-button:hover,
 .link-button:focus {
-    background: #dcebe7;
-    color: var(--primary-dark);
+    background: #d8e6dd;
+    color: var(--green-dark);
 }
 
 .link-button {
-    padding: 9px 12px;
+    min-height: 38px;
+    padding: 8px 12px;
     margin: 0;
 }
 
@@ -274,7 +400,7 @@ button:focus {
 
 .checkbox-group span {
     width: 100%;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .checkbox-group label,
@@ -297,13 +423,13 @@ button:focus {
     display: grid;
     gap: 8px;
     padding: 12px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 6px;
-    background: #fbfcfe;
+    background: #ffffff;
 }
 
 .question > span {
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .question ul {
@@ -327,14 +453,6 @@ button:focus {
     padding: 28px;
 }
 
-.admin-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
 .admin-menu {
     display: flex;
     gap: 10px;
@@ -347,18 +465,18 @@ button:focus {
     justify-content: center;
     min-height: 42px;
     padding: 10px 16px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 6px;
-    background: var(--panel);
-    color: var(--primary);
-    font-weight: 700;
+    background: var(--panel-solid);
+    color: var(--green-dark);
+    font-weight: 800;
     text-decoration: none;
 }
 
 .menu-item.active,
 .menu-item:hover {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--green);
+    border-color: var(--green);
     color: #ffffff;
 }
 
@@ -369,18 +487,11 @@ button:focus {
     margin-bottom: 20px;
 }
 
-.report-card,
-.admin-section {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
-}
-
 .report-card {
     display: grid;
     gap: 8px;
     padding: 18px;
+    border-top: 4px solid var(--orange);
 }
 
 .report-card span {
@@ -390,16 +501,12 @@ button:focus {
 
 .report-card strong {
     font-size: 2rem;
-    color: var(--primary-dark);
+    color: var(--green-dark);
 }
 
 .admin-section {
     margin-bottom: 18px;
     padding: 22px;
-}
-
-.admin-section h2 {
-    margin: 0 0 14px;
 }
 
 .finance-form {
@@ -419,7 +526,7 @@ table {
 
 th,
 td {
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line);
     padding: 12px 10px;
     text-align: left;
     vertical-align: top;
@@ -429,6 +536,11 @@ th {
     color: var(--muted);
     font-size: 0.82rem;
     text-transform: uppercase;
+}
+
+td a {
+    color: var(--green-dark);
+    font-weight: 800;
 }
 
 .errorlist,
@@ -447,29 +559,49 @@ th {
 }
 
 .success-alert {
-    border-color: rgba(27, 111, 93, 0.24);
-    background: rgba(27, 111, 93, 0.08);
-    color: var(--primary-dark);
+    border-color: rgba(47, 104, 68, 0.24);
+    background: rgba(47, 104, 68, 0.08);
+    color: var(--green-dark);
     margin-bottom: 18px;
 }
 
-@media (max-width: 480px) {
-    .login-panel {
-        padding: 24px;
+@media (max-width: 860px) {
+    .auth-page {
+        grid-template-columns: 1fr;
+        justify-items: center;
     }
 
-    .brand {
-        align-items: flex-start;
+    .login-hero {
+        min-height: auto;
+        width: min(100%, 430px);
+        gap: 24px;
     }
 
-    h1 {
-        font-size: 1.25rem;
+    .hero-copy h2 {
+        font-size: 2.4rem;
     }
 
-    .signup-page {
+    .report-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .login-page,
+    .signup-page,
+    .admin-page {
         padding: 16px;
     }
 
+    .login-panel,
+    .form-section,
+    .volunteer-card,
+    .admin-section {
+        padding: 18px;
+    }
+
+    .brand,
+    .page-brand,
     .signup-header,
     .admin-header,
     .signup-actions,
@@ -478,15 +610,21 @@ th {
         flex-direction: column;
     }
 
-    .form-grid {
-        grid-template-columns: 1fr;
+    .page-logo {
+        width: 138px;
+        height: 96px;
     }
 
+    .form-grid,
     .report-grid {
         grid-template-columns: 1fr;
     }
 
     .admin-menu {
         flex-direction: column;
+    }
+
+    .admin-action {
+        margin-left: 0;
     }
 }

@@ -7,12 +7,15 @@
     <title>Painel ADM | Miss&atilde;o Andrews</title>
     <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
 </head>
-<body>
+<body class="admin-body">
     <main class="admin-page">
         <header class="admin-header">
-            <div>
-                <p class="eyebrow">Painel administrativo</p>
-                <h1>Relat&oacute;rios de inscritos</h1>
+            <div class="page-brand">
+                <img class="page-logo" src="{% static 'accounts/images/logo-full.jpeg' %}" alt="Miss&atilde;o Andrews">
+                <div>
+                    <p class="eyebrow">Painel administrativo</p>
+                    <h1>Relat&oacute;rios de inscritos</h1>
+                </div>
             </div>
             <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
         </header>
