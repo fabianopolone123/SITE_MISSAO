@@ -1,11 +1,14 @@
 from io import BytesIO
+from pathlib import Path
 from xml.sax.saxutils import escape
 
+from django.conf import settings
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import (
+    Image,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -13,6 +16,15 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+
+
+GREEN = colors.HexColor('#2f6844')
+GREEN_DARK = colors.HexColor('#1d442c')
+GREEN_SOFT = colors.HexColor('#e8f0eb')
+ORANGE = colors.HexColor('#d95d18')
+LINE = colors.HexColor('#dbe3de')
+TEXT = colors.HexColor('#101513')
+MUTED = colors.HexColor('#647067')
 
 
 def checkbox(label, selected):
@@ -24,31 +36,69 @@ def yes_no_options(value):
     return f'{checkbox("Sim", value == "sim")}    {checkbox("Não", value == "nao")}'
 
 
-def paragraph(text, style):
-    return Paragraph(escape(str(text)).replace('\n', '<br/>'), style)
+def text(value):
+    return escape(str(value or ''))
 
 
-def header_story(styles):
-    return [
-        paragraph('INSTITUTO MISSÃO\nANDREWS', styles['HeaderTitle']),
-        paragraph('Rua Hélio Castro Maia, 529 – (Sala 1)', styles['HeaderText']),
-        paragraph('Bairro Jardim Paulista – Campo Grande-MS', styles['HeaderText']),
-        paragraph('CEP: 79050-020 - (+55 67 99239-3858)', styles['HeaderText']),
-        paragraph('Avante Sem Retroceder', styles['HeaderMotto']),
-        Spacer(1, 10),
-    ]
-
-
-def bullet_list(items, styles):
-    story = []
-    for item in items:
-        story.append(paragraph(f'ü {item}', styles['FormBody']))
-    return story
+def paragraph(value, style):
+    return Paragraph(text(value).replace('\n', '<br/>'), style)
 
 
 def field_line(label, value, styles):
-    value = value or ''
-    return Paragraph(f'<b>{escape(label)}:</b> {escape(str(value))}', styles['FormBody'])
+    return Paragraph(f'<b>{text(label)}:</b> {text(value)}', styles['FormBody'])
+
+
+def section_title(title, styles):
+    return Paragraph(text(title), styles['SectionTitle'])
+
+
+def bullet_list(items, styles):
+    rows = [[Paragraph(f'• {text(item)}', styles['FormBody'])] for item in items]
+    table = Table(rows, colWidths=[17 * cm])
+    table.setStyle(TableStyle([
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 1.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1.5),
+    ]))
+    return table
+
+
+def info_card(flowables):
+    table = Table([[flowables]], colWidths=[17 * cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+        ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    return table
+
+
+def first_page_header(styles):
+    logo_path = Path(settings.BASE_DIR) / 'accounts' / 'static' / 'accounts' / 'images' / 'logo-full-transparent.png'
+    logo = Image(str(logo_path), width=4.8 * cm, height=2.8 * cm) if logo_path.exists() else Paragraph('', styles['HeaderText'])
+
+    institution = [
+        Paragraph('INSTITUTO MISSÃO<br/>ANDREWS', styles['HeaderTitle']),
+        Paragraph('Rua Hélio Castro Maia, 529 – (Sala 1)', styles['HeaderText']),
+        Paragraph('Bairro Jardim Paulista – Campo Grande-MS', styles['HeaderText']),
+        Paragraph('CEP: 79050-020 - (+55 67 99239-3858)', styles['HeaderText']),
+        Paragraph('Avante Sem Retroceder', styles['HeaderMotto']),
+    ]
+    table = Table([[logo, institution]], colWidths=[5.4 * cm, 11.6 * cm])
+    table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BACKGROUND', (0, 0), (-1, -1), GREEN_SOFT),
+        ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    return table
 
 
 def build_registration_pdf(volunteer):
@@ -65,65 +115,56 @@ def build_registration_pdf(volunteer):
     )
 
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='HeaderTitle', parent=styles['Title'], fontSize=17, leading=18, spaceAfter=4))
-    styles.add(ParagraphStyle(name='HeaderText', parent=styles['BodyText'], fontSize=9, leading=11, alignment=1))
-    styles.add(ParagraphStyle(name='HeaderMotto', parent=styles['BodyText'], fontSize=10, leading=12, alignment=1, spaceAfter=3))
-    styles.add(ParagraphStyle(name='FormTitle', parent=styles['Heading1'], fontSize=14, leading=16, alignment=1, spaceAfter=10))
-    styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Heading2'], fontSize=11, leading=13, spaceBefore=8, spaceAfter=7))
-    styles.add(ParagraphStyle(name='FormBody', parent=styles['BodyText'], fontSize=9, leading=12, spaceAfter=3))
+    styles.add(ParagraphStyle(name='HeaderTitle', parent=styles['Title'], fontSize=16, leading=18, textColor=GREEN_DARK, alignment=1))
+    styles.add(ParagraphStyle(name='HeaderText', parent=styles['BodyText'], fontSize=9, leading=11, textColor=TEXT, alignment=1))
+    styles.add(ParagraphStyle(name='HeaderMotto', parent=styles['BodyText'], fontSize=10, leading=12, textColor=ORANGE, alignment=1))
+    styles.add(ParagraphStyle(name='FormTitle', parent=styles['Heading1'], fontSize=15, leading=18, textColor=GREEN_DARK, alignment=1, spaceAfter=12))
+    styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Heading2'], fontSize=11, leading=13, textColor=colors.white, backColor=GREEN, borderPadding=5, spaceBefore=10, spaceAfter=8))
+    styles.add(ParagraphStyle(name='FormBody', parent=styles['BodyText'], fontSize=9, leading=12, textColor=TEXT, spaceAfter=4))
+    styles.add(ParagraphStyle(name='Muted', parent=styles['BodyText'], fontSize=8, leading=10, textColor=MUTED, alignment=1))
 
-    story = []
-    story.extend(header_story(styles))
-    story.extend([
-        paragraph('FICHA DE INSCRIÇÃO\nAMAZONAS SEM FRONTEIRAS 2025', styles['FormTitle']),
-        paragraph(
-            'A Missão Andrews é um projeto de serviço voluntário voltado para as comunidades de baixa renda '
-            'e povos isolados, onde o acesso à educação e saúde são escassos. Através do voluntariado '
-            'diversas ações têm sido desenvolvidas no Amazonas – Brasil:',
-            styles['FormBody'],
-        ),
-        paragraph('Atendimentos:', styles['SectionTitle']),
-    ])
-    story.extend(bullet_list([
-        'Atendimento básico de saúde;',
-        'Consultas médicas;',
-        'Atendimento básico odontológico;',
-        'Visitação nos lares;',
-        'Doações de medicamentos, roupas, calçados etc.;',
-        'Evangelismo (a participação do voluntário é opcional);',
-        'Construção de uma base de voluntariado da Missão Andrews;',
-        'Apoio de infraestrutura às comunidades (construção, pintura e limpeza);',
-        'Outras necessidades;',
-    ], styles))
-    story.extend([
-        paragraph('Observações gerais:', styles['SectionTitle']),
-    ])
-    story.extend(bullet_list([
-        'Cada voluntário paga suas passagens;',
-        'A data da missão está prevista para julho de 2025;',
-        (
-            'O valor da taxa de participação é de R$ 1.600,00 reais + 5 cestas básicas com valor aproximado '
-            'de R$ 85,00. (Obs. Os valores das cestas podem oscilar de acordo com a realidade da época). '
-            'Valor da taxa de R$ 1.600,00 deve ser pago até dia 20/06/2025.'
-        ),
-        (
-            'Para EFETUAR a sua inscrição é preciso fazer um adiantamento de R$ 200,00 reais. Esse valor '
-            'não é reembolsável devido aos compromissos e será descontado do valor da participação como uma parcela.'
-        ),
-        'O adiantamento deverá ser feito via pix: inst.missaoandrews@gmail.com',
-        'Comprovante da inscrição enviar para os financeiros: Sâmela Polone – (16) 99759-2801',
-    ], styles))
-
-    story.append(PageBreak())
-    story.extend(header_story(styles))
-    story.extend([
-        paragraph(
-            'Ao preencher essa ficha, concordo em seguir as diretrizes e regulamentos estabelecidos para a viagem.',
-            styles['FormBody'],
-        ),
+    story = [
+        first_page_header(styles),
         Spacer(1, 12),
-        paragraph('Assinatura: ____________________________________', styles['FormBody']),
-        paragraph('DADOS PESSOAIS', styles['SectionTitle']),
+        Paragraph('FICHA DE INSCRIÇÃO<br/>AMAZONAS SEM FRONTEIRAS 2025', styles['FormTitle']),
+        info_card([
+            paragraph(
+                'A Missão Andrews é um projeto de serviço voluntário voltado para as comunidades de baixa renda '
+                'e povos isolados, onde o acesso à educação e saúde são escassos. Através do voluntariado '
+                'diversas ações têm sido desenvolvidas no Amazonas – Brasil:',
+                styles['FormBody'],
+            )
+        ]),
+        section_title('Atendimentos', styles),
+        bullet_list([
+            'Atendimento básico de saúde;',
+            'Consultas médicas;',
+            'Atendimento básico odontológico;',
+            'Visitação nos lares;',
+            'Doações de medicamentos, roupas, calçados etc.;',
+            'Evangelismo (a participação do voluntário é opcional);',
+            'Construção de uma base de voluntariado da Missão Andrews;',
+            'Apoio de infraestrutura às comunidades (construção, pintura e limpeza);',
+            'Outras necessidades;',
+        ], styles),
+        section_title('Observações gerais', styles),
+        bullet_list([
+            'Cada voluntário paga suas passagens;',
+            'A data da missão está prevista para julho de 2025;',
+            (
+                'O valor da taxa de participação é de R$ 1.600,00 reais + 5 cestas básicas com valor aproximado '
+                'de R$ 85,00. (Obs. Os valores das cestas podem oscilar de acordo com a realidade da época). '
+                'Valor da taxa de R$ 1.600,00 deve ser pago até dia 20/06/2025.'
+            ),
+            (
+                'Para EFETUAR a sua inscrição é preciso fazer um adiantamento de R$ 200,00 reais. Esse valor '
+                'não é reembolsável devido aos compromissos e será descontado do valor da participação como uma parcela.'
+            ),
+            'O adiantamento deverá ser feito via pix: inst.missaoandrews@gmail.com',
+            'Comprovante da inscrição enviar para os financeiros: Sâmela Polone – (16) 99759-2801',
+        ], styles),
+        PageBreak(),
+        section_title('DADOS PESSOAIS', styles),
         field_line('Nome', volunteer.full_name, styles),
         field_line('Data de nascimento', volunteer.birth_date.strftime('%d/%m/%Y'), styles),
         field_line(
@@ -138,11 +179,11 @@ def build_registration_pdf(volunteer):
         field_line('CPF', volunteer.cpf, styles),
         field_line('Nome do responsável (se for menor de idade)', volunteer.guardian_name, styles),
         field_line('Telefone do Responsável', volunteer.guardian_phone, styles),
-        paragraph('Informações médicas relevantes:', styles['SectionTitle']),
+        section_title('Informações médicas relevantes', styles),
         field_line('Alergias', volunteer.allergies, styles),
         field_line('Medicamento em uso', volunteer.medication_in_use, styles),
         field_line('Observações especiais', volunteer.special_notes, styles),
-        paragraph('Qual área você deseja atuar:', styles['SectionTitle']),
+        section_title('Área de atuação e formação', styles),
         paragraph(
             '    '.join([
                 checkbox('Saúde', volunteer.work_health),
@@ -153,21 +194,25 @@ def build_registration_pdf(volunteer):
             styles['FormBody'],
         ),
         field_line('Qual a sua formação', volunteer.education, styles),
-        paragraph('QUESTIONÁRIO', styles['SectionTitle']),
+        section_title('QUESTIONÁRIO', styles),
         field_line('1-Desejo participar voluntariamente da Missão Andrews', yes_no_options(volunteer.wants_to_participate), styles),
         field_line('2-Compreendo que atividades desenvolvidas são sem remuneração', yes_no_options(volunteer.understands_no_payment), styles),
         field_line('3-Estou ciente que devo pagar minhas passagens aéreas', yes_no_options(volunteer.aware_pays_tickets), styles),
         field_line('4-Estou ciente que devo pagar a taxa de participação do projeto', yes_no_options(volunteer.aware_pays_project_fee), styles),
         field_line('5-Estou ciente que meus documentos e vacinas devem estar em dia', yes_no_options(volunteer.aware_documents_vaccines), styles),
         field_line('6-Estou ciente que o valor da taxa de inscrição é não-reembolsável', yes_no_options(volunteer.aware_non_refundable_fee), styles),
-    ])
-
-    story.append(PageBreak())
-    story.extend(header_story(styles))
-    story.extend([
-        Spacer(1, 24),
+        Spacer(1, 14),
+        info_card([
+            paragraph(
+                'Ao preencher essa ficha, concordo em seguir as diretrizes e regulamentos estabelecidos para a viagem.',
+                styles['FormBody'],
+            )
+        ]),
+        Spacer(1, 20),
         field_line('Cidade e Data', volunteer.city_and_date, styles),
-    ])
+        Spacer(1, 26),
+        paragraph('Assinatura: ____________________________________', styles['FormBody']),
+    ]
 
     document.build(story)
     buffer.seek(0)
