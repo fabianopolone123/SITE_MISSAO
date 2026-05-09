@@ -10,6 +10,7 @@ urlpatterns = [
     path('cadastre-se/', views.signup, name='signup'),
     path('cadastro/finalizado/', views.signup_success, name='signup_success'),
     path('minha-inscricao/', views.volunteer_dashboard, name='volunteer_dashboard'),
+    path('minha-inscricao/documentacao/', views.volunteer_documentation_dashboard, name='volunteer_documentation_dashboard'),
     path('missionario/<int:volunteer_id>/ficha/', views.volunteer_registration_pdf, name='volunteer_registration_pdf'),
     path('missionario/<int:volunteer_id>/documentacao/', views.volunteer_documentation_upload, name='volunteer_documentation_upload'),
     path('painel/', views.admin_dashboard, name='admin_dashboard'),

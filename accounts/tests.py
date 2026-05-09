@@ -244,6 +244,7 @@ class VolunteerDashboardTests(TestCase):
         response = self.client.get(reverse('volunteer_dashboard'))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('volunteer_documentation_dashboard'))
         self.assertNotContains(response, 'Baixe a ficha, assine pelo gov.br')
         self.assertNotContains(response, 'Documenta&ccedil;&atilde;o pendente')
         self.assertNotContains(response, 'Enviar documenta&ccedil;&atilde;o')
@@ -264,10 +265,21 @@ class VolunteerDashboardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Minha inscri&ccedil;&atilde;o')
-        self.assertNotContains(response, 'href="#documentacao"')
+        self.assertContains(response, reverse('volunteer_documentation_dashboard'))
         self.assertNotContains(response, '<a class="menu-item " href="/painel/">Inscritos</a>', html=True)
         self.assertNotContains(response, '<a class="menu-item " href="/painel/financeiro/">Financeiro</a>', html=True)
         self.assertNotContains(response, '<a class="menu-item " href="/painel/permissoes/">Permiss&otilde;es</a>', html=True)
+
+    def test_volunteer_documentation_dashboard_renders_documentation_controls(self):
+        user, _, volunteer = create_registration()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('volunteer_documentation_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Documenta&ccedil;&atilde;o pendente')
+        self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
+        self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()

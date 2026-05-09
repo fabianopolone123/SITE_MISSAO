@@ -1,0 +1,6 @@
+<nav class="admin-menu" aria-label="Menu do perfil mission&aacute;rio">
+    <a class="menu-item {% if active_menu == 'volunteer' %}active{% endif %}" href="{% url 'volunteer_dashboard' %}">Minha inscri&ccedil;&atilde;o</a>
+    {% if registration %}
+        <a class="menu-item {% if active_menu == 'documentation' %}active{% endif %}" href="{% url 'volunteer_documentation_dashboard' %}">Documenta&ccedil;&atilde;o</a>
+    {% endif %}
+</nav>

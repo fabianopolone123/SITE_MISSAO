@@ -34,9 +34,7 @@
                     </div>
                 </header>
 
-                <nav class="admin-menu" aria-label="Menu do perfil mission&aacute;rio">
-                    <a class="menu-item active" href="{% url 'volunteer_dashboard' %}">Minha inscri&ccedil;&atilde;o</a>
-                </nav>
+                {% include "registration/partials/missionary_menu.html" %}
 
                 {% if messages %}
                     {% for message in messages %}

@@ -211,6 +211,25 @@ def volunteer_dashboard(request):
 
 
 @login_required(login_url='login')
+def volunteer_documentation_dashboard(request):
+    try:
+        registration = request.user.registration
+    except Registration.DoesNotExist:
+        messages.error(request, 'Crie seu perfil missionario antes de enviar documentos.')
+        return redirect('volunteer_dashboard')
+
+    return render(
+        request,
+        'registration/volunteer_documentation.html',
+        {
+            'registration': registration,
+            'panel_permissions': get_panel_permissions(request.user),
+            'active_menu': 'documentation',
+        },
+    )
+
+
+@login_required(login_url='login')
 def volunteer_registration_pdf(request, volunteer_id):
     volunteer = get_object_or_404(
         Volunteer.objects.select_related('registration__user'),
