@@ -564,6 +564,52 @@ button:focus,
     font-size: 0.92rem;
 }
 
+.document-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.document-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfa;
+}
+
+.document-card h3 {
+    margin: 0 0 6px;
+}
+
+.document-status {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.document-status.ok {
+    background: rgba(47, 104, 68, 0.12);
+    color: var(--green-dark);
+}
+
+.document-status.pending {
+    background: rgba(217, 93, 24, 0.12);
+    color: var(--orange-dark);
+}
+
+.document-upload-form {
+    display: grid;
+    gap: 16px;
+}
+
 .text-link-button {
     display: inline;
     width: auto;
@@ -725,6 +771,16 @@ td a {
     padding: 0 22px 22px;
 }
 
+.modal-content {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+}
+
+.modal-content .detail-grid {
+    padding: 0;
+}
+
 .modal-list h3 {
     margin-bottom: 0;
 }
@@ -806,6 +862,10 @@ td a {
 
     .compact-detail-grid,
     .detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .document-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -948,6 +1008,11 @@ td a {
 
     .report-card {
         text-align: center;
+    }
+
+    .document-card {
+        align-items: stretch;
+        flex-direction: column;
     }
 
     .report-card strong {

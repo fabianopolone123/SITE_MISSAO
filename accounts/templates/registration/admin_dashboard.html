@@ -105,6 +105,7 @@
                             <th>E-mail</th>
                             <th>Forma&ccedil;&atilde;o</th>
                             <th>&Aacute;reas</th>
+                            <th>Documenta&ccedil;&atilde;o</th>
                             <th>Login</th>
                         </tr>
                     </thead>
@@ -126,15 +127,20 @@
                                     {% if volunteer.work_general_help %}{% if volunteer.work_health or volunteer.work_education %}, {% endif %}Aux&iacute;lio geral{% endif %}
                                     {% if volunteer.work_evangelism %}{% if volunteer.work_health or volunteer.work_education or volunteer.work_general_help %}, {% endif %}Evangelismo{% endif %}
                                 </td>
+                                <td>
+                                    <span class="document-status {% if volunteer.documentation_complete %}ok{% else %}pending{% endif %}">
+                                        {% if volunteer.documentation_complete %}OK{% else %}Pendente{% endif %}
+                                    </span>
+                                </td>
                                 <td>{{ volunteer.registration.user.username }}</td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="7">Nenhum volunt&aacute;rio encontrado.</td>
+                                <td colspan="8">Nenhum volunt&aacute;rio encontrado.</td>
                             </tr>
                         {% endfor %}
                         <tr id="volunteer-empty-search" hidden>
-                            <td colspan="7">Nenhum volunt&aacute;rio encontrado para a pesquisa.</td>
+                            <td colspan="8">Nenhum volunt&aacute;rio encontrado para a pesquisa.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -231,6 +237,30 @@
                     <div><dt>Documentos e vacinas</dt><dd>{{ volunteer.get_aware_documents_vaccines_display }}</dd></div>
                     <div><dt>Taxa n&atilde;o reembols&aacute;vel</dt><dd>{{ volunteer.get_aware_non_refundable_fee_display }}</dd></div>
                     <div><dt>Cidade e data</dt><dd>{{ volunteer.city_and_date|default:"-" }}</dd></div>
+                    <div>
+                        <dt>Ficha assinada</dt>
+                        <dd>
+                            {% if volunteer.signed_registration_document %}
+                                <a href="{{ volunteer.signed_registration_document.url }}" target="_blank" rel="noopener">Abrir arquivo</a>
+                            {% else %}
+                                Pendente
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Ap&oacute;lice de seguro</dt>
+                        <dd>
+                            {% if volunteer.insurance_policy_document %}
+                                <a href="{{ volunteer.insurance_policy_document.url }}" target="_blank" rel="noopener">Abrir arquivo</a>
+                            {% else %}
+                                Pendente
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Status da documenta&ccedil;&atilde;o</dt>
+                        <dd>{% if volunteer.documentation_complete %}OK{% else %}Pendente{% endif %}</dd>
+                    </div>
                 </dl>
             </dialog>
         {% endfor %}

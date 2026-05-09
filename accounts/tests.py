@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
@@ -122,6 +123,17 @@ class AdminDashboardTests(TestCase):
         self.assertContains(response, f'data-modal-target="volunteer-modal-{volunteer.id}"')
         self.assertContains(response, 'Mission&aacute;rios deste login')
 
+    def test_admin_dashboard_shows_documentation_status(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        _, _, volunteer = create_registration()
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('admin_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'volunteer-modal-{volunteer.id}')
+        self.assertContains(response, 'Status da documenta&ccedil;&atilde;o')
+
 
 class VolunteerDashboardTests(TestCase):
     def test_volunteer_can_update_only_own_registration(self):
@@ -154,3 +166,68 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(volunteer.full_name, 'voluntario Silva')
         self.assertEqual(other_volunteer.full_name, 'outro Silva')
+
+    def test_volunteer_dashboard_renders_documentation_controls(self):
+        user, _, volunteer = create_registration()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('volunteer_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Documenta&ccedil;&atilde;o')
+        self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
+        self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
+
+    def test_volunteer_can_download_own_registration_pdf(self):
+        user, _, volunteer = create_registration()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('volunteer_registration_pdf', args=[volunteer.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))
+
+    def test_volunteer_can_upload_documentation_files(self):
+        user, _, volunteer = create_registration()
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse('volunteer_documentation_upload', args=[volunteer.id]),
+            {
+                'signed_registration_document': SimpleUploadedFile(
+                    'ficha.pdf',
+                    b'%PDF-1.4 ficha assinada',
+                    content_type='application/pdf',
+                ),
+                'insurance_policy_document': SimpleUploadedFile(
+                    'apolice.pdf',
+                    b'%PDF-1.4 apolice assinada',
+                    content_type='application/pdf',
+                ),
+            },
+        )
+
+        volunteer.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(volunteer.documentation_complete)
+
+    def test_volunteer_cannot_upload_documentation_for_another_user(self):
+        user, _, _ = create_registration()
+        _, _, other_volunteer = create_registration(username='outro')
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse('volunteer_documentation_upload', args=[other_volunteer.id]),
+            {
+                'signed_registration_document': SimpleUploadedFile(
+                    'ficha.pdf',
+                    b'%PDF-1.4 ficha assinada',
+                    content_type='application/pdf',
+                ),
+            },
+        )
+
+        other_volunteer.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(other_volunteer.signed_registration_document)

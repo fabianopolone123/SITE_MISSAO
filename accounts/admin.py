@@ -16,7 +16,14 @@ class RegistrationAdmin(admin.ModelAdmin):
 
 @admin.register(Volunteer)
 class VolunteerAdmin(admin.ModelAdmin):
-    list_display = ('full_name', 'cpf', 'email', 'phone', 'registration')
+    list_display = (
+        'full_name',
+        'cpf',
+        'email',
+        'phone',
+        'registration',
+        'documentation_complete',
+    )
     search_fields = ('full_name', 'cpf', 'email')
 
 

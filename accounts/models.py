@@ -102,6 +102,16 @@ class Volunteer(models.Model):
         default='sim',
     )
     city_and_date = models.CharField('Cidade e Data', max_length=120, blank=True)
+    signed_registration_document = models.FileField(
+        'Ficha de inscricao assinada',
+        upload_to='documentos/fichas_assinadas/',
+        blank=True,
+    )
+    insurance_policy_document = models.FileField(
+        'Apolice de seguro assinada',
+        upload_to='documentos/apolices/',
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -110,6 +120,18 @@ class Volunteer(models.Model):
 
     def __str__(self):
         return self.full_name
+
+    @property
+    def has_signed_registration_document(self):
+        return bool(self.signed_registration_document)
+
+    @property
+    def has_insurance_policy_document(self):
+        return bool(self.insurance_policy_document)
+
+    @property
+    def documentation_complete(self):
+        return self.has_signed_registration_document and self.has_insurance_policy_document
 
 
 class FinancialTransaction(models.Model):

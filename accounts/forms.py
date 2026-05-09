@@ -1,4 +1,5 @@
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
@@ -28,7 +29,12 @@ class SignUpForm(UserCreationForm):
 class VolunteerForm(forms.ModelForm):
     class Meta:
         model = Volunteer
-        exclude = ['registration', 'created_at']
+        exclude = [
+            'registration',
+            'signed_registration_document',
+            'insurance_policy_document',
+            'created_at',
+        ]
         widgets = {
             'birth_date': forms.DateInput(attrs={'type': 'date'}),
             'full_address': forms.Textarea(attrs={'rows': 2}),
@@ -59,6 +65,32 @@ class VolunteerForm(forms.ModelForm):
             'work_evangelism',
         ]:
             self.fields[field_name].widget.attrs['class'] = 'checkbox-control'
+
+
+class VolunteerDocumentationForm(forms.ModelForm):
+    class Meta:
+        model = Volunteer
+        fields = ['signed_registration_document', 'insurance_policy_document']
+        labels = {
+            'signed_registration_document': 'Ficha de inscricao assinada pelo gov.br',
+            'insurance_policy_document': 'Apolice de seguro assinada',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = False
+            field.widget.attrs.setdefault('class', 'form-control')
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        for field_name in ['signed_registration_document', 'insurance_policy_document']:
+            file = cleaned_data.get(field_name)
+            if file and Path(file.name).suffix.lower() != '.pdf':
+                self.add_error(field_name, 'Envie um arquivo PDF.')
+
+        return cleaned_data
 
 
 class PanelPermissionForm(forms.ModelForm):

@@ -5,10 +5,20 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q, Sum
 from django.forms import formset_factory, modelformset_factory
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.text import slugify
+from django.views.decorators.http import require_POST
 
-from .forms import FinancialTransactionForm, PanelPermissionForm, SignUpForm, VolunteerForm
+from .forms import (
+    FinancialTransactionForm,
+    PanelPermissionForm,
+    SignUpForm,
+    VolunteerDocumentationForm,
+    VolunteerForm,
+)
 from .models import FinancialTransaction, PanelPermission, Registration, Volunteer
+from .pdf import build_registration_pdf
 
 
 PANEL_PERMISSION_FIELDS = {
@@ -59,6 +69,12 @@ def can_manage_financial(user):
 
 def can_manage_permissions(user):
     return has_panel_permission(user, 'permissions')
+
+
+def can_view_volunteer(user, volunteer):
+    if not user.is_authenticated:
+        return False
+    return volunteer.registration.user_id == user.id or can_view_registrations(user)
 
 
 def first_available_panel_url(user):
@@ -159,6 +175,41 @@ def volunteer_dashboard(request):
             'active_menu': 'volunteer',
         },
     )
+
+
+@login_required(login_url='login')
+def volunteer_registration_pdf(request, volunteer_id):
+    volunteer = get_object_or_404(
+        Volunteer.objects.select_related('registration__user'),
+        pk=volunteer_id,
+    )
+
+    if not can_view_volunteer(request.user, volunteer):
+        return redirect('login')
+
+    filename = f'ficha-inscricao-{slugify(volunteer.full_name)}.pdf'
+    response = HttpResponse(build_registration_pdf(volunteer), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required(login_url='login')
+@require_POST
+def volunteer_documentation_upload(request, volunteer_id):
+    volunteer = get_object_or_404(
+        Volunteer.objects.select_related('registration__user'),
+        pk=volunteer_id,
+        registration__user=request.user,
+    )
+    form = VolunteerDocumentationForm(request.POST, request.FILES, instance=volunteer)
+
+    if form.is_valid():
+        form.save()
+        messages.success(request, f'Documentacao de {volunteer.full_name} atualizada.')
+    else:
+        messages.error(request, f'Nao foi possivel atualizar a documentacao de {volunteer.full_name}.')
+
+    return redirect('volunteer_dashboard')
 
 
 @user_passes_test(can_view_registrations, login_url='login')
