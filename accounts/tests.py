@@ -47,12 +47,12 @@ def volunteer_post_data(volunteer, full_name):
         'volunteers-0-medication_in_use': volunteer.medication_in_use,
         'volunteers-0-special_notes': volunteer.special_notes,
         'volunteers-0-education': volunteer.education,
-        'volunteers-0-wants_to_participate': volunteer.wants_to_participate,
-        'volunteers-0-understands_no_payment': volunteer.understands_no_payment,
-        'volunteers-0-aware_pays_tickets': volunteer.aware_pays_tickets,
-        'volunteers-0-aware_pays_project_fee': volunteer.aware_pays_project_fee,
-        'volunteers-0-aware_documents_vaccines': volunteer.aware_documents_vaccines,
-        'volunteers-0-aware_non_refundable_fee': volunteer.aware_non_refundable_fee,
+        'volunteers-0-wants_to_participate': volunteer.wants_to_participate or 'sim',
+        'volunteers-0-understands_no_payment': volunteer.understands_no_payment or 'sim',
+        'volunteers-0-aware_pays_tickets': volunteer.aware_pays_tickets or 'sim',
+        'volunteers-0-aware_pays_project_fee': volunteer.aware_pays_project_fee or 'sim',
+        'volunteers-0-aware_documents_vaccines': volunteer.aware_documents_vaccines or 'sim',
+        'volunteers-0-aware_non_refundable_fee': volunteer.aware_non_refundable_fee or 'sim',
         'volunteers-0-city_and_date': volunteer.city_and_date,
     }
 
@@ -94,6 +94,13 @@ class SignupViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context['formset'].forms), 1)
         self.assertContains(response, 'Volunt&aacute;rio 1')
+
+    def test_signup_questionnaire_starts_without_checked_options(self):
+        response = self.client.get(reverse('signup'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'name="volunteers-0-wants_to_participate" value="sim" checked')
+        self.assertNotContains(response, 'name="volunteers-0-understands_no_payment" value="sim" checked')
 
 
 class AdminDashboardTests(TestCase):

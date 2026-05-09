@@ -69,37 +69,31 @@ class Volunteer(models.Model):
         'Desejo participar voluntariamente da Missao Andrews',
         max_length=3,
         choices=YES_NO_CHOICES,
-        default='sim',
     )
     understands_no_payment = models.CharField(
         'Compreendo que atividades desenvolvidas sao sem remuneracao',
         max_length=3,
         choices=YES_NO_CHOICES,
-        default='sim',
     )
     aware_pays_tickets = models.CharField(
         'Estou ciente que devo pagar minhas passagens aereas',
         max_length=3,
         choices=YES_NO_CHOICES,
-        default='sim',
     )
     aware_pays_project_fee = models.CharField(
         'Estou ciente que devo pagar a taxa de participacao do projeto',
         max_length=3,
         choices=YES_NO_CHOICES,
-        default='sim',
     )
     aware_documents_vaccines = models.CharField(
         'Estou ciente que meus documentos e vacinas devem estar em dia',
         max_length=3,
         choices=YES_NO_CHOICES,
-        default='sim',
     )
     aware_non_refundable_fee = models.CharField(
         'Estou ciente que o valor da taxa de inscricao e nao-reembolsavel',
         max_length=3,
         choices=YES_NO_CHOICES,
-        default='sim',
     )
     city_and_date = models.CharField('Cidade e Data', max_length=120, blank=True)
     signed_registration_document = models.FileField(
