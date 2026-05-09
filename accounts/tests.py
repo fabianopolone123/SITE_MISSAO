@@ -237,16 +237,16 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(volunteer.full_name, 'voluntario Silva')
         self.assertEqual(other_volunteer.full_name, 'outro Silva')
 
-    def test_volunteer_dashboard_renders_documentation_controls(self):
-        user, _, volunteer = create_registration()
+    def test_volunteer_dashboard_does_not_render_documentation_section(self):
+        user, _, _ = create_registration()
         self.client.force_login(user)
 
         response = self.client.get(reverse('volunteer_dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Documenta&ccedil;&atilde;o')
-        self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
-        self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
+        self.assertNotContains(response, 'Baixe a ficha, assine pelo gov.br')
+        self.assertNotContains(response, 'Documenta&ccedil;&atilde;o pendente')
+        self.assertNotContains(response, 'Enviar documenta&ccedil;&atilde;o')
 
     def test_missionary_profile_menu_does_not_show_admin_sections(self):
         user, _, _ = create_registration()
