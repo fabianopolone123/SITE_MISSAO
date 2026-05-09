@@ -22,7 +22,16 @@
                             <h1>Dados cadastrados</h1>
                         </div>
                     </div>
-                    <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+                    <div class="header-actions">
+                        {% if panel_permissions.can_view_registrations %}
+                            <a class="primary-link-button compact-link-button" href="{% url 'admin_dashboard' %}">Painel ADM</a>
+                        {% elif panel_permissions.can_manage_financial %}
+                            <a class="primary-link-button compact-link-button" href="{% url 'financial_dashboard' %}">Painel ADM</a>
+                        {% elif panel_permissions.can_manage_permissions %}
+                            <a class="primary-link-button compact-link-button" href="{% url 'permissions_dashboard' %}">Painel ADM</a>
+                        {% endif %}
+                        <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+                    </div>
                 </header>
 
                 {% include "registration/partials/admin_menu.html" %}

@@ -134,6 +134,19 @@ class AdminDashboardTests(TestCase):
         self.assertContains(response, f'volunteer-modal-{volunteer.id}')
         self.assertContains(response, 'Status da documenta&ccedil;&atilde;o')
 
+    def test_admin_user_can_switch_to_missionary_profile(self):
+        user, _, _ = create_registration()
+        user.is_staff = True
+        user.save(update_fields=['is_staff'])
+        PanelPermission.objects.create(user=user, can_view_registrations=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('admin_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Perfil mission&aacute;rio')
+        self.assertContains(response, reverse('volunteer_dashboard'))
+
 
 class VolunteerDashboardTests(TestCase):
     def test_volunteer_can_update_only_own_registration(self):
@@ -177,6 +190,19 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'Documenta&ccedil;&atilde;o')
         self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
         self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
+
+    def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
+        user, _, _ = create_registration()
+        user.is_staff = True
+        user.save(update_fields=['is_staff'])
+        PanelPermission.objects.create(user=user, can_view_registrations=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('volunteer_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Painel ADM')
+        self.assertContains(response, reverse('admin_dashboard'))
 
     def test_volunteer_can_download_own_registration_pdf(self):
         user, _, volunteer = create_registration()
