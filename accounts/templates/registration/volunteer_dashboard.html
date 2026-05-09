@@ -34,7 +34,12 @@
                     </div>
                 </header>
 
-                {% include "registration/partials/admin_menu.html" %}
+                <nav class="admin-menu" aria-label="Menu do perfil mission&aacute;rio">
+                    <a class="menu-item active" href="{% url 'volunteer_dashboard' %}">Minha inscri&ccedil;&atilde;o</a>
+                    {% if registration %}
+                        <a class="menu-item" href="#documentacao">Documenta&ccedil;&atilde;o</a>
+                    {% endif %}
+                </nav>
 
                 {% if messages %}
                     {% for message in messages %}
@@ -69,7 +74,7 @@
             </form>
 
             {% if registration %}
-                <section class="admin-section">
+                <section class="admin-section" id="documentacao">
                     <div class="section-heading">
                         <div>
                             <h2>Documenta&ccedil;&atilde;o</h2>

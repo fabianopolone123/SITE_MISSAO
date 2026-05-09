@@ -248,6 +248,27 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
         self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
 
+    def test_missionary_profile_menu_does_not_show_admin_sections(self):
+        user, _, _ = create_registration()
+        user.is_staff = True
+        user.save(update_fields=['is_staff'])
+        PanelPermission.objects.create(
+            user=user,
+            can_view_registrations=True,
+            can_manage_financial=True,
+            can_manage_permissions=True,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('volunteer_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Minha inscri&ccedil;&atilde;o')
+        self.assertContains(response, 'href="#documentacao"')
+        self.assertNotContains(response, '<a class="menu-item " href="/painel/">Inscritos</a>', html=True)
+        self.assertNotContains(response, '<a class="menu-item " href="/painel/financeiro/">Financeiro</a>', html=True)
+        self.assertNotContains(response, '<a class="menu-item " href="/painel/permissoes/">Permiss&otilde;es</a>', html=True)
+
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()
         user.is_staff = True
