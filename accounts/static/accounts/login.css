@@ -33,6 +33,138 @@ body {
     color: var(--ink);
 }
 
+.mission-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    place-items: center;
+    overflow: hidden;
+    background: #070907;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mission-splash-active .mission-splash {
+    display: grid;
+    opacity: 1;
+    pointer-events: auto;
+    animation: splash-exit 6s ease forwards;
+}
+
+.mission-splash-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.08);
+    filter: brightness(0.8) contrast(1.2) saturate(1.12);
+    animation: splash-bg 6s ease forwards;
+}
+
+.mission-splash::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 52% 44%, rgba(242, 115, 33, 0.18), transparent 24%),
+        linear-gradient(180deg, rgba(7, 9, 7, 0.08), rgba(7, 9, 7, 0.48));
+}
+
+.mission-splash-glow {
+    position: absolute;
+    width: min(70vw, 760px);
+    aspect-ratio: 1;
+    border: 2px solid rgba(217, 93, 24, 0.62);
+    border-radius: 50%;
+    box-shadow:
+        0 0 40px rgba(217, 93, 24, 0.36),
+        inset 0 0 54px rgba(217, 93, 24, 0.16);
+    opacity: 0;
+    animation: splash-ring 6s ease forwards;
+}
+
+.mission-splash-shine {
+    position: absolute;
+    inset: -30%;
+    z-index: 1;
+    background: linear-gradient(115deg, transparent 38%, rgba(255, 194, 102, 0.22) 48%, transparent 58%);
+    transform: translateX(-45%);
+    animation: splash-shine 6s ease forwards;
+}
+
+@keyframes splash-bg {
+    0% {
+        transform: scale(1.18);
+        filter: brightness(0.48) contrast(1.12) saturate(0.92);
+    }
+
+    18% {
+        filter: brightness(0.92) contrast(1.22) saturate(1.24);
+    }
+
+    82% {
+        transform: scale(1.04);
+        filter: brightness(0.86) contrast(1.2) saturate(1.16);
+    }
+
+    100% {
+        transform: scale(1);
+        filter: brightness(0.42) contrast(1.08) saturate(0.86);
+    }
+}
+
+@keyframes splash-ring {
+    0% {
+        opacity: 0;
+        transform: scale(0.55) rotate(-14deg);
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    80% {
+        opacity: 0.7;
+        transform: scale(1.05) rotate(14deg);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.24) rotate(22deg);
+    }
+}
+
+@keyframes splash-shine {
+    0%,
+    18% {
+        opacity: 0;
+        transform: translateX(-45%);
+    }
+
+    36% {
+        opacity: 1;
+    }
+
+    58%,
+    100% {
+        opacity: 0;
+        transform: translateX(45%);
+    }
+}
+
+@keyframes splash-exit {
+    0%,
+    84% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
 .auth-body {
     background:
         linear-gradient(90deg, rgba(7, 10, 9, 0.18), rgba(7, 10, 9, 0.74)),

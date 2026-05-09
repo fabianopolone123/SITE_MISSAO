@@ -1,0 +1,32 @@
+{% load static %}
+<div class="mission-splash" data-mission-splash aria-hidden="true">
+    <img class="mission-splash-photo" src="{% static 'accounts/images/asdwd.PNG' %}" alt="">
+    <div class="mission-splash-glow"></div>
+    <div class="mission-splash-shine"></div>
+</div>
+<script>
+    (() => {
+        const splash = document.querySelector('[data-mission-splash]');
+
+        if (!splash) {
+            return;
+        }
+
+        if (window.sessionStorage.getItem('missionSplashSeen') === '1') {
+            splash.remove();
+            return;
+        }
+
+        document.documentElement.classList.add('mission-splash-active');
+
+        window.setTimeout(() => {
+            splash.classList.add('is-leaving');
+        }, 5200);
+
+        window.setTimeout(() => {
+            window.sessionStorage.setItem('missionSplashSeen', '1');
+            document.documentElement.classList.remove('mission-splash-active');
+            splash.remove();
+        }, 6000);
+    })();
+</script>
