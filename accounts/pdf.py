@@ -7,8 +7,9 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
-    Image,
+    Image as FlowImage,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -77,9 +78,15 @@ def info_card(flowables):
     return table
 
 
+def proportional_image(path, max_width, max_height):
+    image_width, image_height = ImageReader(str(path)).getSize()
+    scale = min(max_width / image_width, max_height / image_height)
+    return FlowImage(str(path), width=image_width * scale, height=image_height * scale)
+
+
 def first_page_header(styles):
     logo_path = Path(settings.BASE_DIR) / 'accounts' / 'static' / 'accounts' / 'images' / 'logo-full-transparent.png'
-    logo = Image(str(logo_path), width=4.8 * cm, height=2.8 * cm) if logo_path.exists() else Paragraph('', styles['HeaderText'])
+    logo = proportional_image(logo_path, 4.2 * cm, 3.6 * cm) if logo_path.exists() else Paragraph('', styles['HeaderText'])
 
     institution = [
         Paragraph('INSTITUTO MISSÃO<br/>ANDREWS', styles['HeaderTitle']),
@@ -91,6 +98,7 @@ def first_page_header(styles):
     table = Table([[logo, institution]], colWidths=[5.4 * cm, 11.6 * cm])
     table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, 0), 'CENTER'),
         ('BACKGROUND', (0, 0), (-1, -1), GREEN_SOFT),
         ('BOX', (0, 0), (-1, -1), 0.8, LINE),
         ('LEFTPADDING', (0, 0), (-1, -1), 12),
