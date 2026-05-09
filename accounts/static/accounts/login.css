@@ -676,6 +676,12 @@ td a {
     color: var(--green-dark);
 }
 
+.modal-close:hover,
+.modal-close:focus {
+    background: var(--green);
+    color: #ffffff;
+}
+
 .detail-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
