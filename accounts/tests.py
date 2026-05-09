@@ -264,7 +264,7 @@ class VolunteerDashboardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Minha inscri&ccedil;&atilde;o')
-        self.assertContains(response, 'href="#documentacao"')
+        self.assertNotContains(response, 'href="#documentacao"')
         self.assertNotContains(response, '<a class="menu-item " href="/painel/">Inscritos</a>', html=True)
         self.assertNotContains(response, '<a class="menu-item " href="/painel/financeiro/">Financeiro</a>', html=True)
         self.assertNotContains(response, '<a class="menu-item " href="/painel/permissoes/">Permiss&otilde;es</a>', html=True)
