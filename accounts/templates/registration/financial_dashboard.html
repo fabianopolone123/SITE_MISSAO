@@ -48,6 +48,63 @@
                 <span>Comprovantes</span>
                 <strong>{{ receipt_count }}</strong>
             </article>
+            <article class="report-card">
+                <span>Comprovantes mission&aacute;rios</span>
+                <strong>{{ missionary_receipt_count }}</strong>
+            </article>
+            <article class="report-card">
+                <span>Conferidos</span>
+                <strong>{{ missionary_confirmed_count }}</strong>
+            </article>
+        </section>
+
+        <section class="admin-section">
+            <h2>Comprovantes dos mission&aacute;rios</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mission&aacute;rio</th>
+                            <th>Login</th>
+                            <th>Pagamento</th>
+                            <th>Valor</th>
+                            <th>Comprovante</th>
+                            <th>Status</th>
+                            <th>Confer&ecirc;ncia ADM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in missionary_payments %}
+                            <tr>
+                                <td>{{ payment.volunteer.full_name }}</td>
+                                <td>{{ payment.volunteer.registration.user.username }}</td>
+                                <td>{{ payment.get_payment_type_display }}</td>
+                                <td>R$ {{ payment.amount_brl }}</td>
+                                <td>
+                                    <a href="{{ payment.receipt.url }}" target="_blank" rel="noopener">Abrir</a>
+                                </td>
+                                <td>{{ payment.status_label }}</td>
+                                <td>
+                                    <form method="post" class="permission-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="missionary_payment_id" value="{{ payment.id }}">
+                                        {% if payment.is_confirmed %}
+                                            <p class="section-note">Conferido por {{ payment.confirmed_by.username|default:"-" }} em {{ payment.confirmed_at|date:"d/m/Y H:i" }}</p>
+                                            <button type="submit" name="action" value="unconfirm" class="table-button secondary-button">Remover OK</button>
+                                        {% else %}
+                                            <button type="submit" name="action" value="confirm" class="table-button">Marcar OK</button>
+                                        {% endif %}
+                                    </form>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7">Nenhum comprovante de mission&aacute;rio enviado.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <section class="admin-section">

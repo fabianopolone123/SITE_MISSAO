@@ -8,17 +8,27 @@ from django.db.models import Count, Q, Sum
 from django.forms import formset_factory, modelformset_factory
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from .forms import (
     FinancialTransactionForm,
+    MissionaryPaymentReceiptForm,
     PanelPermissionForm,
     SignUpForm,
     VolunteerDocumentationForm,
     VolunteerForm,
 )
-from .models import FinancialTransaction, PanelPermission, Registration, Volunteer
+from .models import (
+    FinancialTransaction,
+    MISSIONARY_PAYMENT_AMOUNTS,
+    MISSIONARY_PAYMENT_TYPES,
+    MissionaryPayment,
+    PanelPermission,
+    Registration,
+    Volunteer,
+)
 from .pdf import build_registration_pdf
 
 
@@ -26,6 +36,15 @@ PANEL_PERMISSION_FIELDS = {
     'registrations': 'can_view_registrations',
     'financial': 'can_manage_financial',
     'permissions': 'can_manage_permissions',
+}
+
+MISSION_PAYMENT_PIX_KEY = '64.077.212/0001-50'
+MISSION_PAYMENT_BANK_INFO = {
+    'nome': 'Missao Andrews',
+    'banco': 'Bradesco',
+    'agencia': '2403',
+    'conta_corrente': '58653-6',
+    'pix': MISSION_PAYMENT_PIX_KEY,
 }
 
 
@@ -86,6 +105,20 @@ def first_available_panel_url(user):
     if has_panel_permission(user, 'permissions'):
         return 'permissions_dashboard'
     return 'volunteer_dashboard'
+
+
+def ensure_missionary_payments(volunteer):
+    payments = []
+
+    for payment_type, _ in MISSIONARY_PAYMENT_TYPES:
+        payment, _ = MissionaryPayment.objects.get_or_create(
+            volunteer=volunteer,
+            payment_type=payment_type,
+            defaults={'amount': MISSIONARY_PAYMENT_AMOUNTS[payment_type]},
+        )
+        payments.append(payment)
+
+    return payments
 
 
 class SmartLoginView(LoginView):
@@ -230,6 +263,61 @@ def volunteer_documentation_dashboard(request):
 
 
 @login_required(login_url='login')
+def volunteer_financial_dashboard(request):
+    try:
+        registration = request.user.registration
+    except Registration.DoesNotExist:
+        messages.error(request, 'Crie seu perfil missionario antes de enviar comprovantes.')
+        return redirect('volunteer_dashboard')
+
+    volunteers = registration.volunteers.order_by('created_at')
+    payment_groups = []
+
+    for volunteer in volunteers:
+        payment_groups.append({
+            'volunteer': volunteer,
+            'payments': ensure_missionary_payments(volunteer),
+        })
+
+    return render(
+        request,
+        'registration/volunteer_financial.html',
+        {
+            'registration': registration,
+            'payment_groups': payment_groups,
+            'panel_permissions': get_panel_permissions(request.user),
+            'active_menu': 'missionary_financial',
+            'bank_info': MISSION_PAYMENT_BANK_INFO,
+            'total_amount': '2.050,00',
+        },
+    )
+
+
+@login_required(login_url='login')
+@require_POST
+def volunteer_payment_upload(request, payment_id):
+    payment = get_object_or_404(
+        MissionaryPayment.objects.select_related('volunteer__registration__user'),
+        pk=payment_id,
+        volunteer__registration__user=request.user,
+    )
+    form = MissionaryPaymentReceiptForm(request.POST, request.FILES, instance=payment)
+
+    if form.is_valid():
+        payment = form.save(commit=False)
+        payment.submitted_at = timezone.now()
+        payment.is_confirmed = False
+        payment.confirmed_by = None
+        payment.confirmed_at = None
+        payment.save()
+        messages.success(request, f'Comprovante de {payment.get_payment_type_display()} enviado.')
+    else:
+        messages.error(request, f'Nao foi possivel enviar o comprovante de {payment.get_payment_type_display()}.')
+
+    return redirect('volunteer_financial_dashboard')
+
+
+@login_required(login_url='login')
 def volunteer_registration_pdf(request, volunteer_id):
     volunteer = get_object_or_404(
         Volunteer.objects.select_related('registration__user'),
@@ -300,6 +388,25 @@ def admin_dashboard(request):
 
 @user_passes_test(can_manage_financial, login_url='login')
 def financial_dashboard(request):
+    if request.method == 'POST' and request.POST.get('missionary_payment_id'):
+        payment = get_object_or_404(MissionaryPayment, pk=request.POST['missionary_payment_id'])
+        action = request.POST.get('action')
+
+        if action == 'confirm':
+            payment.is_confirmed = True
+            payment.confirmed_by = request.user
+            payment.confirmed_at = timezone.now()
+            payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
+            messages.success(request, 'Comprovante conferido pelo financeiro.')
+        elif action == 'unconfirm':
+            payment.is_confirmed = False
+            payment.confirmed_by = None
+            payment.confirmed_at = None
+            payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
+            messages.success(request, 'Conferencia do comprovante removida.')
+
+        return redirect('financial_dashboard')
+
     if request.method == 'POST':
         form = FinancialTransactionForm(request.POST, request.FILES)
 
@@ -311,6 +418,12 @@ def financial_dashboard(request):
         form = FinancialTransactionForm()
 
     transactions = FinancialTransaction.objects.all()
+    missionary_payments = (
+        MissionaryPayment.objects
+        .select_related('volunteer', 'volunteer__registration__user', 'confirmed_by')
+        .filter(receipt__gt='')
+        .order_by('is_confirmed', '-submitted_at', 'volunteer__full_name')
+    )
     total_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
     total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
     balance = total_income - total_expenses
@@ -323,6 +436,9 @@ def financial_dashboard(request):
         'balance': balance,
         'expense_count': transactions.filter(transaction_type='saida').count(),
         'receipt_count': transactions.exclude(receipt='').count(),
+        'missionary_payments': missionary_payments,
+        'missionary_receipt_count': missionary_payments.count(),
+        'missionary_confirmed_count': missionary_payments.filter(is_confirmed=True).count(),
         'panel_permissions': get_panel_permissions(request.user),
         'active_menu': 'financial',
         'category_summary': transactions.values('category', 'transaction_type').annotate(total=Sum('amount')).order_by('category'),

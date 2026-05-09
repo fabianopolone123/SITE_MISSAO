@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import FinancialTransaction, PanelPermission, Registration, Volunteer
+from .models import FinancialTransaction, MissionaryPayment, PanelPermission, Registration, Volunteer
 
 
 class VolunteerInline(admin.TabularInline):
@@ -44,3 +44,10 @@ class PanelPermissionAdmin(admin.ModelAdmin):
         'updated_at',
     )
     search_fields = ('user__username', 'user__email')
+
+
+@admin.register(MissionaryPayment)
+class MissionaryPaymentAdmin(admin.ModelAdmin):
+    list_display = ('volunteer', 'payment_type', 'amount', 'has_receipt', 'is_confirmed', 'confirmed_by', 'confirmed_at')
+    list_filter = ('payment_type', 'is_confirmed')
+    search_fields = ('volunteer__full_name', 'volunteer__cpf', 'volunteer__email')

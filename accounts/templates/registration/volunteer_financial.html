@@ -1,0 +1,138 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body class="form-body">
+    <main class="signup-page">
+        <div class="signup-shell">
+            <header class="signup-header">
+                <div class="page-brand">
+                    <img class="page-logo" src="{% static 'accounts/images/logo-full-transparent.png' %}" alt="Miss&atilde;o Andrews">
+                    <div>
+                        <p class="eyebrow">Perfil mission&aacute;rio</p>
+                        <h1>Financeiro</h1>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    {% if panel_permissions.can_view_registrations %}
+                        <a class="primary-link-button compact-link-button" href="{% url 'admin_dashboard' %}">Painel ADM</a>
+                    {% elif panel_permissions.can_manage_financial %}
+                        <a class="primary-link-button compact-link-button" href="{% url 'financial_dashboard' %}">Painel ADM</a>
+                    {% elif panel_permissions.can_manage_permissions %}
+                        <a class="primary-link-button compact-link-button" href="{% url 'permissions_dashboard' %}">Painel ADM</a>
+                    {% endif %}
+                    <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+                </div>
+            </header>
+
+            {% include "registration/partials/missionary_menu.html" %}
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="form-alert success-alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <section class="admin-section">
+                <div class="section-heading">
+                    <div>
+                        <h2>Conta oficial para dep&oacute;sitos</h2>
+                        <p class="section-note">Use estes dados para fazer os pagamentos e envie os comprovantes abaixo.</p>
+                    </div>
+                </div>
+
+                <div class="payment-summary-grid">
+                    <article class="payment-summary-card">
+                        <span>Taxa de participa&ccedil;&atilde;o</span>
+                        <strong>R$ 1.600,00</strong>
+                    </article>
+                    <article class="payment-summary-card">
+                        <span>5 cestas b&aacute;sicas</span>
+                        <strong>R$ 450,00</strong>
+                        <small>R$ 90,00 cada</small>
+                    </article>
+                    <article class="payment-summary-card">
+                        <span>Total por mission&aacute;rio</span>
+                        <strong>R$ {{ total_amount }}</strong>
+                    </article>
+                </div>
+
+                <dl class="pix-card">
+                    <div><dt>Nome</dt><dd>{{ bank_info.nome }}</dd></div>
+                    <div><dt>Banco</dt><dd>{{ bank_info.banco }}</dd></div>
+                    <div><dt>Ag&ecirc;ncia</dt><dd>{{ bank_info.agencia }}</dd></div>
+                    <div><dt>Conta corrente</dt><dd>{{ bank_info.conta_corrente }}</dd></div>
+                    <div class="wide-detail">
+                        <dt>Pix (CNPJ)</dt>
+                        <dd class="pix-copy-row">
+                            <span id="pix-key">{{ bank_info.pix }}</span>
+                            <button type="button" class="secondary-button compact-link-button" id="copy-pix">Copiar Pix</button>
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+
+            {% for group in payment_groups %}
+                <section class="admin-section">
+                    <h2>{{ group.volunteer.full_name }}</h2>
+                    <div class="payment-grid">
+                        {% for payment in group.payments %}
+                            <article class="payment-card">
+                                <div>
+                                    <h3>{{ payment.get_payment_type_display }}</h3>
+                                    <strong>R$ {{ payment.amount_brl }}</strong>
+                                    <p class="document-status {% if payment.is_confirmed %}ok{% elif payment.has_receipt %}pending{% else %}pending{% endif %}">
+                                        {{ payment.status_label }}
+                                    </p>
+                                </div>
+
+                                {% if payment.receipt %}
+                                    <a href="{{ payment.receipt.url }}" target="_blank" rel="noopener">Abrir comprovante enviado</a>
+                                {% endif %}
+
+                                <form method="post" action="{% url 'volunteer_payment_upload' payment.id %}" enctype="multipart/form-data" class="document-upload-form">
+                                    {% csrf_token %}
+                                    <div class="field">
+                                        <label for="id_receipt_{{ payment.id }}">Enviar comprovante</label>
+                                        <input type="file" name="receipt" id="id_receipt_{{ payment.id }}" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required>
+                                    </div>
+                                    <button type="submit">Enviar comprovante</button>
+                                </form>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endfor %}
+        </div>
+    </main>
+
+    <script>
+        const copyPixButton = document.querySelector('#copy-pix');
+        const pixKey = document.querySelector('#pix-key');
+
+        if (copyPixButton && pixKey) {
+            copyPixButton.addEventListener('click', async () => {
+                if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(pixKey.textContent.trim());
+                } else {
+                    const input = document.createElement('textarea');
+                    input.value = pixKey.textContent.trim();
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand('copy');
+                    input.remove();
+                }
+                copyPixButton.textContent = 'Pix copiado';
+                setTimeout(() => {
+                    copyPixButton.textContent = 'Copiar Pix';
+                }, 1800);
+            });
+        }
+    </script>
+</body>
+</html>

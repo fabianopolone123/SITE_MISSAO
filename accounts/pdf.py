@@ -54,7 +54,7 @@ def section_title(title, styles):
 
 
 def bullet_list(items, styles):
-    rows = [[Paragraph(f'• {text(item)}', styles['FormBody'])] for item in items]
+    rows = [[Paragraph(f'&bull; {text(item)}', styles['FormBody'])] for item in items]
     table = Table(rows, colWidths=[17 * cm])
     table.setStyle(TableStyle([
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -90,8 +90,8 @@ def first_page_header(styles):
 
     institution = [
         Paragraph('INSTITUTO MISSÃO<br/>ANDREWS', styles['HeaderTitle']),
-        Paragraph('Rua Hélio Castro Maia, 529 – (Sala 1)', styles['HeaderText']),
-        Paragraph('Bairro Jardim Paulista – Campo Grande-MS', styles['HeaderText']),
+        Paragraph('Rua Hélio Castro Maia, 529 - (Sala 1)', styles['HeaderText']),
+        Paragraph('Bairro Jardim Paulista - Campo Grande-MS', styles['HeaderText']),
         Paragraph('CEP: 79050-020 - (+55 67 99239-3858)', styles['HeaderText']),
         Paragraph('Avante Sem Retroceder', styles['HeaderMotto']),
     ]
@@ -134,12 +134,11 @@ def build_registration_pdf(volunteer):
     story = [
         first_page_header(styles),
         Spacer(1, 12),
-        Paragraph('FICHA DE INSCRIÇÃO<br/>AMAZONAS SEM FRONTEIRAS 2025', styles['FormTitle']),
+        Paragraph('FICHA DE INSCRIÇÃO<br/>AMAZONAS SEM FRONTEIRAS 2026', styles['FormTitle']),
         info_card([
             paragraph(
-                'A Missão Andrews é um projeto de serviço voluntário voltado para as comunidades de baixa renda '
-                'e povos isolados, onde o acesso à educação e saúde são escassos. Através do voluntariado '
-                'diversas ações têm sido desenvolvidas no Amazonas – Brasil:',
+                'Uma experiência de 10 dias de missão, serviço e transformação, levando apoio às comunidades '
+                'ribeirinhas e indígenas da região de Maués (Ilha Michellis - Sateré Mawé).',
                 styles['FormBody'],
             )
         ]),
@@ -157,19 +156,22 @@ def build_registration_pdf(volunteer):
         ], styles),
         section_title('Observações gerais', styles),
         bullet_list([
-            'Cada voluntário paga suas passagens;',
-            'A data da missão está prevista para julho de 2025;',
+            'A missão está prevista para 03 a 13 de julho de 2026;',
+            'IDA - 03/07: saída do porto de Manaus às 15h. Chegar em Manaus até 12h;',
+            'VOLTA - 13/07: chegada ao porto de Manaus por volta de 12h. Comprar voo de retorno a partir das 16h ou ficar mais dias em Manaus;',
             (
-                'O valor da taxa de participação é de R$ 1.600,00 reais + 5 cestas básicas com valor aproximado '
-                'de R$ 85,00. (Obs. Os valores das cestas podem oscilar de acordo com a realidade da época). '
-                'Valor da taxa de R$ 1.600,00 deve ser pago até dia 20/06/2025.'
+                'Valor de participação: R$ 1.600,00. Inclui transporte fluvial Manaus/Maués ida e volta, '
+                'transporte fluvial Maués/Ilha Michellis ida e volta, alimentação completa durante toda a missão, '
+                'água mineral à vontade e 2 camisetas personalizadas da missão.'
             ),
+            'Doação solidária: 5 cestas básicas compradas em Manaus, valor médio de R$ 90,00 cada, totalizando R$ 450,00;',
+            'Total financeiro por missionário: R$ 2.050,00;',
+            'Por conta do missionário: passagem aérea até Manaus ida e volta, seguro de vida e rede;',
             (
-                'Para EFETUAR a sua inscrição é preciso fazer um adiantamento de R$ 200,00 reais. Esse valor '
-                'não é reembolsável devido aos compromissos e será descontado do valor da participação como uma parcela.'
+                'Conta oficial para depósitos: Nome Missão Andrews, Banco Bradesco, Agência 2403, '
+                'Conta Corrente 58653-6, Pix (CNPJ) 64.077.212/0001-50.'
             ),
-            'O adiantamento deverá ser feito via pix: inst.missaoandrews@gmail.com',
-            'Comprovante da inscrição enviar para os financeiros: Sâmela Polone – (16) 99759-2801',
+            'Valores e informações podem sofrer ajustes conforme a realidade do período.',
         ], styles),
         PageBreak(),
         section_title('DADOS PESSOAIS', styles),

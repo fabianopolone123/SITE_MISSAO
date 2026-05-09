@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import PanelPermission, Registration, Volunteer
+from .models import MissionaryPayment, PanelPermission, Registration, Volunteer
 
 
 def create_registration(username='voluntario', password='senha-forte-123'):
@@ -269,6 +269,7 @@ class VolunteerDashboardTests(TestCase):
         self.assertNotContains(response, '<a class="menu-item " href="/painel/">Inscritos</a>', html=True)
         self.assertNotContains(response, '<a class="menu-item " href="/painel/financeiro/">Financeiro</a>', html=True)
         self.assertNotContains(response, '<a class="menu-item " href="/painel/permissoes/">Permiss&otilde;es</a>', html=True)
+        self.assertContains(response, reverse('volunteer_financial_dashboard'))
 
     def test_volunteer_documentation_dashboard_renders_documentation_controls(self):
         user, _, volunteer = create_registration()
@@ -280,6 +281,69 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'Documenta&ccedil;&atilde;o pendente')
         self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
         self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
+
+    def test_volunteer_financial_dashboard_renders_pix_and_payment_fields(self):
+        user, _, volunteer = create_registration()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('volunteer_financial_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '64.077.212/0001-50')
+        self.assertContains(response, 'R$ 1.600,00')
+        self.assertContains(response, 'R$ 450,00')
+        self.assertContains(response, 'R$ 2.050,00')
+        self.assertEqual(MissionaryPayment.objects.filter(volunteer=volunteer).count(), 2)
+
+    def test_volunteer_can_upload_payment_receipt(self):
+        user, _, volunteer = create_registration()
+        self.client.force_login(user)
+        self.client.get(reverse('volunteer_financial_dashboard'))
+        payment = MissionaryPayment.objects.get(volunteer=volunteer, payment_type='participacao')
+
+        response = self.client.post(
+            reverse('volunteer_payment_upload', args=[payment.id]),
+            {
+                'receipt': SimpleUploadedFile(
+                    'comprovante.pdf',
+                    b'%PDF-1.4 comprovante',
+                    content_type='application/pdf',
+                ),
+            },
+        )
+
+        payment.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(payment.has_receipt)
+        self.assertFalse(payment.is_confirmed)
+
+    def test_admin_financial_dashboard_can_confirm_missionary_payment(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        _, _, volunteer = create_registration()
+        payment = MissionaryPayment.objects.create(
+            volunteer=volunteer,
+            payment_type='participacao',
+            amount='1600.00',
+            receipt=SimpleUploadedFile(
+                'comprovante.pdf',
+                b'%PDF-1.4 comprovante',
+                content_type='application/pdf',
+            ),
+        )
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse('financial_dashboard'),
+            {
+                'missionary_payment_id': payment.id,
+                'action': 'confirm',
+            },
+        )
+
+        payment.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(payment.is_confirmed)
+        self.assertEqual(payment.confirmed_by, admin)
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()
@@ -303,7 +367,9 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertTrue(response.content.startswith(b'%PDF'))
-        self.assertIn(b'AMAZONAS SEM FRONTEIRAS 2025', response.content)
+        self.assertIn(b'AMAZONAS SEM FRONTEIRAS 2026', response.content)
+        self.assertIn(b'64.077.212/0001-50', response.content)
+        self.assertIn(b'R$ 2.050,00', response.content)
         self.assertIn(volunteer.full_name.encode(), response.content)
 
     def test_volunteer_can_upload_documentation_files(self):

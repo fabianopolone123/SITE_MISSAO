@@ -628,6 +628,90 @@ button:focus,
     gap: 16px;
 }
 
+.payment-summary-grid,
+.payment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.payment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payment-summary-card,
+.payment-card,
+.pix-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfa;
+}
+
+.payment-summary-card {
+    display: grid;
+    gap: 5px;
+    padding: 16px;
+}
+
+.payment-summary-card span,
+.payment-summary-card small {
+    color: var(--muted);
+}
+
+.payment-summary-card strong {
+    color: var(--green-dark);
+    font-size: 1.45rem;
+}
+
+.payment-card {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+}
+
+.payment-card h3 {
+    margin: 0 0 6px;
+}
+
+.payment-card strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--green-dark);
+    font-size: 1.3rem;
+}
+
+.pix-card {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 16px 0 0;
+    padding: 16px;
+}
+
+.pix-card div {
+    display: grid;
+    gap: 4px;
+}
+
+.pix-card dt {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.pix-card dd {
+    margin: 0;
+    font-weight: 800;
+}
+
+.pix-copy-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .text-link-button {
     display: inline;
     width: auto;
@@ -884,6 +968,12 @@ td a {
     }
 
     .document-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-summary-grid,
+    .payment-grid,
+    .pix-card {
         grid-template-columns: 1fr;
     }
 }

@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import FinancialTransaction, PanelPermission, Volunteer, YES_NO_CHOICES
+from .models import FinancialTransaction, MissionaryPayment, PanelPermission, Volunteer, YES_NO_CHOICES
 
 
 class SignUpForm(UserCreationForm):
@@ -91,6 +91,29 @@ class VolunteerDocumentationForm(forms.ModelForm):
                 self.add_error(field_name, 'Envie um arquivo PDF.')
 
         return cleaned_data
+
+
+class MissionaryPaymentReceiptForm(forms.ModelForm):
+    class Meta:
+        model = MissionaryPayment
+        fields = ['receipt']
+        labels = {
+            'receipt': 'Comprovante de pagamento',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['receipt'].required = True
+        self.fields['receipt'].widget.attrs.setdefault('class', 'form-control')
+
+    def clean_receipt(self):
+        receipt = self.cleaned_data['receipt']
+        allowed_suffixes = {'.pdf', '.jpg', '.jpeg', '.png'}
+
+        if Path(receipt.name).suffix.lower() not in allowed_suffixes:
+            raise forms.ValidationError('Envie um comprovante em PDF, JPG ou PNG.')
+
+        return receipt
 
 
 class PanelPermissionForm(forms.ModelForm):

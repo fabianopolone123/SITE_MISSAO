@@ -2,5 +2,6 @@
     <a class="menu-item {% if active_menu == 'volunteer' %}active{% endif %}" href="{% url 'volunteer_dashboard' %}">Minha inscri&ccedil;&atilde;o</a>
     {% if registration %}
         <a class="menu-item {% if active_menu == 'documentation' %}active{% endif %}" href="{% url 'volunteer_documentation_dashboard' %}">Documenta&ccedil;&atilde;o</a>
+        <a class="menu-item {% if active_menu == 'missionary_financial' %}active{% endif %}" href="{% url 'volunteer_financial_dashboard' %}">Financeiro</a>
     {% endif %}
 </nav>

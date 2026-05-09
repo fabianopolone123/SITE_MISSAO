@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -16,6 +18,16 @@ FINANCIAL_TRANSACTION_TYPES = [
     ('entrada', 'Entrada'),
     ('saida', 'Saida'),
 ]
+
+MISSIONARY_PAYMENT_TYPES = [
+    ('participacao', 'Taxa de participacao'),
+    ('cestas', 'Doacao solidaria - 5 cestas basicas'),
+]
+
+MISSIONARY_PAYMENT_AMOUNTS = {
+    'participacao': '1600.00',
+    'cestas': '450.00',
+}
 
 
 class PanelPermission(models.Model):
@@ -144,3 +156,49 @@ class FinancialTransaction(models.Model):
 
     def __str__(self):
         return f'{self.get_transaction_type_display()} - {self.category} - R$ {self.amount}'
+
+
+class MissionaryPayment(models.Model):
+    volunteer = models.ForeignKey(Volunteer, on_delete=models.CASCADE, related_name='payments')
+    payment_type = models.CharField('Tipo de pagamento', max_length=20, choices=MISSIONARY_PAYMENT_TYPES)
+    amount = models.DecimalField('Valor', max_digits=10, decimal_places=2)
+    receipt = models.FileField('Comprovante', upload_to='comprovantes_missionarios/', blank=True)
+    submitted_at = models.DateTimeField('Enviado em', null=True, blank=True)
+    is_confirmed = models.BooleanField('Conferido pelo financeiro', default=False)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='confirmed_missionary_payments',
+    )
+    confirmed_at = models.DateTimeField('Conferido em', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Pagamento de missionario'
+        verbose_name_plural = 'Pagamentos de missionarios'
+        unique_together = ('volunteer', 'payment_type')
+        ordering = ['volunteer__full_name', 'payment_type']
+
+    def __str__(self):
+        return f'{self.volunteer.full_name} - {self.get_payment_type_display()}'
+
+    @property
+    def has_receipt(self):
+        return bool(self.receipt)
+
+    @property
+    def status_label(self):
+        if self.is_confirmed:
+            return 'Conferido'
+        if self.has_receipt:
+            return 'Pago - aguardando conferencia'
+        return 'Pendente'
+
+    @property
+    def amount_brl(self):
+        amount = Decimal(str(self.amount))
+        value = f'{amount:,.2f}'
+        return value.replace(',', 'X').replace('.', ',').replace('X', '.')
