@@ -3,6 +3,7 @@ from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.forms import formset_factory, modelformset_factory
 from django.http import HttpResponse
@@ -139,8 +140,39 @@ def volunteer_dashboard(request):
     try:
         registration = request.user.registration
     except Registration.DoesNotExist:
-        messages.error(request, 'Nenhuma inscricao foi encontrada para este usuario.')
-        return redirect('signup')
+        registration = None
+
+    if registration is None:
+        VolunteerFormSet = formset_factory(VolunteerForm, extra=0, min_num=1, validate_min=True, max_num=20)
+
+        if request.method == 'POST':
+            formset = VolunteerFormSet(request.POST, prefix='volunteers')
+
+            if formset.is_valid():
+                with transaction.atomic():
+                    registration = Registration.objects.create(user=request.user)
+
+                    for form in formset:
+                        volunteer = form.save(commit=False)
+                        volunteer.registration = registration
+                        volunteer.save()
+
+                messages.success(request, 'Perfil missionario criado com sucesso.')
+                return redirect('volunteer_dashboard')
+        else:
+            formset = VolunteerFormSet(prefix='volunteers')
+
+        return render(
+            request,
+            'registration/volunteer_dashboard.html',
+            {
+                'registration': registration,
+                'formset': formset,
+                'panel_permissions': get_panel_permissions(request.user),
+                'active_menu': 'volunteer',
+                'is_creating_missionary_profile': True,
+            },
+        )
 
     VolunteerFormSet = modelformset_factory(Volunteer, form=VolunteerForm, extra=0)
     queryset = registration.volunteers.order_by('created_at')
@@ -173,6 +205,7 @@ def volunteer_dashboard(request):
             'formset': formset,
             'panel_permissions': get_panel_permissions(request.user),
             'active_menu': 'volunteer',
+            'is_creating_missionary_profile': False,
         },
     )
 

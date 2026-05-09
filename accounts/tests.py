@@ -57,6 +57,36 @@ def volunteer_post_data(volunteer, full_name):
     }
 
 
+def new_volunteer_post_data(full_name='Admin Missionario'):
+    return {
+        'volunteers-TOTAL_FORMS': '1',
+        'volunteers-INITIAL_FORMS': '0',
+        'volunteers-MIN_NUM_FORMS': '1',
+        'volunteers-MAX_NUM_FORMS': '20',
+        'volunteers-0-full_name': full_name,
+        'volunteers-0-birth_date': '2000-01-01',
+        'volunteers-0-gender': 'masculino',
+        'volunteers-0-full_address': 'Rua Teste, 123',
+        'volunteers-0-phone': '11999999999',
+        'volunteers-0-email': 'admin@example.com',
+        'volunteers-0-identity_document': '123456',
+        'volunteers-0-cpf': '000.000.000-00',
+        'volunteers-0-guardian_name': '',
+        'volunteers-0-guardian_phone': '',
+        'volunteers-0-allergies': '',
+        'volunteers-0-medication_in_use': '',
+        'volunteers-0-special_notes': '',
+        'volunteers-0-education': '',
+        'volunteers-0-wants_to_participate': 'sim',
+        'volunteers-0-understands_no_payment': 'sim',
+        'volunteers-0-aware_pays_tickets': 'sim',
+        'volunteers-0-aware_pays_project_fee': 'sim',
+        'volunteers-0-aware_documents_vaccines': 'sim',
+        'volunteers-0-aware_non_refundable_fee': 'sim',
+        'volunteers-0-city_and_date': 'Sao Paulo, 01/01/2026',
+    }
+
+
 class SignupViewTests(TestCase):
     def test_signup_page_starts_with_one_volunteer_form(self):
         response = self.client.get(reverse('signup'))
@@ -149,6 +179,26 @@ class AdminDashboardTests(TestCase):
 
 
 class VolunteerDashboardTests(TestCase):
+    def test_admin_without_registration_can_open_missionary_profile_creation(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('volunteer_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Criar perfil mission&aacute;rio')
+        self.assertEqual(len(response.context['formset'].forms), 1)
+
+    def test_admin_without_registration_can_create_missionary_profile(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        self.client.force_login(admin)
+
+        response = self.client.post(reverse('volunteer_dashboard'), new_volunteer_post_data())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Registration.objects.filter(user=admin).exists())
+        self.assertTrue(Volunteer.objects.filter(registration__user=admin, full_name='Admin Missionario').exists())
+
     def test_volunteer_can_update_only_own_registration(self):
         user, _, volunteer = create_registration()
         _, _, other_volunteer = create_registration(username='outro')
