@@ -109,6 +109,19 @@ class AdminDashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, user.username)
 
+    def test_admin_dashboard_renders_volunteer_search_and_detail_modals(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        _, registration, volunteer = create_registration()
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('admin_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="volunteer-search"')
+        self.assertContains(response, f'data-modal-target="registration-modal-{registration.id}"')
+        self.assertContains(response, f'data-modal-target="volunteer-modal-{volunteer.id}"')
+        self.assertContains(response, 'Mission&aacute;rios deste login')
+
 
 class VolunteerDashboardTests(TestCase):
     def test_volunteer_can_update_only_own_registration(self):
