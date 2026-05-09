@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import FinancialTransaction, Volunteer, YES_NO_CHOICES
+from .models import FinancialTransaction, PanelPermission, Volunteer, YES_NO_CHOICES
 
 
 class SignUpForm(UserCreationForm):
@@ -59,6 +59,44 @@ class VolunteerForm(forms.ModelForm):
             'work_evangelism',
         ]:
             self.fields[field_name].widget.attrs['class'] = 'checkbox-control'
+
+
+class PanelPermissionForm(forms.ModelForm):
+    is_staff = forms.BooleanField(label='Acesso administrativo', required=False)
+
+    class Meta:
+        model = PanelPermission
+        fields = [
+            'is_staff',
+            'can_view_registrations',
+            'can_manage_financial',
+            'can_manage_permissions',
+        ]
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        initial = kwargs.pop('initial', {})
+
+        if user is not None:
+            initial['is_staff'] = user.is_staff
+
+        super().__init__(*args, initial=initial, **kwargs)
+
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'checkbox-control'
+
+    def save(self, commit=True):
+        permission = super().save(commit=False)
+
+        if self.user is not None:
+            self.user.is_staff = self.cleaned_data['is_staff']
+            if commit:
+                self.user.save(update_fields=['is_staff'])
+
+        if commit:
+            permission.save()
+
+        return permission
 
 
 class FinancialTransactionForm(forms.ModelForm):

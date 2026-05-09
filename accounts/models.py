@@ -18,6 +18,21 @@ FINANCIAL_TRANSACTION_TYPES = [
 ]
 
 
+class PanelPermission(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='panel_permission')
+    can_view_registrations = models.BooleanField('Ver inscritos', default=False)
+    can_manage_financial = models.BooleanField('Acessar financeiro', default=False)
+    can_manage_permissions = models.BooleanField('Gerenciar permissoes', default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Permissao do painel'
+        verbose_name_plural = 'Permissoes do painel'
+
+    def __str__(self):
+        return f'Permissoes de {self.user.username}'
+
+
 class Registration(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)

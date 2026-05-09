@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permiss&otilde;es | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body class="admin-body">
+    <main class="admin-page">
+        <header class="admin-header">
+            <div class="page-brand">
+                <img class="page-logo" src="{% static 'accounts/images/logo-full-transparent.png' %}" alt="Miss&atilde;o Andrews">
+                <div>
+                    <p class="eyebrow">Painel administrativo</p>
+                    <h1>Permiss&otilde;es</h1>
+                </div>
+            </div>
+            <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+        </header>
+
+        {% include "registration/partials/admin_menu.html" %}
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="form-alert success-alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <section class="admin-section">
+            <h2>Usu&aacute;rios cadastrados</h2>
+            <div class="table-wrap">
+                <table class="permissions-table">
+                    <thead>
+                        <tr>
+                            <th>Usu&aacute;rio</th>
+                            <th>E-mail</th>
+                            <th>Acesso</th>
+                            <th>Bot&otilde;es liberados</th>
+                            <th>A&ccedil;&atilde;o</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in users %}
+                            <tr>
+                                <td>{{ account.username }}</td>
+                                <td>{{ account.email|default:"-" }}</td>
+                                <td>
+                                    <form method="post" class="permission-form" id="permission-form-{{ account.id }}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="user_id" value="{{ account.id }}">
+                                        <label class="inline-check">
+                                            <input type="checkbox" name="is_staff" class="checkbox-control" {% if account.is_staff %}checked{% endif %}>
+                                            Admin
+                                        </label>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="permission-options">
+                                        <label class="inline-check" form="permission-form-{{ account.id }}">
+                                            <input form="permission-form-{{ account.id }}" type="checkbox" name="can_view_registrations" class="checkbox-control" {% if account.panel_permission.can_view_registrations %}checked{% endif %}>
+                                            Inscritos
+                                        </label>
+                                        <label class="inline-check" form="permission-form-{{ account.id }}">
+                                            <input form="permission-form-{{ account.id }}" type="checkbox" name="can_manage_financial" class="checkbox-control" {% if account.panel_permission.can_manage_financial %}checked{% endif %}>
+                                            Financeiro
+                                        </label>
+                                        <label class="inline-check" form="permission-form-{{ account.id }}">
+                                            <input form="permission-form-{{ account.id }}" type="checkbox" name="can_manage_permissions" class="checkbox-control" {% if account.panel_permission.can_manage_permissions %}checked{% endif %}>
+                                            Permiss&otilde;es
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button type="submit" form="permission-form-{{ account.id }}" class="table-button">Salvar</button>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">Nenhum usu&aacute;rio cadastrado.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

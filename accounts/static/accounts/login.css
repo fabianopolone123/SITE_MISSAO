@@ -516,6 +516,30 @@ button:focus,
     gap: 16px;
 }
 
+.permission-form {
+    margin: 0;
+}
+
+.permission-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+}
+
+.inline-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+}
+
+.table-button {
+    min-height: 38px;
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 0.92rem;
+}
+
 .table-wrap {
     overflow-x: auto;
     width: 100%;

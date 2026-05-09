@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha inscri&ccedil;&atilde;o | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body class="form-body">
+    <main class="signup-page">
+        <form method="post" class="signup-shell" novalidate>
+            {% csrf_token %}
+            {{ formset.management_form }}
+
+            <header class="signup-header">
+                <div class="page-brand">
+                    <img class="page-logo" src="{% static 'accounts/images/logo-full-transparent.png' %}" alt="Miss&atilde;o Andrews">
+                    <div>
+                        <p class="eyebrow">Minha inscri&ccedil;&atilde;o</p>
+                        <h1>Dados cadastrados</h1>
+                    </div>
+                </div>
+                <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+            </header>
+
+            {% include "registration/partials/admin_menu.html" %}
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="form-alert success-alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <section class="form-section">
+                <h2>Inscri&ccedil;&atilde;o #{{ registration.id }}</h2>
+                <p class="section-note">Login: {{ request.user.username }} | Criada em {{ registration.created_at|date:"d/m/Y H:i" }}</p>
+            </section>
+
+            <div id="volunteer-forms">
+                {% for volunteer_form in formset %}
+                    <section class="volunteer-card">
+                        <div class="volunteer-title">
+                            <h2>Volunt&aacute;rio {{ forloop.counter }}</h2>
+                        </div>
+                        {% include "registration/partials/volunteer_fields.html" with form=volunteer_form %}
+                    </section>
+                {% endfor %}
+            </div>
+
+            <div class="signup-actions">
+                <button type="submit">Salvar altera&ccedil;&otilde;es</button>
+            </div>
+        </form>
+    </main>
+</body>
+</html>

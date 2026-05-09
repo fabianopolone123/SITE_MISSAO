@@ -1,17 +1,74 @@
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.db.models import Count, Q, Sum
-from django.forms import formset_factory
-from django.shortcuts import redirect, render
+from django.forms import formset_factory, modelformset_factory
+from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import FinancialTransactionForm, SignUpForm, VolunteerForm
-from .models import FinancialTransaction, Registration, Volunteer
+from .forms import FinancialTransactionForm, PanelPermissionForm, SignUpForm, VolunteerForm
+from .models import FinancialTransaction, PanelPermission, Registration, Volunteer
 
 
-def is_admin_user(user):
-    return user.is_authenticated and user.is_staff
+PANEL_PERMISSION_FIELDS = {
+    'registrations': 'can_view_registrations',
+    'financial': 'can_manage_financial',
+    'permissions': 'can_manage_permissions',
+}
+
+
+def get_panel_permissions(user):
+    permissions = {
+        'can_view_registrations': False,
+        'can_manage_financial': False,
+        'can_manage_permissions': False,
+    }
+
+    if not user.is_authenticated:
+        return permissions
+
+    if user.is_superuser:
+        return {key: True for key in permissions}
+
+    panel_permission = getattr(user, 'panel_permission', None)
+    if panel_permission is None:
+        return permissions
+
+    for key in permissions:
+        permissions[key] = getattr(panel_permission, key)
+
+    return permissions
+
+
+def has_panel_permission(user, permission_key):
+    if not user.is_authenticated:
+        return False
+
+    field_name = PANEL_PERMISSION_FIELDS[permission_key]
+    return get_panel_permissions(user)[field_name]
+
+
+def can_view_registrations(user):
+    return has_panel_permission(user, 'registrations')
+
+
+def can_manage_financial(user):
+    return has_panel_permission(user, 'financial')
+
+
+def can_manage_permissions(user):
+    return has_panel_permission(user, 'permissions')
+
+
+def first_available_panel_url(user):
+    if has_panel_permission(user, 'registrations'):
+        return 'admin_dashboard'
+    if has_panel_permission(user, 'financial'):
+        return 'financial_dashboard'
+    if has_panel_permission(user, 'permissions'):
+        return 'permissions_dashboard'
+    return 'volunteer_dashboard'
 
 
 class SmartLoginView(LoginView):
@@ -19,7 +76,7 @@ class SmartLoginView(LoginView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['logged_redirect_url'] = 'admin_dashboard' if self.request.user.is_staff else 'signup_success'
+        context['logged_redirect_url'] = first_available_panel_url(self.request.user)
         return context
 
 
@@ -61,7 +118,50 @@ def signup_success(request):
     return render(request, 'registration/signup_success.html')
 
 
-@user_passes_test(is_admin_user, login_url='login')
+@login_required(login_url='login')
+def volunteer_dashboard(request):
+    try:
+        registration = request.user.registration
+    except Registration.DoesNotExist:
+        messages.error(request, 'Nenhuma inscricao foi encontrada para este usuario.')
+        return redirect('signup')
+
+    VolunteerFormSet = modelformset_factory(Volunteer, form=VolunteerForm, extra=0)
+    queryset = registration.volunteers.order_by('created_at')
+
+    if request.method == 'POST':
+        formset = VolunteerFormSet(request.POST, queryset=queryset, prefix='volunteers')
+
+        if formset.is_valid():
+            allowed_volunteer_ids = set(queryset.values_list('id', flat=True))
+            submitted_volunteer_ids = {
+                form.cleaned_data['id'].id
+                for form in formset.forms
+                if form.cleaned_data.get('id')
+            }
+
+            if not submitted_volunteer_ids.issubset(allowed_volunteer_ids):
+                messages.error(request, 'Nao foi possivel atualizar um cadastro de outro usuario.')
+            else:
+                formset.save()
+                messages.success(request, 'Dados atualizados com sucesso.')
+                return redirect('volunteer_dashboard')
+    else:
+        formset = VolunteerFormSet(queryset=queryset, prefix='volunteers')
+
+    return render(
+        request,
+        'registration/volunteer_dashboard.html',
+        {
+            'registration': registration,
+            'formset': formset,
+            'panel_permissions': get_panel_permissions(request.user),
+            'active_menu': 'volunteer',
+        },
+    )
+
+
+@user_passes_test(can_view_registrations, login_url='login')
 def admin_dashboard(request):
     registrations = (
         Registration.objects
@@ -81,6 +181,8 @@ def admin_dashboard(request):
         'registrations': registrations.annotate(total_volunteers=Count('volunteers')),
         'volunteers': volunteers,
         'gender_summary': volunteers.values('gender').annotate(total=Count('id')).order_by('gender'),
+        'panel_permissions': get_panel_permissions(request.user),
+        'active_menu': 'registrations',
         'pending_questionnaire_count': volunteers.filter(
             Q(wants_to_participate='nao')
             | Q(understands_no_payment='nao')
@@ -93,7 +195,7 @@ def admin_dashboard(request):
     return render(request, 'registration/admin_dashboard.html', context)
 
 
-@user_passes_test(is_admin_user, login_url='login')
+@user_passes_test(can_manage_financial, login_url='login')
 def financial_dashboard(request):
     if request.method == 'POST':
         form = FinancialTransactionForm(request.POST, request.FILES)
@@ -118,6 +220,46 @@ def financial_dashboard(request):
         'balance': balance,
         'expense_count': transactions.filter(transaction_type='saida').count(),
         'receipt_count': transactions.exclude(receipt='').count(),
+        'panel_permissions': get_panel_permissions(request.user),
+        'active_menu': 'financial',
         'category_summary': transactions.values('category', 'transaction_type').annotate(total=Sum('amount')).order_by('category'),
     }
     return render(request, 'registration/financial_dashboard.html', context)
+
+
+@user_passes_test(can_manage_permissions, login_url='login')
+def permissions_dashboard(request):
+    if request.method == 'POST':
+        target_user = get_object_or_404(
+            User,
+            pk=request.POST.get('user_id'),
+            registration__isnull=False,
+            is_superuser=False,
+        )
+        permission, _ = PanelPermission.objects.get_or_create(user=target_user)
+        form = PanelPermissionForm(request.POST, instance=permission, user=target_user)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Permissoes de {target_user.username} atualizadas.')
+            return redirect('permissions_dashboard')
+    else:
+        form = None
+
+    users = (
+        User.objects
+        .filter(registration__isnull=False, is_superuser=False)
+        .select_related('registration', 'panel_permission')
+        .order_by('username')
+    )
+
+    return render(
+        request,
+        'registration/permissions_dashboard.html',
+        {
+            'users': users,
+            'form': form,
+            'panel_permissions': get_panel_permissions(request.user),
+            'active_menu': 'permissions',
+        },
+    )

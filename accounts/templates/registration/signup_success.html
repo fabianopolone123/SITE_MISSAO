@@ -18,6 +18,9 @@
                 </div>
             </div>
             <p class="section-note">Os dados da ficha de inscri&ccedil;&atilde;o foram salvos no sistema.</p>
+            {% if user.is_authenticated %}
+                <a class="primary-link-button" href="{% url 'volunteer_dashboard' %}">Ver minha inscri&ccedil;&atilde;o</a>
+            {% endif %}
             <a class="secondary-action" href="{% url 'login' %}">Ir para o login</a>
         </section>
     </main>

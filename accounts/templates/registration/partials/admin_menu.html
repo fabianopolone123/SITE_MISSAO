@@ -1,0 +1,12 @@
+<nav class="admin-menu" aria-label="Menu do painel administrativo">
+    {% if panel_permissions.can_view_registrations %}
+        <a class="menu-item {% if active_menu == 'registrations' %}active{% endif %}" href="{% url 'admin_dashboard' %}">Inscritos</a>
+    {% endif %}
+    {% if panel_permissions.can_manage_financial %}
+        <a class="menu-item {% if active_menu == 'financial' %}active{% endif %}" href="{% url 'financial_dashboard' %}">Financeiro</a>
+    {% endif %}
+    {% if panel_permissions.can_manage_permissions %}
+        <a class="menu-item {% if active_menu == 'permissions' %}active{% endif %}" href="{% url 'permissions_dashboard' %}">Permiss&otilde;es</a>
+    {% endif %}
+    <a class="menu-item {% if active_menu == 'volunteer' %}active{% endif %}" href="{% url 'volunteer_dashboard' %}">Minha inscri&ccedil;&atilde;o</a>
+</nav>
