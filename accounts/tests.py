@@ -303,6 +303,8 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertTrue(response.content.startswith(b'%PDF'))
+        self.assertIn(b'AMAZONAS SEM FRONTEIRAS 2025', response.content)
+        self.assertIn(volunteer.full_name.encode(), response.content)
 
     def test_volunteer_can_upload_documentation_files(self):
         user, _, volunteer = create_registration()
