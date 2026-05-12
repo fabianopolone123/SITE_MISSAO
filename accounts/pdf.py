@@ -93,7 +93,7 @@ def first_page_header(styles):
         Paragraph('Rua Hélio Castro Maia, 529 - (Sala 1)', styles['HeaderText']),
         Paragraph('Bairro Jardim Paulista - Campo Grande-MS', styles['HeaderText']),
         Paragraph('CEP: 79050-020 - (+55 67 99239-3858)', styles['HeaderText']),
-        Paragraph('Avante Sem Retroceder', styles['HeaderMotto']),
+        Paragraph('Amazonas Sem Fronteiras 2026', styles['HeaderMotto']),
     ]
     table = Table([[logo, institution]], colWidths=[5.4 * cm, 11.6 * cm])
     table.setStyle(TableStyle([

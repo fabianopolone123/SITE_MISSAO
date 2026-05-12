@@ -40,7 +40,7 @@ PANEL_PERMISSION_FIELDS = {
 
 MISSION_PAYMENT_PIX_KEY = '64.077.212/0001-50'
 MISSION_PAYMENT_BANK_INFO = {
-    'nome': 'Missao Andrews',
+    'nome': 'Missão Andrews',
     'banco': 'Bradesco',
     'agencia': '2403',
     'conta_corrente': '58653-6',
@@ -190,7 +190,7 @@ def volunteer_dashboard(request):
                         volunteer.registration = registration
                         volunteer.save()
 
-                messages.success(request, 'Perfil missionario criado com sucesso.')
+                messages.success(request, 'Perfil missionário criado com sucesso.')
                 return redirect('volunteer_dashboard')
         else:
             formset = VolunteerFormSet(prefix='volunteers')
@@ -222,7 +222,7 @@ def volunteer_dashboard(request):
             }
 
             if not submitted_volunteer_ids.issubset(allowed_volunteer_ids):
-                messages.error(request, 'Nao foi possivel atualizar um cadastro de outro usuario.')
+                messages.error(request, 'Não foi possível atualizar um cadastro de outro usuário.')
             else:
                 formset.save()
                 messages.success(request, 'Dados atualizados com sucesso.')
@@ -248,7 +248,7 @@ def volunteer_documentation_dashboard(request):
     try:
         registration = request.user.registration
     except Registration.DoesNotExist:
-        messages.error(request, 'Crie seu perfil missionario antes de enviar documentos.')
+        messages.error(request, 'Crie seu perfil missionário antes de enviar documentos.')
         return redirect('volunteer_dashboard')
 
     return render(
@@ -267,7 +267,7 @@ def volunteer_financial_dashboard(request):
     try:
         registration = request.user.registration
     except Registration.DoesNotExist:
-        messages.error(request, 'Crie seu perfil missionario antes de enviar comprovantes.')
+        messages.error(request, 'Crie seu perfil missionário antes de enviar comprovantes.')
         return redirect('volunteer_dashboard')
 
     volunteers = registration.volunteers.order_by('created_at')
@@ -312,7 +312,7 @@ def volunteer_payment_upload(request, payment_id):
         payment.save()
         messages.success(request, f'Comprovante de {payment.get_payment_type_display()} enviado.')
     else:
-        messages.error(request, f'Nao foi possivel enviar o comprovante de {payment.get_payment_type_display()}.')
+        messages.error(request, f'Não foi possível enviar o comprovante de {payment.get_payment_type_display()}.')
 
     return redirect('volunteer_financial_dashboard')
 
@@ -345,9 +345,9 @@ def volunteer_documentation_upload(request, volunteer_id):
 
     if form.is_valid():
         form.save()
-        messages.success(request, f'Documentacao de {volunteer.full_name} atualizada.')
+        messages.success(request, f'Documentação de {volunteer.full_name} atualizada.')
     else:
-        messages.error(request, f'Nao foi possivel atualizar a documentacao de {volunteer.full_name}.')
+        messages.error(request, f'Não foi possível atualizar a documentação de {volunteer.full_name}.')
 
     return redirect('volunteer_dashboard')
 
@@ -403,7 +403,7 @@ def financial_dashboard(request):
             payment.confirmed_by = None
             payment.confirmed_at = None
             payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
-            messages.success(request, 'Conferencia do comprovante removida.')
+            messages.success(request, 'Conferência do comprovante removida.')
 
         return redirect('financial_dashboard')
 
@@ -412,7 +412,7 @@ def financial_dashboard(request):
 
         if form.is_valid():
             form.save()
-            messages.success(request, 'Lancamento financeiro cadastrado com sucesso.')
+            messages.success(request, 'Lançamento financeiro cadastrado com sucesso.')
             return redirect('financial_dashboard')
     else:
         form = FinancialTransactionForm()
@@ -460,7 +460,7 @@ def permissions_dashboard(request):
 
         if form.is_valid():
             form.save()
-            messages.success(request, f'Permissoes de {target_user.username} atualizadas.')
+            messages.success(request, f'Permissões de {target_user.username} atualizadas.')
             return redirect('permissions_dashboard')
     else:
         form = None

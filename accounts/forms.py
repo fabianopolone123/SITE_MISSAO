@@ -15,9 +15,9 @@ class SignUpForm(UserCreationForm):
         model = User
         fields = ['username', 'email', 'password1', 'password2']
         labels = {
-            'username': 'Usuario',
+            'username': 'Usuário',
             'password1': 'Senha',
-            'password2': 'Confirmacao de senha',
+            'password2': 'Confirmação de senha',
         }
 
     def __init__(self, *args, **kwargs):
@@ -72,8 +72,8 @@ class VolunteerDocumentationForm(forms.ModelForm):
         model = Volunteer
         fields = ['signed_registration_document', 'insurance_policy_document']
         labels = {
-            'signed_registration_document': 'Ficha de inscricao assinada pelo gov.br',
-            'insurance_policy_document': 'Apolice de seguro assinada',
+            'signed_registration_document': 'Ficha de inscrição assinada pelo gov.br',
+            'insurance_policy_document': 'Apólice de seguro assinada',
         }
 
     def __init__(self, *args, **kwargs):
@@ -170,7 +170,7 @@ class FinancialTransactionForm(forms.ModelForm):
         labels = {
             'transaction_type': 'Tipo',
             'category': 'Categoria',
-            'description': 'Descricao',
+            'description': 'Descrição',
             'amount': 'Valor',
             'transaction_date': 'Data',
             'receipt': 'Anexar comprovante',
@@ -190,4 +190,4 @@ class FinancialTransactionForm(forms.ModelForm):
         try:
             return Decimal(normalized_amount)
         except InvalidOperation:
-            raise forms.ValidationError('Informe um valor valido no formato 1.234,56.')
+            raise forms.ValidationError('Informe um valor válido no formato 1.234,56.')
