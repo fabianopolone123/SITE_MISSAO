@@ -37,6 +37,14 @@ def yes_no_options(value):
     return f'{checkbox("Sim", value == "sim")}    {checkbox("Não", value == "nao")}'
 
 
+def display_choice(value):
+    if value == 'sim':
+        return 'Sim'
+    if value == 'nao':
+        return 'Não'
+    return ''
+
+
 def text(value):
     return escape(str(value or ''))
 
@@ -189,21 +197,32 @@ def build_registration_pdf(volunteer):
         field_line('CPF', volunteer.cpf, styles),
         field_line('Nome do responsável (se for menor de idade)', volunteer.guardian_name, styles),
         field_line('Telefone do Responsável', volunteer.guardian_phone, styles),
-        section_title('Informações médicas relevantes', styles),
-        field_line('Alergias', volunteer.allergies, styles),
-        field_line('Medicamento em uso', volunteer.medication_in_use, styles),
-        field_line('Observações especiais', volunteer.special_notes, styles),
+        section_title('Contato de emergência', styles),
+        field_line('Nome completo', volunteer.emergency_contact_name, styles),
+        field_line('Parentesco', volunteer.emergency_contact_relationship, styles),
+        field_line('Telefone', volunteer.emergency_contact_phone, styles),
+        section_title('Informações médicas', styles),
+        field_line('Possui alguma alergia?', display_choice(volunteer.has_allergies), styles),
+        field_line('Qual(is) alergia(s)?', volunteer.allergies, styles),
+        field_line('Faz uso de medicamentos contínuos?', display_choice(volunteer.has_continuous_medication), styles),
+        field_line('Nome, dosagem e horário dos medicamentos', volunteer.medication_in_use, styles),
+        field_line('Condições médicas relevantes ou necessidades especiais', volunteer.special_notes, styles),
+        field_line('Possui alguma restrição alimentar?', display_choice(volunteer.has_food_restriction), styles),
+        field_line('Qual(is) restrição(ões) alimentar(es)?', volunteer.food_restrictions, styles),
         section_title('Área de atuação e formação', styles),
         paragraph(
             '    '.join([
                 checkbox('Saúde', volunteer.work_health),
                 checkbox('Educação', volunteer.work_education),
-                checkbox('Auxílio geral', volunteer.work_general_help),
+                checkbox('Apoio geral', volunteer.work_general_help),
                 checkbox('Evangelismo', volunteer.work_evangelism),
+                checkbox('Outra', volunteer.work_other),
             ]),
             styles['FormBody'],
         ),
-        field_line('Qual a sua formação', volunteer.education, styles),
+        field_line('Outra área de atuação', volunteer.work_other_description, styles),
+        field_line('Qual a sua formação ou experiência principal?', volunteer.education, styles),
+        field_line('Outras habilidades que possam contribuir para a missão', volunteer.other_skills, styles),
         section_title('QUESTIONÁRIO', styles),
         field_line('1-Desejo participar voluntariamente da Missão Andrews', yes_no_options(volunteer.wants_to_participate), styles),
         field_line('2-Compreendo que atividades desenvolvidas são sem remuneração', yes_no_options(volunteer.understands_no_payment), styles),
@@ -212,6 +231,19 @@ def build_registration_pdf(volunteer):
         field_line('5-Estou ciente que meus documentos e vacinas devem estar em dia', yes_no_options(volunteer.aware_documents_vaccines), styles),
         field_line('6-Estou ciente que o valor da taxa de inscrição é não-reembolsável', yes_no_options(volunteer.aware_non_refundable_fee), styles),
         Spacer(1, 14),
+        section_title('Uso de imagem e declaração final', styles),
+        field_line(
+            'Autorizo o uso de minha imagem para fins institucionais, educativos e de divulgação',
+            yes_no_options(volunteer.authorizes_image_use),
+            styles,
+        ),
+        field_line('Declaro que as informações acima são verdadeiras', yes_no_options(volunteer.declares_true_information), styles),
+        field_line(
+            'Concordo em seguir as diretrizes, normas e regulamentos da viagem e da missão',
+            yes_no_options(volunteer.agrees_guidelines),
+            styles,
+        ),
+        Spacer(1, 8),
         info_card([
             paragraph(
                 'Ao preencher essa ficha, concordo em seguir as diretrizes e regulamentos estabelecidos para a viagem.',

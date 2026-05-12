@@ -506,6 +506,19 @@ button:focus,
     grid-column: 1 / -1;
 }
 
+.subsection-title {
+    margin: 6px 0 0;
+    color: var(--green-dark);
+    font-size: 1rem;
+}
+
+.field-hint {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
 .volunteer-title,
 .signup-actions {
     display: flex;

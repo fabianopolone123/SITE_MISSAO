@@ -69,14 +69,34 @@ class Volunteer(models.Model):
     cpf = models.CharField('CPF', max_length=20)
     guardian_name = models.CharField('Nome do responsável', max_length=180, blank=True)
     guardian_phone = models.CharField('Telefone do responsável', max_length=30, blank=True)
-    allergies = models.TextField('Alergias', blank=True)
-    medication_in_use = models.TextField('Medicamento em uso', blank=True)
-    special_notes = models.TextField('Observações especiais', blank=True)
+    emergency_contact_name = models.CharField('Nome completo do contato de emergência', max_length=180, blank=True)
+    emergency_contact_relationship = models.CharField('Parentesco do contato de emergência', max_length=80, blank=True)
+    emergency_contact_phone = models.CharField('Telefone do contato de emergência', max_length=30, blank=True)
+    has_allergies = models.CharField('Possui alguma alergia?', max_length=3, choices=YES_NO_CHOICES, blank=True)
+    allergies = models.TextField('Qual(is) alergia(s)?', blank=True)
+    has_continuous_medication = models.CharField(
+        'Faz uso de medicamentos contínuos?',
+        max_length=3,
+        choices=YES_NO_CHOICES,
+        blank=True,
+    )
+    medication_in_use = models.TextField('Nome, dosagem e horário dos medicamentos', blank=True)
+    special_notes = models.TextField('Condições médicas relevantes ou necessidades especiais', blank=True)
+    has_food_restriction = models.CharField(
+        'Possui alguma restrição alimentar?',
+        max_length=3,
+        choices=YES_NO_CHOICES,
+        blank=True,
+    )
+    food_restrictions = models.TextField('Qual(is) restrição(ões) alimentar(es)?', blank=True)
     work_health = models.BooleanField('Saúde', default=False)
     work_education = models.BooleanField('Educação', default=False)
-    work_general_help = models.BooleanField('Auxílio geral', default=False)
+    work_general_help = models.BooleanField('Apoio geral', default=False)
     work_evangelism = models.BooleanField('Evangelismo', default=False)
-    education = models.CharField('Qual a sua formação', max_length=180, blank=True)
+    work_other = models.BooleanField('Outra', default=False)
+    work_other_description = models.CharField('Outra área de atuação', max_length=160, blank=True)
+    education = models.CharField('Qual a sua formação ou experiência principal?', max_length=180, blank=True)
+    other_skills = models.TextField('Outras habilidades que possam contribuir para a missão', blank=True)
     wants_to_participate = models.CharField(
         'Desejo participar voluntariamente da Missão Andrews',
         max_length=3,
@@ -107,7 +127,25 @@ class Volunteer(models.Model):
         max_length=3,
         choices=YES_NO_CHOICES,
     )
-    city_and_date = models.CharField('Cidade e Data', max_length=120, blank=True)
+    authorizes_image_use = models.CharField(
+        'Autorizo o uso de minha imagem para fins institucionais, educativos e de divulgação',
+        max_length=3,
+        choices=YES_NO_CHOICES,
+        blank=True,
+    )
+    declares_true_information = models.CharField(
+        'Declaro que as informações acima são verdadeiras',
+        max_length=3,
+        choices=YES_NO_CHOICES,
+        blank=True,
+    )
+    agrees_guidelines = models.CharField(
+        'Concordo em seguir as diretrizes, normas e regulamentos da viagem e da missão',
+        max_length=3,
+        choices=YES_NO_CHOICES,
+        blank=True,
+    )
+    city_and_date = models.CharField('Local e data', max_length=120, blank=True)
     signed_registration_document = models.FileField(
         'Ficha de inscrição assinada',
         upload_to='documentos/fichas_assinadas/',

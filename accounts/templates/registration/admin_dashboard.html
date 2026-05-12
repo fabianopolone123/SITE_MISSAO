@@ -48,7 +48,7 @@
                 <strong>{{ education_count }}</strong>
             </article>
             <article class="report-card">
-                <span>Aux&iacute;lio geral</span>
+                <span>Apoio geral</span>
                 <strong>{{ general_help_count }}</strong>
             </article>
             <article class="report-card">
@@ -128,7 +128,7 @@
                                 <td>
                                     {% if volunteer.work_health %}Sa&uacute;de{% endif %}
                                     {% if volunteer.work_education %}{% if volunteer.work_health %}, {% endif %}Educa&ccedil;&atilde;o{% endif %}
-                                    {% if volunteer.work_general_help %}{% if volunteer.work_health or volunteer.work_education %}, {% endif %}Aux&iacute;lio geral{% endif %}
+                                    {% if volunteer.work_general_help %}{% if volunteer.work_health or volunteer.work_education %}, {% endif %}Apoio geral{% endif %}
                                     {% if volunteer.work_evangelism %}{% if volunteer.work_health or volunteer.work_education or volunteer.work_general_help %}, {% endif %}Evangelismo{% endif %}
                                 </td>
                                 <td>
@@ -185,7 +185,7 @@
                                 &Aacute;reas:
                                 {% if volunteer.work_health %}Sa&uacute;de{% endif %}
                                 {% if volunteer.work_education %}{% if volunteer.work_health %}, {% endif %}Educa&ccedil;&atilde;o{% endif %}
-                                {% if volunteer.work_general_help %}{% if volunteer.work_health or volunteer.work_education %}, {% endif %}Aux&iacute;lio geral{% endif %}
+                                {% if volunteer.work_general_help %}{% if volunteer.work_health or volunteer.work_education %}, {% endif %}Apoio geral{% endif %}
                                 {% if volunteer.work_evangelism %}{% if volunteer.work_health or volunteer.work_education or volunteer.work_general_help %}, {% endif %}Evangelismo{% endif %}
                                 {% if not volunteer.work_health and not volunteer.work_education and not volunteer.work_general_help and not volunteer.work_evangelism %}-{% endif %}
                             </p>
@@ -219,19 +219,28 @@
                     <div><dt>CPF</dt><dd>{{ volunteer.cpf }}</dd></div>
                     <div><dt>Respons&aacute;vel</dt><dd>{{ volunteer.guardian_name|default:"-" }}</dd></div>
                     <div><dt>Telefone do respons&aacute;vel</dt><dd>{{ volunteer.guardian_phone|default:"-" }}</dd></div>
+                    <div><dt>Contato de emerg&ecirc;ncia</dt><dd>{{ volunteer.emergency_contact_name|default:"-" }}</dd></div>
+                    <div><dt>Parentesco</dt><dd>{{ volunteer.emergency_contact_relationship|default:"-" }}</dd></div>
+                    <div><dt>Telefone de emerg&ecirc;ncia</dt><dd>{{ volunteer.emergency_contact_phone|default:"-" }}</dd></div>
                     <div class="wide-detail"><dt>Endere&ccedil;o</dt><dd>{{ volunteer.full_address }}</dd></div>
+                    <div><dt>Possui alergia?</dt><dd>{{ volunteer.get_has_allergies_display|default:"-" }}</dd></div>
                     <div class="wide-detail"><dt>Alergias</dt><dd>{{ volunteer.allergies|default:"-" }}</dd></div>
-                    <div class="wide-detail"><dt>Medicamento em uso</dt><dd>{{ volunteer.medication_in_use|default:"-" }}</dd></div>
-                    <div class="wide-detail"><dt>Observa&ccedil;&otilde;es especiais</dt><dd>{{ volunteer.special_notes|default:"-" }}</dd></div>
+                    <div><dt>Medicamento cont&iacute;nuo?</dt><dd>{{ volunteer.get_has_continuous_medication_display|default:"-" }}</dd></div>
+                    <div class="wide-detail"><dt>Medicamentos</dt><dd>{{ volunteer.medication_in_use|default:"-" }}</dd></div>
+                    <div class="wide-detail"><dt>Condi&ccedil;&otilde;es m&eacute;dicas</dt><dd>{{ volunteer.special_notes|default:"-" }}</dd></div>
+                    <div><dt>Restri&ccedil;&atilde;o alimentar?</dt><dd>{{ volunteer.get_has_food_restriction_display|default:"-" }}</dd></div>
+                    <div class="wide-detail"><dt>Restri&ccedil;&otilde;es alimentares</dt><dd>{{ volunteer.food_restrictions|default:"-" }}</dd></div>
                     <div><dt>Forma&ccedil;&atilde;o</dt><dd>{{ volunteer.education|default:"-" }}</dd></div>
+                    <div class="wide-detail"><dt>Outras habilidades</dt><dd>{{ volunteer.other_skills|default:"-" }}</dd></div>
                     <div>
                         <dt>&Aacute;reas</dt>
                         <dd>
                             {% if volunteer.work_health %}Sa&uacute;de{% endif %}
                             {% if volunteer.work_education %}{% if volunteer.work_health %}, {% endif %}Educa&ccedil;&atilde;o{% endif %}
-                            {% if volunteer.work_general_help %}{% if volunteer.work_health or volunteer.work_education %}, {% endif %}Aux&iacute;lio geral{% endif %}
+                            {% if volunteer.work_general_help %}{% if volunteer.work_health or volunteer.work_education %}, {% endif %}Apoio geral{% endif %}
                             {% if volunteer.work_evangelism %}{% if volunteer.work_health or volunteer.work_education or volunteer.work_general_help %}, {% endif %}Evangelismo{% endif %}
-                            {% if not volunteer.work_health and not volunteer.work_education and not volunteer.work_general_help and not volunteer.work_evangelism %}-{% endif %}
+                            {% if volunteer.work_other %}{% if volunteer.work_health or volunteer.work_education or volunteer.work_general_help or volunteer.work_evangelism %}, {% endif %}Outra{% if volunteer.work_other_description %}: {{ volunteer.work_other_description }}{% endif %}{% endif %}
+                            {% if not volunteer.work_health and not volunteer.work_education and not volunteer.work_general_help and not volunteer.work_evangelism and not volunteer.work_other %}-{% endif %}
                         </dd>
                     </div>
                     <div><dt>Deseja participar</dt><dd>{{ volunteer.get_wants_to_participate_display }}</dd></div>
@@ -240,6 +249,9 @@
                     <div><dt>Taxa do projeto</dt><dd>{{ volunteer.get_aware_pays_project_fee_display }}</dd></div>
                     <div><dt>Documentos e vacinas</dt><dd>{{ volunteer.get_aware_documents_vaccines_display }}</dd></div>
                     <div><dt>Taxa n&atilde;o reembols&aacute;vel</dt><dd>{{ volunteer.get_aware_non_refundable_fee_display }}</dd></div>
+                    <div><dt>Uso de imagem</dt><dd>{{ volunteer.get_authorizes_image_use_display|default:"-" }}</dd></div>
+                    <div><dt>Informa&ccedil;&otilde;es verdadeiras</dt><dd>{{ volunteer.get_declares_true_information_display|default:"-" }}</dd></div>
+                    <div><dt>Diretrizes da miss&atilde;o</dt><dd>{{ volunteer.get_agrees_guidelines_display|default:"-" }}</dd></div>
                     <div><dt>Cidade e data</dt><dd>{{ volunteer.city_and_date|default:"-" }}</dd></div>
                     <div>
                         <dt>Ficha assinada</dt>

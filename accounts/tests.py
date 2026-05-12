@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import MissionaryPayment, PanelPermission, Registration, Volunteer
 
@@ -101,6 +102,15 @@ class SignupViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'name="volunteers-0-wants_to_participate" value="sim" checked')
         self.assertNotContains(response, 'name="volunteers-0-understands_no_payment" value="sim" checked')
+
+    def test_signup_renders_new_missionary_fields_and_current_date(self):
+        response = self.client.get(reverse('signup'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Contato de emerg')
+        self.assertContains(response, 'Possui alguma restri')
+        self.assertContains(response, 'uso de fotos')
+        self.assertContains(response, timezone.localdate().strftime('%d/%m/%Y'))
 
 
 class AdminDashboardTests(TestCase):
