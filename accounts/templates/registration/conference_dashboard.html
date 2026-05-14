@@ -80,13 +80,11 @@
                                 <p class="section-note">Login: {{ group.volunteer.registration.user.username }}</p>
                             </div>
                             <div class="modal-actions">
-                                <a class="primary-link-button compact-link-button preview-open-link" id="preview-link-{{ group.volunteer.id }}" href="#" target="_blank" rel="noopener" aria-disabled="true">Abrir em nova aba</a>
                                 <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
                             </div>
                         </div>
 
-                        <div class="conference-profile-grid">
-                            <div class="conference-menu">
+                        <div class="conference-menu conference-modal-content">
                                 <section class="conference-block">
                                     <h3>Documenta&ccedil;&atilde;o</h3>
                                     {% if group.volunteer.signed_registration_document %}
@@ -96,7 +94,7 @@
                                                 <p class="section-note">{% if group.volunteer.signed_registration_document_confirmed %}Conferida{% else %}Aguardando confer&ecirc;ncia{% endif %}</p>
                                             </div>
                                             <div class="conference-actions">
-                                                <button type="button" class="secondary-button compact-link-button" data-preview-target="preview-frame-{{ group.volunteer.id }}" data-preview-src="{{ group.volunteer.signed_registration_document.url }}" data-preview-link="preview-link-{{ group.volunteer.id }}" data-preview-title="preview-title-{{ group.volunteer.id }}" data-preview-label="Ficha assinada">Ver arquivo</button>
+                                                <a class="primary-link-button secondary-button compact-link-button" href="{{ group.volunteer.signed_registration_document.url }}" target="_blank" rel="noopener">Ver arquivo</a>
                                                 <form method="post" class="permission-form">
                                                     {% csrf_token %}
                                                     <input type="hidden" name="volunteer_id" value="{{ group.volunteer.id }}">
@@ -118,7 +116,7 @@
                                                 <p class="section-note">{% if group.volunteer.insurance_policy_document_confirmed %}Conferida{% else %}Aguardando confer&ecirc;ncia{% endif %}</p>
                                             </div>
                                             <div class="conference-actions">
-                                                <button type="button" class="secondary-button compact-link-button" data-preview-target="preview-frame-{{ group.volunteer.id }}" data-preview-src="{{ group.volunteer.insurance_policy_document.url }}" data-preview-link="preview-link-{{ group.volunteer.id }}" data-preview-title="preview-title-{{ group.volunteer.id }}" data-preview-label="Ap&oacute;lice de seguro">Ver arquivo</button>
+                                                <a class="primary-link-button secondary-button compact-link-button" href="{{ group.volunteer.insurance_policy_document.url }}" target="_blank" rel="noopener">Ver arquivo</a>
                                                 <form method="post" class="permission-form">
                                                     {% csrf_token %}
                                                     <input type="hidden" name="volunteer_id" value="{{ group.volunteer.id }}">
@@ -195,13 +193,6 @@
                                         <p class="section-note">Nenhum comprovante de doa&ccedil;&atilde;o enviado.</p>
                                     {% endfor %}
                                 </section>
-                            </div>
-
-                            <aside class="conference-preview-panel">
-                                <p class="eyebrow">Visualiza&ccedil;&atilde;o</p>
-                                <h3 id="preview-title-{{ group.volunteer.id }}">Selecione um arquivo</h3>
-                                <iframe class="file-preview-frame" id="preview-frame-{{ group.volunteer.id }}" title="Visualiza&ccedil;&atilde;o de arquivo"></iframe>
-                            </aside>
                         </div>
                     </dialog>
                 {% empty %}
@@ -214,7 +205,6 @@
     <script>
         const openModalButtons = document.querySelectorAll('[data-modal-target]');
         const closeModalButtons = document.querySelectorAll('[data-modal-close]');
-        const previewButtons = document.querySelectorAll('[data-preview-target]');
 
         openModalButtons.forEach((button) => {
             button.addEventListener('click', () => {
@@ -235,27 +225,6 @@
         closeModalButtons.forEach((button) => {
             button.addEventListener('click', () => {
                 button.closest('dialog').close();
-            });
-        });
-
-        previewButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                const frame = document.getElementById(button.dataset.previewTarget);
-                const link = document.getElementById(button.dataset.previewLink);
-                const title = document.getElementById(button.dataset.previewTitle);
-
-                if (frame) {
-                    frame.src = button.dataset.previewSrc;
-                }
-
-                if (link) {
-                    link.href = button.dataset.previewSrc;
-                    link.removeAttribute('aria-disabled');
-                }
-
-                if (title) {
-                    title.textContent = button.dataset.previewLabel;
-                }
             });
         });
 
