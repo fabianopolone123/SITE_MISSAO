@@ -240,3 +240,18 @@ class MissionaryPayment(models.Model):
         amount = Decimal(str(self.amount))
         value = f'{amount:,.2f}'
         return value.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
+class MissionaryDonationReceipt(models.Model):
+    volunteer = models.ForeignKey(Volunteer, on_delete=models.CASCADE, related_name='donation_receipts')
+    description = models.CharField('Descrição da doação', max_length=180, blank=True)
+    receipt = models.FileField('Comprovante de doação', upload_to='comprovantes_doacoes/')
+    submitted_at = models.DateTimeField('Enviado em', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Comprovante de doação'
+        verbose_name_plural = 'Comprovantes de doações'
+        ordering = ['-submitted_at']
+
+    def __str__(self):
+        return f'Doação opcional - {self.volunteer.full_name}'

@@ -13,6 +13,7 @@ urlpatterns = [
     path('minha-inscricao/documentacao/', views.volunteer_documentation_dashboard, name='volunteer_documentation_dashboard'),
     path('minha-inscricao/financeiro/', views.volunteer_financial_dashboard, name='volunteer_financial_dashboard'),
     path('pagamento/<int:payment_id>/comprovante/', views.volunteer_payment_upload, name='volunteer_payment_upload'),
+    path('missionario/<int:volunteer_id>/doacao/', views.volunteer_donation_receipt_upload, name='volunteer_donation_receipt_upload'),
     path('missionario/<int:volunteer_id>/ficha/', views.volunteer_registration_pdf, name='volunteer_registration_pdf'),
     path('missionario/<int:volunteer_id>/documentacao/', views.volunteer_documentation_upload, name='volunteer_documentation_upload'),
     path('painel/', views.admin_dashboard, name='admin_dashboard'),

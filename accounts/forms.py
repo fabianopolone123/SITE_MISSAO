@@ -6,7 +6,14 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from .models import FinancialTransaction, MissionaryPayment, PanelPermission, Volunteer, YES_NO_CHOICES
+from .models import (
+    FinancialTransaction,
+    MissionaryDonationReceipt,
+    MissionaryPayment,
+    PanelPermission,
+    Volunteer,
+    YES_NO_CHOICES,
+)
 
 
 class SignUpForm(UserCreationForm):
@@ -128,6 +135,35 @@ class MissionaryPaymentReceiptForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['receipt'].required = True
         self.fields['receipt'].widget.attrs.setdefault('class', 'form-control')
+
+    def clean_receipt(self):
+        receipt = self.cleaned_data['receipt']
+        allowed_suffixes = {'.pdf', '.jpg', '.jpeg', '.png'}
+
+        if Path(receipt.name).suffix.lower() not in allowed_suffixes:
+            raise forms.ValidationError('Envie um comprovante em PDF, JPG ou PNG.')
+
+        return receipt
+
+
+class MissionaryDonationReceiptForm(forms.ModelForm):
+    class Meta:
+        model = MissionaryDonationReceipt
+        fields = ['description', 'receipt']
+        labels = {
+            'description': 'Descrição da doação',
+            'receipt': 'Comprovante da doação',
+        }
+        widgets = {
+            'description': forms.TextInput(attrs={'placeholder': 'Ex.: oferta, doação extra, apoio a missionário'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['description'].required = False
+        self.fields['receipt'].required = True
+        for field in self.fields.values():
+            field.widget.attrs.setdefault('class', 'form-control')
 
     def clean_receipt(self):
         receipt = self.cleaned_data['receipt']

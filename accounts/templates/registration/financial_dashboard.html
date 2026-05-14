@@ -57,6 +57,10 @@
                 <span>Conferidos</span>
                 <strong>{{ missionary_confirmed_count }}</strong>
             </article>
+            <article class="report-card">
+                <span>Doações opcionais</span>
+                <strong>{{ donation_receipt_count }}</strong>
+            </article>
         </section>
 
         <section class="admin-section">
@@ -101,6 +105,38 @@
                         {% empty %}
                             <tr>
                                 <td colspan="7">Nenhum comprovante de mission&aacute;rio enviado.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>Comprovantes de doações opcionais</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Missionário</th>
+                            <th>Login</th>
+                            <th>Descrição</th>
+                            <th>Enviado em</th>
+                            <th>Comprovante</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for donation in donation_receipts %}
+                            <tr>
+                                <td>{{ donation.volunteer.full_name }}</td>
+                                <td>{{ donation.volunteer.registration.user.username }}</td>
+                                <td>{{ donation.description|default:"Doação opcional" }}</td>
+                                <td>{{ donation.submitted_at|date:"d/m/Y H:i" }}</td>
+                                <td><a href="{{ donation.receipt.url }}" target="_blank" rel="noopener">Abrir</a></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">Nenhum comprovante de doação opcional enviado.</td>
                             </tr>
                         {% endfor %}
                     </tbody>

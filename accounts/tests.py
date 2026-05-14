@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import MissionaryPayment, PanelPermission, Registration, Volunteer
+from .models import MissionaryDonationReceipt, MissionaryPayment, PanelPermission, Registration, Volunteer
 
 
 def create_registration(username='voluntario', password='senha-forte-123'):
@@ -303,6 +303,8 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'R$ 1.600,00')
         self.assertContains(response, 'R$ 450,00')
         self.assertContains(response, 'R$ 2.050,00')
+        self.assertContains(response, 'Comprovantes de doa')
+        self.assertContains(response, reverse('volunteer_donation_receipt_upload', args=[volunteer.id]))
         self.assertEqual(MissionaryPayment.objects.filter(volunteer=volunteer).count(), 2)
 
     def test_volunteer_can_upload_payment_receipt(self):
@@ -326,6 +328,46 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(payment.has_receipt)
         self.assertFalse(payment.is_confirmed)
+
+    def test_volunteer_can_upload_optional_donation_receipt(self):
+        user, _, volunteer = create_registration()
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse('volunteer_donation_receipt_upload', args=[volunteer.id]),
+            {
+                'donation-%s-description' % volunteer.id: 'Doação extra',
+                'donation-%s-receipt' % volunteer.id: SimpleUploadedFile(
+                    'doacao.pdf',
+                    b'%PDF-1.4 doacao',
+                    content_type='application/pdf',
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        donation = MissionaryDonationReceipt.objects.get(volunteer=volunteer)
+        self.assertEqual(donation.description, 'Doação extra')
+
+    def test_admin_financial_dashboard_lists_optional_donation_receipts(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        _, _, volunteer = create_registration()
+        MissionaryDonationReceipt.objects.create(
+            volunteer=volunteer,
+            description='Doação extra',
+            receipt=SimpleUploadedFile(
+                'doacao.pdf',
+                b'%PDF-1.4 doacao',
+                content_type='application/pdf',
+            ),
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('financial_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Doa')
+        self.assertContains(response, 'Doação extra')
 
     def test_admin_financial_dashboard_can_confirm_missionary_payment(self):
         admin = User.objects.create_superuser(username='admin', password='senha-forte-123')

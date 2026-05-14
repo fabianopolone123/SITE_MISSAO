@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import (
     FinancialTransactionForm,
+    MissionaryDonationReceiptForm,
     MissionaryPaymentReceiptForm,
     PanelPermissionForm,
     SignUpForm,
@@ -24,6 +25,7 @@ from .models import (
     FinancialTransaction,
     MISSIONARY_PAYMENT_AMOUNTS,
     MISSIONARY_PAYMENT_TYPES,
+    MissionaryDonationReceipt,
     MissionaryPayment,
     PanelPermission,
     Registration,
@@ -277,6 +279,8 @@ def volunteer_financial_dashboard(request):
         payment_groups.append({
             'volunteer': volunteer,
             'payments': ensure_missionary_payments(volunteer),
+            'donation_receipts': volunteer.donation_receipts.all(),
+            'donation_form': MissionaryDonationReceiptForm(prefix=f'donation-{volunteer.id}'),
         })
 
     return render(
@@ -313,6 +317,31 @@ def volunteer_payment_upload(request, payment_id):
         messages.success(request, f'Comprovante de {payment.get_payment_type_display()} enviado.')
     else:
         messages.error(request, f'Não foi possível enviar o comprovante de {payment.get_payment_type_display()}.')
+
+    return redirect('volunteer_financial_dashboard')
+
+
+@login_required(login_url='login')
+@require_POST
+def volunteer_donation_receipt_upload(request, volunteer_id):
+    volunteer = get_object_or_404(
+        Volunteer.objects.select_related('registration__user'),
+        pk=volunteer_id,
+        registration__user=request.user,
+    )
+    form = MissionaryDonationReceiptForm(
+        request.POST,
+        request.FILES,
+        prefix=f'donation-{volunteer.id}',
+    )
+
+    if form.is_valid():
+        donation_receipt = form.save(commit=False)
+        donation_receipt.volunteer = volunteer
+        donation_receipt.save()
+        messages.success(request, 'Comprovante de doação enviado.')
+    else:
+        messages.error(request, 'Não foi possível enviar o comprovante de doação.')
 
     return redirect('volunteer_financial_dashboard')
 
@@ -424,6 +453,11 @@ def financial_dashboard(request):
         .filter(receipt__gt='')
         .order_by('is_confirmed', '-submitted_at', 'volunteer__full_name')
     )
+    donation_receipts = (
+        MissionaryDonationReceipt.objects
+        .select_related('volunteer', 'volunteer__registration__user')
+        .order_by('-submitted_at', 'volunteer__full_name')
+    )
     total_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
     total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
     balance = total_income - total_expenses
@@ -439,6 +473,8 @@ def financial_dashboard(request):
         'missionary_payments': missionary_payments,
         'missionary_receipt_count': missionary_payments.count(),
         'missionary_confirmed_count': missionary_payments.filter(is_confirmed=True).count(),
+        'donation_receipts': donation_receipts,
+        'donation_receipt_count': donation_receipts.count(),
         'panel_permissions': get_panel_permissions(request.user),
         'active_menu': 'financial',
         'category_summary': transactions.values('category', 'transaction_type').annotate(total=Sum('amount')).order_by('category'),

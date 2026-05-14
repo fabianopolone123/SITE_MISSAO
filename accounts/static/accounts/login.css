@@ -776,6 +776,26 @@ button:focus,
     gap: 16px;
 }
 
+.donation-receipt-section {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+
+.donation-list {
+    display: grid;
+    gap: 12px;
+}
+
+.donation-upload-form {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
 .payment-summary-grid,
 .payment-grid {
     display: grid;
