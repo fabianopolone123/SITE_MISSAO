@@ -18,5 +18,6 @@ urlpatterns = [
     path('missionario/<int:volunteer_id>/documentacao/', views.volunteer_documentation_upload, name='volunteer_documentation_upload'),
     path('painel/', views.admin_dashboard, name='admin_dashboard'),
     path('painel/financeiro/', views.financial_dashboard, name='financial_dashboard'),
+    path('painel/conferencia/', views.conference_dashboard, name='conference_dashboard'),
     path('painel/permissoes/', views.permissions_dashboard, name='permissions_dashboard'),
 ]

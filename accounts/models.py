@@ -35,6 +35,7 @@ class PanelPermission(models.Model):
     can_view_registrations = models.BooleanField('Ver inscritos', default=False)
     can_manage_financial = models.BooleanField('Acessar financeiro', default=False)
     can_manage_permissions = models.BooleanField('Gerenciar permissões', default=False)
+    can_review_submissions = models.BooleanField('Conferir documentos e comprovantes', default=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -156,6 +157,16 @@ class Volunteer(models.Model):
         upload_to='documentos/apolices/',
         blank=True,
     )
+    signed_registration_document_confirmed = models.BooleanField('Ficha assinada conferida', default=False)
+    insurance_policy_document_confirmed = models.BooleanField('Apolice de seguro conferida', default=False)
+    documentation_reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_volunteer_documentations',
+    )
+    documentation_reviewed_at = models.DateTimeField('Documentacao conferida em', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -176,6 +187,23 @@ class Volunteer(models.Model):
     @property
     def documentation_complete(self):
         return self.has_signed_registration_document and self.has_insurance_policy_document
+
+    @property
+    def documentation_review_complete(self):
+        return (
+            self.has_signed_registration_document
+            and self.signed_registration_document_confirmed
+            and self.has_insurance_policy_document
+            and self.insurance_policy_document_confirmed
+        )
+
+    @property
+    def documentation_status_label(self):
+        if self.documentation_review_complete:
+            return 'Documentacao conferida'
+        if self.documentation_complete:
+            return 'Enviada - aguardando conferencia'
+        return 'Documentacao pendente'
 
 
 class FinancialTransaction(models.Model):
@@ -247,6 +275,15 @@ class MissionaryDonationReceipt(models.Model):
     description = models.CharField('Descrição da doação', max_length=180, blank=True)
     receipt = models.FileField('Comprovante de doação', upload_to='comprovantes_doacoes/')
     submitted_at = models.DateTimeField('Enviado em', auto_now_add=True)
+    is_confirmed = models.BooleanField('Conferido', default=False)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='confirmed_donation_receipts',
+    )
+    confirmed_at = models.DateTimeField('Conferido em', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Comprovante de doação'
@@ -255,3 +292,9 @@ class MissionaryDonationReceipt(models.Model):
 
     def __str__(self):
         return f'Doação opcional - {self.volunteer.full_name}'
+
+    @property
+    def status_label(self):
+        if self.is_confirmed:
+            return 'Conferido'
+        return 'Aguardando conferencia'

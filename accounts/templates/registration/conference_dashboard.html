@@ -1,0 +1,284 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confer&ecirc;ncia | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body class="admin-body">
+    {% include "registration/partials/mission_splash.html" %}
+    <main class="admin-page">
+        <header class="admin-header">
+            <div class="page-brand">
+                <img class="page-logo" src="{% static 'accounts/images/logo-full-transparent.png' %}" alt="Miss&atilde;o Andrews">
+                <div>
+                    <p class="eyebrow">Painel administrativo</p>
+                    <h1>Confer&ecirc;ncia</h1>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a class="primary-link-button compact-link-button" href="{% url 'volunteer_dashboard' %}">Perfil mission&aacute;rio</a>
+                <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+            </div>
+        </header>
+
+        {% include "registration/partials/admin_menu.html" %}
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="form-alert success-alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <section class="report-grid">
+            <article class="report-card">
+                <span>Documenta&ccedil;&otilde;es</span>
+                <strong>{{ document_count }}</strong>
+                <small>{{ document_pending_count }} pendente(s)</small>
+            </article>
+            <article class="report-card">
+                <span>Comprovantes obrigat&oacute;rios</span>
+                <strong>{{ payment_count }}</strong>
+                <small>{{ payment_pending_count }} pendente(s)</small>
+            </article>
+            <article class="report-card">
+                <span>Doa&ccedil;&otilde;es opcionais</span>
+                <strong>{{ donation_count }}</strong>
+                <small>{{ donation_pending_count }} pendente(s)</small>
+            </article>
+        </section>
+
+        <section class="admin-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Documenta&ccedil;&otilde;es enviadas</h2>
+                    <p class="section-note">Abra o arquivo na janela suspensa para conferir e marque OK quando estiver correto.</p>
+                </div>
+            </div>
+
+            <div class="conference-list">
+                {% for volunteer in document_volunteers %}
+                    <article class="conference-card">
+                        <div class="conference-card-header">
+                            <div>
+                                <h3>{{ volunteer.full_name }}</h3>
+                                <p class="section-note">Login: {{ volunteer.registration.user.username }}</p>
+                            </div>
+                            <span class="document-status {% if volunteer.documentation_review_complete %}ok{% else %}pending{% endif %}">
+                                {{ volunteer.documentation_status_label }}
+                            </span>
+                        </div>
+
+                        <div class="conference-file-grid">
+                            {% if volunteer.signed_registration_document %}
+                                <div class="conference-file">
+                                    <div>
+                                        <strong>Ficha assinada</strong>
+                                        <p class="section-note">{% if volunteer.signed_registration_document_confirmed %}Conferida{% else %}Aguardando confer&ecirc;ncia{% endif %}</p>
+                                    </div>
+                                    <div class="conference-actions">
+                                        <button type="button" class="secondary-button compact-link-button" data-modal-target="signed-document-{{ volunteer.id }}">Ver arquivo</button>
+                                        <form method="post" class="permission-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="volunteer_id" value="{{ volunteer.id }}">
+                                            <input type="hidden" name="document_type" value="signed_registration">
+                                            {% if volunteer.signed_registration_document_confirmed %}
+                                                <button type="submit" name="action" value="unconfirm" class="table-button secondary-button">Remover OK</button>
+                                            {% else %}
+                                                <button type="submit" name="action" value="confirm" class="table-button">Marcar OK</button>
+                                            {% endif %}
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <dialog class="detail-modal preview-modal" id="signed-document-{{ volunteer.id }}" aria-labelledby="signed-document-title-{{ volunteer.id }}">
+                                    <div class="modal-header">
+                                        <div>
+                                            <p class="eyebrow">Ficha assinada</p>
+                                            <h2 id="signed-document-title-{{ volunteer.id }}">{{ volunteer.full_name }}</h2>
+                                        </div>
+                                        <div class="modal-actions">
+                                            <a class="primary-link-button compact-link-button" href="{{ volunteer.signed_registration_document.url }}" target="_blank" rel="noopener">Abrir em nova aba</a>
+                                            <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
+                                        </div>
+                                    </div>
+                                    <iframe class="file-preview-frame" src="{{ volunteer.signed_registration_document.url }}" title="Ficha assinada de {{ volunteer.full_name }}"></iframe>
+                                </dialog>
+                            {% endif %}
+
+                            {% if volunteer.insurance_policy_document %}
+                                <div class="conference-file">
+                                    <div>
+                                        <strong>Ap&oacute;lice de seguro</strong>
+                                        <p class="section-note">{% if volunteer.insurance_policy_document_confirmed %}Conferida{% else %}Aguardando confer&ecirc;ncia{% endif %}</p>
+                                    </div>
+                                    <div class="conference-actions">
+                                        <button type="button" class="secondary-button compact-link-button" data-modal-target="insurance-document-{{ volunteer.id }}">Ver arquivo</button>
+                                        <form method="post" class="permission-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="volunteer_id" value="{{ volunteer.id }}">
+                                            <input type="hidden" name="document_type" value="insurance_policy">
+                                            {% if volunteer.insurance_policy_document_confirmed %}
+                                                <button type="submit" name="action" value="unconfirm" class="table-button secondary-button">Remover OK</button>
+                                            {% else %}
+                                                <button type="submit" name="action" value="confirm" class="table-button">Marcar OK</button>
+                                            {% endif %}
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <dialog class="detail-modal preview-modal" id="insurance-document-{{ volunteer.id }}" aria-labelledby="insurance-document-title-{{ volunteer.id }}">
+                                    <div class="modal-header">
+                                        <div>
+                                            <p class="eyebrow">Ap&oacute;lice de seguro</p>
+                                            <h2 id="insurance-document-title-{{ volunteer.id }}">{{ volunteer.full_name }}</h2>
+                                        </div>
+                                        <div class="modal-actions">
+                                            <a class="primary-link-button compact-link-button" href="{{ volunteer.insurance_policy_document.url }}" target="_blank" rel="noopener">Abrir em nova aba</a>
+                                            <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
+                                        </div>
+                                    </div>
+                                    <iframe class="file-preview-frame" src="{{ volunteer.insurance_policy_document.url }}" title="Ap&oacute;lice de {{ volunteer.full_name }}"></iframe>
+                                </dialog>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% empty %}
+                    <p class="section-note">Nenhuma documenta&ccedil;&atilde;o enviada ainda.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>Comprovantes obrigat&oacute;rios</h2>
+            <div class="conference-list">
+                {% for payment in missionary_payments %}
+                    <article class="conference-card">
+                        <div class="conference-card-header">
+                            <div>
+                                <h3>{{ payment.volunteer.full_name }}</h3>
+                                <p class="section-note">{{ payment.get_payment_type_display }} | R$ {{ payment.amount_brl }} | Login: {{ payment.volunteer.registration.user.username }}</p>
+                            </div>
+                            <span class="document-status {% if payment.is_confirmed %}ok{% else %}pending{% endif %}">{{ payment.status_label }}</span>
+                        </div>
+                        {% if payment.is_confirmed %}
+                            <p class="section-note">Conferido por {{ payment.confirmed_by.username|default:"-" }} em {{ payment.confirmed_at|date:"d/m/Y H:i" }}</p>
+                        {% endif %}
+                        <div class="conference-actions">
+                            <button type="button" class="secondary-button compact-link-button" data-modal-target="payment-receipt-{{ payment.id }}">Ver comprovante</button>
+                            <form method="post" class="permission-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="missionary_payment_id" value="{{ payment.id }}">
+                                {% if payment.is_confirmed %}
+                                    <button type="submit" name="action" value="unconfirm" class="table-button secondary-button">Remover OK</button>
+                                {% else %}
+                                    <button type="submit" name="action" value="confirm" class="table-button">Marcar OK</button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </article>
+
+                    <dialog class="detail-modal preview-modal" id="payment-receipt-{{ payment.id }}" aria-labelledby="payment-receipt-title-{{ payment.id }}">
+                        <div class="modal-header">
+                            <div>
+                                <p class="eyebrow">Comprovante obrigat&oacute;rio</p>
+                                <h2 id="payment-receipt-title-{{ payment.id }}">{{ payment.volunteer.full_name }}</h2>
+                            </div>
+                            <div class="modal-actions">
+                                <a class="primary-link-button compact-link-button" href="{{ payment.receipt.url }}" target="_blank" rel="noopener">Abrir em nova aba</a>
+                                <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
+                            </div>
+                        </div>
+                        <iframe class="file-preview-frame" src="{{ payment.receipt.url }}" title="Comprovante de {{ payment.volunteer.full_name }}"></iframe>
+                    </dialog>
+                {% empty %}
+                    <p class="section-note">Nenhum comprovante obrigat&oacute;rio enviado ainda.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>Comprovantes de doa&ccedil;&otilde;es opcionais</h2>
+            <div class="conference-list">
+                {% for donation in donation_receipts %}
+                    <article class="conference-card">
+                        <div class="conference-card-header">
+                            <div>
+                                <h3>{{ donation.volunteer.full_name }}</h3>
+                                <p class="section-note">{{ donation.description|default:"Doa&ccedil;&atilde;o opcional" }} | Login: {{ donation.volunteer.registration.user.username }}</p>
+                            </div>
+                            <span class="document-status {% if donation.is_confirmed %}ok{% else %}pending{% endif %}">{{ donation.status_label }}</span>
+                        </div>
+                        {% if donation.is_confirmed %}
+                            <p class="section-note">Conferido por {{ donation.confirmed_by.username|default:"-" }} em {{ donation.confirmed_at|date:"d/m/Y H:i" }}</p>
+                        {% endif %}
+                        <div class="conference-actions">
+                            <button type="button" class="secondary-button compact-link-button" data-modal-target="donation-receipt-{{ donation.id }}">Ver comprovante</button>
+                            <form method="post" class="permission-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="donation_receipt_id" value="{{ donation.id }}">
+                                {% if donation.is_confirmed %}
+                                    <button type="submit" name="action" value="unconfirm" class="table-button secondary-button">Remover OK</button>
+                                {% else %}
+                                    <button type="submit" name="action" value="confirm" class="table-button">Marcar OK</button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </article>
+
+                    <dialog class="detail-modal preview-modal" id="donation-receipt-{{ donation.id }}" aria-labelledby="donation-receipt-title-{{ donation.id }}">
+                        <div class="modal-header">
+                            <div>
+                                <p class="eyebrow">Comprovante de doa&ccedil;&atilde;o</p>
+                                <h2 id="donation-receipt-title-{{ donation.id }}">{{ donation.volunteer.full_name }}</h2>
+                            </div>
+                            <div class="modal-actions">
+                                <a class="primary-link-button compact-link-button" href="{{ donation.receipt.url }}" target="_blank" rel="noopener">Abrir em nova aba</a>
+                                <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
+                            </div>
+                        </div>
+                        <iframe class="file-preview-frame" src="{{ donation.receipt.url }}" title="Comprovante de doacao de {{ donation.volunteer.full_name }}"></iframe>
+                    </dialog>
+                {% empty %}
+                    <p class="section-note">Nenhum comprovante de doa&ccedil;&atilde;o enviado ainda.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const openModalButtons = document.querySelectorAll('[data-modal-target]');
+        const closeModalButtons = document.querySelectorAll('[data-modal-close]');
+
+        openModalButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const modal = document.getElementById(button.dataset.modalTarget);
+
+                if (!modal) {
+                    return;
+                }
+
+                if (typeof modal.showModal === 'function') {
+                    modal.showModal();
+                } else {
+                    modal.setAttribute('open', 'open');
+                }
+            });
+        });
+
+        closeModalButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                button.closest('dialog').close();
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            if (event.target.matches('dialog.detail-modal')) {
+                event.target.close();
+            }
+        });
+    </script>
+</body>
+</html>

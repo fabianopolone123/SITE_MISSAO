@@ -5,6 +5,9 @@
     {% if panel_permissions.can_manage_financial %}
         <a class="menu-item {% if active_menu == 'financial' %}active{% endif %}" href="{% url 'financial_dashboard' %}">Financeiro</a>
     {% endif %}
+    {% if panel_permissions.can_review_submissions %}
+        <a class="menu-item {% if active_menu == 'conference' %}active{% endif %}" href="{% url 'conference_dashboard' %}">Confer&ecirc;ncia</a>
+    {% endif %}
     {% if panel_permissions.can_manage_permissions %}
         <a class="menu-item {% if active_menu == 'permissions' %}active{% endif %}" href="{% url 'permissions_dashboard' %}">Permiss&otilde;es</a>
     {% endif %}

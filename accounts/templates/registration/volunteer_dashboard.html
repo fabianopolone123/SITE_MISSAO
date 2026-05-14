@@ -28,6 +28,8 @@
                             <a class="primary-link-button compact-link-button" href="{% url 'admin_dashboard' %}">Painel ADM</a>
                         {% elif panel_permissions.can_manage_financial %}
                             <a class="primary-link-button compact-link-button" href="{% url 'financial_dashboard' %}">Painel ADM</a>
+                        {% elif panel_permissions.can_review_submissions %}
+                            <a class="primary-link-button compact-link-button" href="{% url 'conference_dashboard' %}">Painel ADM</a>
                         {% elif panel_permissions.can_manage_permissions %}
                             <a class="primary-link-button compact-link-button" href="{% url 'permissions_dashboard' %}">Painel ADM</a>
                         {% endif %}

@@ -24,6 +24,8 @@
                         <a class="primary-link-button compact-link-button" href="{% url 'admin_dashboard' %}">Painel ADM</a>
                     {% elif panel_permissions.can_manage_financial %}
                         <a class="primary-link-button compact-link-button" href="{% url 'financial_dashboard' %}">Painel ADM</a>
+                    {% elif panel_permissions.can_review_submissions %}
+                        <a class="primary-link-button compact-link-button" href="{% url 'conference_dashboard' %}">Painel ADM</a>
                     {% elif panel_permissions.can_manage_permissions %}
                         <a class="primary-link-button compact-link-button" href="{% url 'permissions_dashboard' %}">Painel ADM</a>
                     {% endif %}
@@ -52,9 +54,11 @@
                         <article class="document-card">
                             <div>
                                 <h3>{{ volunteer.full_name }}</h3>
-                                <p class="document-status {% if volunteer.documentation_complete %}ok{% else %}pending{% endif %}">
-                                    {% if volunteer.documentation_complete %}
-                                        Documenta&ccedil;&atilde;o OK
+                                <p class="document-status {% if volunteer.documentation_review_complete %}ok{% else %}pending{% endif %}">
+                                    {% if volunteer.documentation_review_complete %}
+                                        Documenta&ccedil;&atilde;o conferida
+                                    {% elif volunteer.documentation_complete %}
+                                        Aguardando confer&ecirc;ncia
                                     {% else %}
                                         Documenta&ccedil;&atilde;o pendente
                                     {% endif %}
@@ -81,6 +85,7 @@
                                         <dd>
                                             {% if volunteer.signed_registration_document %}
                                                 <a href="{{ volunteer.signed_registration_document.url }}" target="_blank" rel="noopener">Arquivo enviado</a>
+                                                {% if volunteer.signed_registration_document_confirmed %}<span class="document-status ok">OK</span>{% else %}<span class="document-status pending">Aguardando OK</span>{% endif %}
                                             {% else %}
                                                 Pendente
                                             {% endif %}
@@ -91,6 +96,7 @@
                                         <dd>
                                             {% if volunteer.insurance_policy_document %}
                                                 <a href="{{ volunteer.insurance_policy_document.url }}" target="_blank" rel="noopener">Arquivo enviado</a>
+                                                {% if volunteer.insurance_policy_document_confirmed %}<span class="document-status ok">OK</span>{% else %}<span class="document-status pending">Aguardando OK</span>{% endif %}
                                             {% else %}
                                                 Pendente
                                             {% endif %}
@@ -98,7 +104,7 @@
                                     </div>
                                     <div>
                                         <dt>Status</dt>
-                                        <dd>{% if volunteer.documentation_complete %}OK{% else %}Pendente{% endif %}</dd>
+                                        <dd>{{ volunteer.documentation_status_label }}</dd>
                                     </div>
                                 </dl>
 

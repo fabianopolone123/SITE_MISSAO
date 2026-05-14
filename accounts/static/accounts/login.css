@@ -776,6 +776,61 @@ button:focus,
     gap: 16px;
 }
 
+.conference-list {
+    display: grid;
+    gap: 14px;
+}
+
+.conference-card,
+.conference-file {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfa;
+}
+
+.conference-card-header,
+.conference-file,
+.conference-actions,
+.modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.conference-card h3,
+.conference-card p,
+.conference-file p {
+    margin: 0;
+}
+
+.conference-file-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.conference-actions,
+.modal-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.preview-modal {
+    width: min(1120px, calc(100% - 28px));
+    max-height: min(900px, calc(100vh - 28px));
+}
+
+.file-preview-frame {
+    display: block;
+    width: 100%;
+    height: min(72vh, 720px);
+    border: 0;
+    background: #f4f6f2;
+}
+
 .donation-receipt-section {
     display: grid;
     gap: 16px;
@@ -1144,6 +1199,12 @@ td a {
     .pix-card {
         grid-template-columns: 1fr;
     }
+
+    .conference-card-header,
+    .conference-file {
+        align-items: stretch;
+        flex-direction: column;
+    }
 }
 
 @media (max-width: 560px) {
@@ -1290,6 +1351,20 @@ td a {
     .document-card {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .conference-actions,
+    .modal-actions {
+        width: 100%;
+    }
+
+    .preview-modal .modal-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .file-preview-frame {
+        height: 64vh;
     }
 
     .report-card strong {

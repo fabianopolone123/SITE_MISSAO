@@ -132,8 +132,8 @@
                                     {% if volunteer.work_evangelism %}{% if volunteer.work_health or volunteer.work_education or volunteer.work_general_help %}, {% endif %}Evangelismo{% endif %}
                                 </td>
                                 <td>
-                                    <span class="document-status {% if volunteer.documentation_complete %}ok{% else %}pending{% endif %}">
-                                        {% if volunteer.documentation_complete %}OK{% else %}Pendente{% endif %}
+                                    <span class="document-status {% if volunteer.documentation_review_complete %}ok{% else %}pending{% endif %}">
+                                        {% if volunteer.documentation_review_complete %}OK{% elif volunteer.documentation_complete %}Aguardando OK{% else %}Pendente{% endif %}
                                     </span>
                                 </td>
                                 <td>{{ volunteer.registration.user.username }}</td>
@@ -275,7 +275,7 @@
                     </div>
                     <div>
                         <dt>Status da documenta&ccedil;&atilde;o</dt>
-                        <dd>{% if volunteer.documentation_complete %}OK{% else %}Pendente{% endif %}</dd>
+                        <dd>{{ volunteer.documentation_status_label }}</dd>
                     </div>
                 </dl>
             </dialog>

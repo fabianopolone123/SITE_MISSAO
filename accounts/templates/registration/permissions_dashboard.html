@@ -71,6 +71,10 @@
                                             Financeiro
                                         </label>
                                         <label class="inline-check" form="permission-form-{{ account.id }}">
+                                            <input form="permission-form-{{ account.id }}" type="checkbox" name="can_review_submissions" class="checkbox-control" {% if account.panel_permission.can_review_submissions %}checked{% endif %}>
+                                            Confer&ecirc;ncia
+                                        </label>
+                                        <label class="inline-check" form="permission-form-{{ account.id }}">
                                             <input form="permission-form-{{ account.id }}" type="checkbox" name="can_manage_permissions" class="checkbox-control" {% if account.panel_permission.can_manage_permissions %}checked{% endif %}>
                                             Permiss&otilde;es
                                         </label>

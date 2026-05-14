@@ -38,6 +38,7 @@ PANEL_PERMISSION_FIELDS = {
     'registrations': 'can_view_registrations',
     'financial': 'can_manage_financial',
     'permissions': 'can_manage_permissions',
+    'conference': 'can_review_submissions',
 }
 
 MISSION_PAYMENT_PIX_KEY = '64.077.212/0001-50'
@@ -55,6 +56,7 @@ def get_panel_permissions(user):
         'can_view_registrations': False,
         'can_manage_financial': False,
         'can_manage_permissions': False,
+        'can_review_submissions': False,
     }
 
     if not user.is_authenticated:
@@ -93,6 +95,10 @@ def can_manage_permissions(user):
     return has_panel_permission(user, 'permissions')
 
 
+def can_review_submissions(user):
+    return has_panel_permission(user, 'conference')
+
+
 def can_view_volunteer(user, volunteer):
     if not user.is_authenticated:
         return False
@@ -106,6 +112,8 @@ def first_available_panel_url(user):
         return 'financial_dashboard'
     if has_panel_permission(user, 'permissions'):
         return 'permissions_dashboard'
+    if has_panel_permission(user, 'conference'):
+        return 'conference_dashboard'
     return 'volunteer_dashboard'
 
 
@@ -373,7 +381,19 @@ def volunteer_documentation_upload(request, volunteer_id):
     form = VolunteerDocumentationForm(request.POST, request.FILES, instance=volunteer)
 
     if form.is_valid():
-        form.save()
+        volunteer = form.save(commit=False)
+
+        if 'signed_registration_document' in request.FILES:
+            volunteer.signed_registration_document_confirmed = False
+
+        if 'insurance_policy_document' in request.FILES:
+            volunteer.insurance_policy_document_confirmed = False
+
+        if 'signed_registration_document' in request.FILES or 'insurance_policy_document' in request.FILES:
+            volunteer.documentation_reviewed_by = None
+            volunteer.documentation_reviewed_at = None
+
+        volunteer.save()
         messages.success(request, f'Documentação de {volunteer.full_name} atualizada.')
     else:
         messages.error(request, f'Não foi possível atualizar a documentação de {volunteer.full_name}.')
@@ -455,7 +475,7 @@ def financial_dashboard(request):
     )
     donation_receipts = (
         MissionaryDonationReceipt.objects
-        .select_related('volunteer', 'volunteer__registration__user')
+        .select_related('volunteer', 'volunteer__registration__user', 'confirmed_by')
         .order_by('-submitted_at', 'volunteer__full_name')
     )
     total_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
@@ -480,6 +500,112 @@ def financial_dashboard(request):
         'category_summary': transactions.values('category', 'transaction_type').annotate(total=Sum('amount')).order_by('category'),
     }
     return render(request, 'registration/financial_dashboard.html', context)
+
+
+@user_passes_test(can_review_submissions, login_url='login')
+def conference_dashboard(request):
+    if request.method == 'POST' and request.POST.get('missionary_payment_id'):
+        payment = get_object_or_404(MissionaryPayment, pk=request.POST['missionary_payment_id'])
+        action = request.POST.get('action')
+
+        if action == 'confirm':
+            payment.is_confirmed = True
+            payment.confirmed_by = request.user
+            payment.confirmed_at = timezone.now()
+            payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
+            messages.success(request, 'Comprovante obrigatorio conferido.')
+        elif action == 'unconfirm':
+            payment.is_confirmed = False
+            payment.confirmed_by = None
+            payment.confirmed_at = None
+            payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
+            messages.success(request, 'Conferencia do comprovante obrigatorio removida.')
+
+        return redirect('conference_dashboard')
+
+    if request.method == 'POST' and request.POST.get('donation_receipt_id'):
+        donation = get_object_or_404(MissionaryDonationReceipt, pk=request.POST['donation_receipt_id'])
+        action = request.POST.get('action')
+
+        if action == 'confirm':
+            donation.is_confirmed = True
+            donation.confirmed_by = request.user
+            donation.confirmed_at = timezone.now()
+            donation.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at'])
+            messages.success(request, 'Comprovante de doacao conferido.')
+        elif action == 'unconfirm':
+            donation.is_confirmed = False
+            donation.confirmed_by = None
+            donation.confirmed_at = None
+            donation.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at'])
+            messages.success(request, 'Conferencia da doacao removida.')
+
+        return redirect('conference_dashboard')
+
+    if request.method == 'POST' and request.POST.get('volunteer_id'):
+        volunteer = get_object_or_404(Volunteer, pk=request.POST['volunteer_id'])
+        document_type = request.POST.get('document_type')
+        action = request.POST.get('action')
+        field_by_type = {
+            'signed_registration': 'signed_registration_document_confirmed',
+            'insurance_policy': 'insurance_policy_document_confirmed',
+        }
+        file_by_type = {
+            'signed_registration': volunteer.signed_registration_document,
+            'insurance_policy': volunteer.insurance_policy_document,
+        }
+        field_name = field_by_type.get(document_type)
+
+        if field_name and file_by_type.get(document_type):
+            setattr(volunteer, field_name, action == 'confirm')
+            volunteer.documentation_reviewed_by = request.user if action == 'confirm' else None
+            volunteer.documentation_reviewed_at = timezone.now() if action == 'confirm' else None
+            volunteer.save(update_fields=[field_name, 'documentation_reviewed_by', 'documentation_reviewed_at'])
+
+            if action == 'confirm':
+                messages.success(request, 'Documento conferido.')
+            elif action == 'unconfirm':
+                messages.success(request, 'Conferencia do documento removida.')
+        else:
+            messages.error(request, 'Documento nao encontrado para conferencia.')
+
+        return redirect('conference_dashboard')
+
+    document_volunteers = (
+        Volunteer.objects
+        .select_related('registration__user', 'documentation_reviewed_by')
+        .filter(Q(signed_registration_document__gt='') | Q(insurance_policy_document__gt=''))
+        .order_by('documentation_reviewed_at', 'full_name')
+    )
+    missionary_payments = (
+        MissionaryPayment.objects
+        .select_related('volunteer', 'volunteer__registration__user', 'confirmed_by')
+        .filter(receipt__gt='')
+        .order_by('is_confirmed', '-submitted_at', 'volunteer__full_name')
+    )
+    donation_receipts = (
+        MissionaryDonationReceipt.objects
+        .select_related('volunteer', 'volunteer__registration__user', 'confirmed_by')
+        .order_by('is_confirmed', '-submitted_at', 'volunteer__full_name')
+    )
+
+    context = {
+        'document_volunteers': document_volunteers,
+        'missionary_payments': missionary_payments,
+        'donation_receipts': donation_receipts,
+        'document_count': document_volunteers.count(),
+        'document_pending_count': document_volunteers.filter(
+            Q(signed_registration_document__gt='', signed_registration_document_confirmed=False)
+            | Q(insurance_policy_document__gt='', insurance_policy_document_confirmed=False)
+        ).count(),
+        'payment_count': missionary_payments.count(),
+        'payment_pending_count': missionary_payments.filter(is_confirmed=False).count(),
+        'donation_count': donation_receipts.count(),
+        'donation_pending_count': donation_receipts.filter(is_confirmed=False).count(),
+        'panel_permissions': get_panel_permissions(request.user),
+        'active_menu': 'conference',
+    }
+    return render(request, 'registration/conference_dashboard.html', context)
 
 
 @user_passes_test(can_manage_permissions, login_url='login')

@@ -123,6 +123,7 @@
                             <th>Descrição</th>
                             <th>Enviado em</th>
                             <th>Comprovante</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -133,10 +134,11 @@
                                 <td>{{ donation.description|default:"Doação opcional" }}</td>
                                 <td>{{ donation.submitted_at|date:"d/m/Y H:i" }}</td>
                                 <td><a href="{{ donation.receipt.url }}" target="_blank" rel="noopener">Abrir</a></td>
+                                <td>{{ donation.status_label }}</td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="5">Nenhum comprovante de doação opcional enviado.</td>
+                                <td colspan="6">Nenhum comprovante de doação opcional enviado.</td>
                             </tr>
                         {% endfor %}
                     </tbody>

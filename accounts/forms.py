@@ -185,6 +185,7 @@ class PanelPermissionForm(forms.ModelForm):
             'can_view_registrations',
             'can_manage_financial',
             'can_manage_permissions',
+            'can_review_submissions',
         ]
 
     def __init__(self, *args, user=None, **kwargs):

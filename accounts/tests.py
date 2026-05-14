@@ -146,6 +146,28 @@ class AdminDashboardTests(TestCase):
         self.assertTrue(permission.can_view_registrations)
         self.assertTrue(permission.can_manage_financial)
         self.assertFalse(permission.can_manage_permissions)
+        self.assertFalse(permission.can_review_submissions)
+
+    def test_permissions_dashboard_grants_conference_access(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        user, _, _ = create_registration()
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse('permissions_dashboard'),
+            {
+                'user_id': user.id,
+                'is_staff': 'on',
+                'can_review_submissions': 'on',
+            },
+            follow=True,
+        )
+
+        user.refresh_from_db()
+        permission = PanelPermission.objects.get(user=user)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(permission.can_review_submissions)
 
     def test_permissions_dashboard_lists_users_without_existing_permission(self):
         admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
@@ -291,6 +313,98 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'Documenta&ccedil;&atilde;o pendente')
         self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
         self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
+
+    def test_conference_dashboard_requires_permission(self):
+        user, _, _ = create_registration()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('conference_dashboard'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response['Location'])
+
+    def test_conference_dashboard_lists_documents_and_receipts(self):
+        reviewer, _, _ = create_registration(username='revisor')
+        PanelPermission.objects.create(user=reviewer, can_review_submissions=True)
+        _, _, volunteer = create_registration(username='missionario')
+        volunteer.signed_registration_document = SimpleUploadedFile(
+            'ficha.pdf',
+            b'%PDF-1.4 ficha assinada',
+            content_type='application/pdf',
+        )
+        volunteer.save(update_fields=['signed_registration_document'])
+        MissionaryDonationReceipt.objects.create(
+            volunteer=volunteer,
+            description='Doacao extra',
+            receipt=SimpleUploadedFile(
+                'doacao.pdf',
+                b'%PDF-1.4 doacao',
+                content_type='application/pdf',
+            ),
+        )
+        self.client.force_login(reviewer)
+
+        response = self.client.get(reverse('conference_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Confer&ecirc;ncia')
+        self.assertContains(response, volunteer.full_name)
+        self.assertContains(response, 'Ver arquivo')
+        self.assertContains(response, 'Ver comprovante')
+
+    def test_conference_dashboard_can_confirm_documentation_file(self):
+        reviewer, _, _ = create_registration(username='revisor')
+        PanelPermission.objects.create(user=reviewer, can_review_submissions=True)
+        _, _, volunteer = create_registration(username='missionario')
+        volunteer.signed_registration_document = SimpleUploadedFile(
+            'ficha.pdf',
+            b'%PDF-1.4 ficha assinada',
+            content_type='application/pdf',
+        )
+        volunteer.save(update_fields=['signed_registration_document'])
+        self.client.force_login(reviewer)
+
+        response = self.client.post(
+            reverse('conference_dashboard'),
+            {
+                'volunteer_id': volunteer.id,
+                'document_type': 'signed_registration',
+                'action': 'confirm',
+            },
+        )
+
+        volunteer.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(volunteer.signed_registration_document_confirmed)
+        self.assertEqual(volunteer.documentation_reviewed_by, reviewer)
+
+    def test_conference_dashboard_can_confirm_optional_donation_receipt(self):
+        reviewer, _, _ = create_registration(username='revisor')
+        PanelPermission.objects.create(user=reviewer, can_review_submissions=True)
+        _, _, volunteer = create_registration(username='missionario')
+        donation = MissionaryDonationReceipt.objects.create(
+            volunteer=volunteer,
+            description='Doacao extra',
+            receipt=SimpleUploadedFile(
+                'doacao.pdf',
+                b'%PDF-1.4 doacao',
+                content_type='application/pdf',
+            ),
+        )
+        self.client.force_login(reviewer)
+
+        response = self.client.post(
+            reverse('conference_dashboard'),
+            {
+                'donation_receipt_id': donation.id,
+                'action': 'confirm',
+            },
+        )
+
+        donation.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(donation.is_confirmed)
+        self.assertEqual(donation.confirmed_by, reviewer)
 
     def test_volunteer_financial_dashboard_renders_pix_and_payment_fields(self):
         user, _, volunteer = create_registration()
