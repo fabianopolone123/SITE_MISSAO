@@ -781,6 +781,43 @@ button:focus,
     gap: 14px;
 }
 
+.conference-person-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.conference-person-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 16px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+}
+
+.conference-person-button:hover,
+.conference-person-button:focus {
+    background: var(--green-soft);
+    color: var(--ink);
+}
+
+.conference-person-button span:first-child {
+    display: grid;
+    gap: 4px;
+}
+
+.conference-person-button small {
+    color: var(--muted);
+    font-weight: 700;
+}
+
 .conference-card,
 .conference-file {
     display: grid;
@@ -816,6 +853,56 @@ button:focus,
 .modal-actions {
     flex-wrap: wrap;
     justify-content: flex-start;
+}
+
+.conference-modal {
+    width: min(1180px, calc(100% - 28px));
+    max-height: min(900px, calc(100vh - 28px));
+}
+
+.conference-profile-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+    gap: 18px;
+    padding: 22px;
+}
+
+.conference-menu,
+.conference-block {
+    display: grid;
+    gap: 14px;
+}
+
+.conference-block {
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+}
+
+.conference-block:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.conference-block h3,
+.conference-preview-panel h3 {
+    margin: 0;
+}
+
+.conference-preview-panel {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.preview-open-link[aria-disabled='true'] {
+    opacity: 0.55;
+    pointer-events: none;
 }
 
 .preview-modal {
@@ -1205,6 +1292,14 @@ td a {
         align-items: stretch;
         flex-direction: column;
     }
+
+    .conference-profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .conference-preview-panel {
+        position: static;
+    }
 }
 
 @media (max-width: 560px) {
@@ -1358,7 +1453,14 @@ td a {
         width: 100%;
     }
 
-    .preview-modal .modal-header {
+    .conference-person-button {
+        align-items: stretch;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .preview-modal .modal-header,
+    .conference-modal .modal-header {
         align-items: stretch;
         flex-direction: column;
     }

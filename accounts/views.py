@@ -588,11 +588,33 @@ def conference_dashboard(request):
         .select_related('volunteer', 'volunteer__registration__user', 'confirmed_by')
         .order_by('is_confirmed', '-submitted_at', 'volunteer__full_name')
     )
+    conference_groups = {}
+
+    for volunteer in document_volunteers:
+        conference_groups.setdefault(
+            volunteer.id,
+            {'volunteer': volunteer, 'payments': [], 'donations': []},
+        )
+
+    for payment in missionary_payments:
+        conference_groups.setdefault(
+            payment.volunteer_id,
+            {'volunteer': payment.volunteer, 'payments': [], 'donations': []},
+        )['payments'].append(payment)
+
+    for donation in donation_receipts:
+        conference_groups.setdefault(
+            donation.volunteer_id,
+            {'volunteer': donation.volunteer, 'payments': [], 'donations': []},
+        )['donations'].append(donation)
+
+    conference_groups = sorted(
+        conference_groups.values(),
+        key=lambda group: group['volunteer'].full_name.lower(),
+    )
 
     context = {
-        'document_volunteers': document_volunteers,
-        'missionary_payments': missionary_payments,
-        'donation_receipts': donation_receipts,
+        'conference_groups': conference_groups,
         'document_count': document_volunteers.count(),
         'document_pending_count': document_volunteers.filter(
             Q(signed_registration_document__gt='', signed_registration_document_confirmed=False)
