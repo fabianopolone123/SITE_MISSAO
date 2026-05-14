@@ -150,7 +150,7 @@
                                                 {% endif %}
                                             </div>
                                             <div class="conference-actions">
-                                                <button type="button" class="secondary-button compact-link-button" data-preview-target="preview-frame-{{ group.volunteer.id }}" data-preview-src="{{ payment.receipt.url }}" data-preview-link="preview-link-{{ group.volunteer.id }}" data-preview-title="preview-title-{{ group.volunteer.id }}" data-preview-label="{{ payment.get_payment_type_display }}">Ver comprovante</button>
+                                                <a class="primary-link-button secondary-button compact-link-button" href="{{ payment.receipt.url }}" target="_blank" rel="noopener">Ver comprovante</a>
                                                 <form method="post" class="permission-form">
                                                     {% csrf_token %}
                                                     <input type="hidden" name="missionary_payment_id" value="{{ payment.id }}">
@@ -179,7 +179,7 @@
                                                 {% endif %}
                                             </div>
                                             <div class="conference-actions">
-                                                <button type="button" class="secondary-button compact-link-button" data-preview-target="preview-frame-{{ group.volunteer.id }}" data-preview-src="{{ donation.receipt.url }}" data-preview-link="preview-link-{{ group.volunteer.id }}" data-preview-title="preview-title-{{ group.volunteer.id }}" data-preview-label="{{ donation.description|default:'Doa&ccedil;&atilde;o opcional' }}">Ver comprovante</button>
+                                                <a class="primary-link-button secondary-button compact-link-button" href="{{ donation.receipt.url }}" target="_blank" rel="noopener">Ver comprovante</a>
                                                 <form method="post" class="permission-form">
                                                     {% csrf_token %}
                                                     <input type="hidden" name="donation_receipt_id" value="{{ donation.id }}">
