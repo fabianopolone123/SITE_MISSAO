@@ -451,6 +451,7 @@ class VolunteerDashboardTests(TestCase):
             reverse('volunteer_donation_receipt_upload', args=[volunteer.id]),
             {
                 'donation-%s-description' % volunteer.id: 'Doação extra',
+                'donation-%s-amount' % volunteer.id: '125,50',
                 'donation-%s-receipt' % volunteer.id: SimpleUploadedFile(
                     'doacao.pdf',
                     b'%PDF-1.4 doacao',
@@ -462,18 +463,36 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(response.status_code, 302)
         donation = MissionaryDonationReceipt.objects.get(volunteer=volunteer)
         self.assertEqual(donation.description, 'Doação extra')
+        self.assertEqual(str(donation.amount), '125.50')
 
-    def test_admin_financial_dashboard_lists_optional_donation_receipts(self):
+    def test_admin_financial_dashboard_lists_confirmed_entries_by_category(self):
         admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
         _, _, volunteer = create_registration()
+        MissionaryPayment.objects.create(
+            volunteer=volunteer,
+            payment_type='participacao',
+            amount='1600.00',
+            receipt=SimpleUploadedFile(
+                'comprovante.pdf',
+                b'%PDF-1.4 comprovante',
+                content_type='application/pdf',
+            ),
+            is_confirmed=True,
+            confirmed_by=admin,
+            confirmed_at=timezone.now(),
+        )
         MissionaryDonationReceipt.objects.create(
             volunteer=volunteer,
             description='Doação extra',
+            amount='125.50',
             receipt=SimpleUploadedFile(
                 'doacao.pdf',
                 b'%PDF-1.4 doacao',
                 content_type='application/pdf',
             ),
+            is_confirmed=True,
+            confirmed_by=admin,
+            confirmed_at=timezone.now(),
         )
         self.client.force_login(admin)
 
@@ -482,8 +501,11 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Doa')
         self.assertContains(response, 'Doação extra')
+        self.assertContains(response, 'Inscri')
+        self.assertContains(response, '1.600,00')
+        self.assertContains(response, '125,50')
 
-    def test_admin_financial_dashboard_can_confirm_missionary_payment(self):
+    def test_admin_financial_dashboard_does_not_confirm_missionary_payment(self):
         admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
         _, _, volunteer = create_registration()
         payment = MissionaryPayment.objects.create(
@@ -507,9 +529,9 @@ class VolunteerDashboardTests(TestCase):
         )
 
         payment.refresh_from_db()
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(payment.is_confirmed)
-        self.assertEqual(payment.confirmed_by, admin)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(payment.is_confirmed)
+        self.assertIsNone(payment.confirmed_by)
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()

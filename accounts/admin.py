@@ -57,6 +57,6 @@ class MissionaryPaymentAdmin(admin.ModelAdmin):
 
 @admin.register(MissionaryDonationReceipt)
 class MissionaryDonationReceiptAdmin(admin.ModelAdmin):
-    list_display = ('volunteer', 'description', 'submitted_at', 'is_confirmed', 'confirmed_by', 'confirmed_at')
+    list_display = ('volunteer', 'description', 'amount', 'submitted_at', 'is_confirmed', 'confirmed_by', 'confirmed_at')
     list_filter = ('is_confirmed', 'submitted_at')
     search_fields = ('volunteer__full_name', 'volunteer__cpf', 'volunteer__email', 'description')

@@ -51,6 +51,11 @@ MISSION_PAYMENT_BANK_INFO = {
 }
 
 
+def format_brl(amount):
+    value = f'{amount or 0:,.2f}'
+    return value.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
 def get_panel_permissions(user):
     permissions = {
         'can_view_registrations': False,
@@ -437,25 +442,6 @@ def admin_dashboard(request):
 
 @user_passes_test(can_manage_financial, login_url='login')
 def financial_dashboard(request):
-    if request.method == 'POST' and request.POST.get('missionary_payment_id'):
-        payment = get_object_or_404(MissionaryPayment, pk=request.POST['missionary_payment_id'])
-        action = request.POST.get('action')
-
-        if action == 'confirm':
-            payment.is_confirmed = True
-            payment.confirmed_by = request.user
-            payment.confirmed_at = timezone.now()
-            payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
-            messages.success(request, 'Comprovante conferido pelo financeiro.')
-        elif action == 'unconfirm':
-            payment.is_confirmed = False
-            payment.confirmed_by = None
-            payment.confirmed_at = None
-            payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
-            messages.success(request, 'Conferência do comprovante removida.')
-
-        return redirect('financial_dashboard')
-
     if request.method == 'POST':
         form = FinancialTransactionForm(request.POST, request.FILES)
 
@@ -467,20 +453,63 @@ def financial_dashboard(request):
         form = FinancialTransactionForm()
 
     transactions = FinancialTransaction.objects.all()
-    missionary_payments = (
+    confirmed_missionary_payments = (
         MissionaryPayment.objects
         .select_related('volunteer', 'volunteer__registration__user', 'confirmed_by')
-        .filter(receipt__gt='')
-        .order_by('is_confirmed', '-submitted_at', 'volunteer__full_name')
+        .filter(receipt__gt='', is_confirmed=True)
+        .order_by('-confirmed_at', 'volunteer__full_name')
     )
-    donation_receipts = (
+    confirmed_donation_receipts = (
         MissionaryDonationReceipt.objects
         .select_related('volunteer', 'volunteer__registration__user', 'confirmed_by')
-        .order_by('-submitted_at', 'volunteer__full_name')
+        .filter(is_confirmed=True)
+        .order_by('-confirmed_at', '-submitted_at', 'volunteer__full_name')
     )
-    total_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
+    manual_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
     total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
+    participation_total = confirmed_missionary_payments.filter(payment_type='participacao').aggregate(total=Sum('amount'))['total'] or 0
+    baskets_total = confirmed_missionary_payments.filter(payment_type='cestas').aggregate(total=Sum('amount'))['total'] or 0
+    donations_total = confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0
+    total_income = manual_income + participation_total + baskets_total + donations_total
     balance = total_income - total_expenses
+    statement_entries = []
+
+    for entry in transactions:
+        signed_amount = entry.amount if entry.transaction_type == 'entrada' else -entry.amount
+        statement_entries.append({
+            'date': entry.transaction_date,
+            'type': entry.get_transaction_type_display(),
+            'category': entry.category,
+            'description': entry.description,
+            'amount': signed_amount,
+            'amount_brl': format_brl(entry.amount),
+            'receipt': entry.receipt,
+        })
+
+    for payment in confirmed_missionary_payments:
+        category = 'Inscrição' if payment.payment_type == 'participacao' else 'Cestas básicas'
+        statement_entries.append({
+            'date': payment.confirmed_at or payment.submitted_at,
+            'type': 'Entrada',
+            'category': category,
+            'description': f'{category} - {payment.volunteer.full_name}',
+            'amount': payment.amount,
+            'amount_brl': payment.amount_brl,
+            'receipt': payment.receipt,
+        })
+
+    for donation in confirmed_donation_receipts:
+        statement_entries.append({
+            'date': donation.confirmed_at or donation.submitted_at,
+            'type': 'Entrada',
+            'category': 'Doação',
+            'description': f'{donation.description or "Doação opcional"} - {donation.volunteer.full_name}',
+            'amount': donation.amount,
+            'amount_brl': donation.amount_brl,
+            'receipt': donation.receipt,
+        })
+
+    statement_entries.sort(key=lambda entry: str(entry['date']), reverse=True)
 
     context = {
         'form': form,
@@ -490,11 +519,13 @@ def financial_dashboard(request):
         'balance': balance,
         'expense_count': transactions.filter(transaction_type='saida').count(),
         'receipt_count': transactions.exclude(receipt='').count(),
-        'missionary_payments': missionary_payments,
-        'missionary_receipt_count': missionary_payments.count(),
-        'missionary_confirmed_count': missionary_payments.filter(is_confirmed=True).count(),
-        'donation_receipts': donation_receipts,
-        'donation_receipt_count': donation_receipts.count(),
+        'manual_income': manual_income,
+        'participation_total': participation_total,
+        'baskets_total': baskets_total,
+        'donations_total': donations_total,
+        'confirmed_missionary_payments': confirmed_missionary_payments,
+        'confirmed_donation_receipts': confirmed_donation_receipts,
+        'statement_entries': statement_entries,
         'panel_permissions': get_panel_permissions(request.user),
         'active_menu': 'financial',
         'category_summary': transactions.values('category', 'transaction_type').annotate(total=Sum('amount')).order_by('category'),

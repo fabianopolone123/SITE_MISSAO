@@ -171,7 +171,7 @@
                                         <div class="conference-file">
                                             <div>
                                                 <strong>{{ donation.description|default:"Doa&ccedil;&atilde;o opcional" }}</strong>
-                                                <p class="section-note">{{ donation.status_label }} | Enviado em {{ donation.submitted_at|date:"d/m/Y H:i" }}</p>
+                                                <p class="section-note">R$ {{ donation.amount_brl }} | {{ donation.status_label }} | Enviado em {{ donation.submitted_at|date:"d/m/Y H:i" }}</p>
                                                 {% if donation.is_confirmed %}
                                                     <p class="section-note">Conferido por {{ donation.confirmed_by.username|default:"-" }} em {{ donation.confirmed_at|date:"d/m/Y H:i" }}</p>
                                                 {% endif %}

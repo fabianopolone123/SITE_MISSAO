@@ -273,6 +273,7 @@ class MissionaryPayment(models.Model):
 class MissionaryDonationReceipt(models.Model):
     volunteer = models.ForeignKey(Volunteer, on_delete=models.CASCADE, related_name='donation_receipts')
     description = models.CharField('Descrição da doação', max_length=180, blank=True)
+    amount = models.DecimalField('Valor da doação', max_digits=10, decimal_places=2, default=0)
     receipt = models.FileField('Comprovante de doação', upload_to='comprovantes_doacoes/')
     submitted_at = models.DateTimeField('Enviado em', auto_now_add=True)
     is_confirmed = models.BooleanField('Conferido', default=False)
@@ -298,3 +299,9 @@ class MissionaryDonationReceipt(models.Model):
         if self.is_confirmed:
             return 'Conferido'
         return 'Aguardando conferencia'
+
+    @property
+    def amount_brl(self):
+        amount = Decimal(str(self.amount))
+        value = f'{amount:,.2f}'
+        return value.replace(',', 'X').replace('.', ',').replace('X', '.')

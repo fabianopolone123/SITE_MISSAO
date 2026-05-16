@@ -122,6 +122,7 @@
                                     <div class="document-card">
                                         <div>
                                             <h3>{{ donation.description|default:"Doação opcional" }}</h3>
+                                            <strong>R$ {{ donation.amount_brl }}</strong>
                                             <p class="section-note">Enviado em {{ donation.submitted_at|date:"d/m/Y H:i" }}</p>
                                         </div>
                                         <a class="primary-link-button compact-link-button" href="{{ donation.receipt.url }}" target="_blank" rel="noopener">Abrir</a>
@@ -171,6 +172,17 @@
                 }, 1800);
             });
         }
+
+        document.querySelectorAll('.money-input').forEach((moneyInput) => {
+            moneyInput.addEventListener('input', () => {
+                const numbers = moneyInput.value.replace(/\D/g, '');
+                const cents = numbers.padStart(3, '0');
+                const reais = cents.slice(0, -2);
+                const centavos = cents.slice(-2);
+                const formattedReais = Number(reais).toLocaleString('pt-BR');
+                moneyInput.value = `${formattedReais},${centavos}`;
+            });
+        });
     </script>
 </body>
 </html>

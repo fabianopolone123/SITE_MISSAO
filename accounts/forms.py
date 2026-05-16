@@ -147,11 +147,17 @@ class MissionaryPaymentReceiptForm(forms.ModelForm):
 
 
 class MissionaryDonationReceiptForm(forms.ModelForm):
+    amount = forms.CharField(
+        label='Valor da doação',
+        widget=forms.TextInput(attrs={'inputmode': 'decimal', 'placeholder': '0,00'}),
+    )
+
     class Meta:
         model = MissionaryDonationReceipt
-        fields = ['description', 'receipt']
+        fields = ['description', 'amount', 'receipt']
         labels = {
             'description': 'Descrição da doação',
+            'amount': 'Valor da doação',
             'receipt': 'Comprovante da doação',
         }
         widgets = {
@@ -164,6 +170,16 @@ class MissionaryDonationReceiptForm(forms.ModelForm):
         self.fields['receipt'].required = True
         for field in self.fields.values():
             field.widget.attrs.setdefault('class', 'form-control')
+        self.fields['amount'].widget.attrs['class'] = 'form-control money-input'
+
+    def clean_amount(self):
+        amount = str(self.cleaned_data['amount'])
+        normalized_amount = amount.replace('.', '').replace(',', '.')
+
+        try:
+            return Decimal(normalized_amount)
+        except InvalidOperation:
+            raise forms.ValidationError('Informe um valor válido no formato 1.234,56.')
 
     def clean_receipt(self):
         receipt = self.cleaned_data['receipt']

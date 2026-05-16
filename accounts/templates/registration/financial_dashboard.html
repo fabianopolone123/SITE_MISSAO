@@ -33,38 +33,17 @@
         {% endif %}
 
         <section class="report-grid">
-            <article class="report-card">
-                <span>Entradas</span>
-                <strong>R$ {{ total_income|floatformat:2 }}</strong>
-            </article>
-            <article class="report-card">
-                <span>Custos</span>
-                <strong>R$ {{ total_expenses|floatformat:2 }}</strong>
-            </article>
-            <article class="report-card">
-                <span>Saldo</span>
-                <strong>R$ {{ balance|floatformat:2 }}</strong>
-            </article>
-            <article class="report-card">
-                <span>Comprovantes</span>
-                <strong>{{ receipt_count }}</strong>
-            </article>
-            <article class="report-card">
-                <span>Comprovantes mission&aacute;rios</span>
-                <strong>{{ missionary_receipt_count }}</strong>
-            </article>
-            <article class="report-card">
-                <span>Conferidos</span>
-                <strong>{{ missionary_confirmed_count }}</strong>
-            </article>
-            <article class="report-card">
-                <span>Doações opcionais</span>
-                <strong>{{ donation_receipt_count }}</strong>
-            </article>
+            <article class="report-card"><span>Entradas totais</span><strong>R$ {{ total_income|floatformat:2 }}</strong></article>
+            <article class="report-card"><span>Sa&iacute;das totais</span><strong>R$ {{ total_expenses|floatformat:2 }}</strong></article>
+            <article class="report-card"><span>Saldo</span><strong>R$ {{ balance|floatformat:2 }}</strong></article>
+            <article class="report-card"><span>Inscri&ccedil;&otilde;es</span><strong>R$ {{ participation_total|floatformat:2 }}</strong></article>
+            <article class="report-card"><span>Cestas</span><strong>R$ {{ baskets_total|floatformat:2 }}</strong></article>
+            <article class="report-card"><span>Doa&ccedil;&otilde;es</span><strong>R$ {{ donations_total|floatformat:2 }}</strong></article>
+            <article class="report-card"><span>Entradas manuais</span><strong>R$ {{ manual_income|floatformat:2 }}</strong></article>
         </section>
 
         <section class="admin-section">
-            <h2>Comprovantes dos mission&aacute;rios</h2>
+            <h2>Entradas conferidas de inscri&ccedil;&atilde;o e cestas</h2>
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -74,38 +53,21 @@
                             <th>Pagamento</th>
                             <th>Valor</th>
                             <th>Comprovante</th>
-                            <th>Status</th>
-                            <th>Confer&ecirc;ncia ADM</th>
+                            <th>Confer&ecirc;ncia</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for payment in missionary_payments %}
+                        {% for payment in confirmed_missionary_payments %}
                             <tr>
                                 <td>{{ payment.volunteer.full_name }}</td>
                                 <td>{{ payment.volunteer.registration.user.username }}</td>
                                 <td>{{ payment.get_payment_type_display }}</td>
                                 <td>R$ {{ payment.amount_brl }}</td>
-                                <td>
-                                    <a href="{{ payment.receipt.url }}" target="_blank" rel="noopener">Abrir</a>
-                                </td>
-                                <td>{{ payment.status_label }}</td>
-                                <td>
-                                    <form method="post" class="permission-form">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="missionary_payment_id" value="{{ payment.id }}">
-                                        {% if payment.is_confirmed %}
-                                            <p class="section-note">Conferido por {{ payment.confirmed_by.username|default:"-" }} em {{ payment.confirmed_at|date:"d/m/Y H:i" }}</p>
-                                            <button type="submit" name="action" value="unconfirm" class="table-button secondary-button">Remover OK</button>
-                                        {% else %}
-                                            <button type="submit" name="action" value="confirm" class="table-button">Marcar OK</button>
-                                        {% endif %}
-                                    </form>
-                                </td>
+                                <td><a href="{{ payment.receipt.url }}" target="_blank" rel="noopener">Abrir</a></td>
+                                <td>{{ payment.confirmed_by.username|default:"-" }} em {{ payment.confirmed_at|date:"d/m/Y H:i" }}</td>
                             </tr>
                         {% empty %}
-                            <tr>
-                                <td colspan="7">Nenhum comprovante de mission&aacute;rio enviado.</td>
-                            </tr>
+                            <tr><td colspan="6">Nenhum comprovante de mission&aacute;rio conferido.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -113,33 +75,31 @@
         </section>
 
         <section class="admin-section">
-            <h2>Comprovantes de doações opcionais</h2>
+            <h2>Doa&ccedil;&otilde;es conferidas</h2>
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>Missionário</th>
+                            <th>Mission&aacute;rio</th>
                             <th>Login</th>
-                            <th>Descrição</th>
-                            <th>Enviado em</th>
+                            <th>Descri&ccedil;&atilde;o</th>
+                            <th>Valor</th>
                             <th>Comprovante</th>
-                            <th>Status</th>
+                            <th>Confer&ecirc;ncia</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for donation in donation_receipts %}
+                        {% for donation in confirmed_donation_receipts %}
                             <tr>
                                 <td>{{ donation.volunteer.full_name }}</td>
                                 <td>{{ donation.volunteer.registration.user.username }}</td>
-                                <td>{{ donation.description|default:"Doação opcional" }}</td>
-                                <td>{{ donation.submitted_at|date:"d/m/Y H:i" }}</td>
+                                <td>{{ donation.description|default:"Doa&ccedil;&atilde;o opcional" }}</td>
+                                <td>R$ {{ donation.amount_brl }}</td>
                                 <td><a href="{{ donation.receipt.url }}" target="_blank" rel="noopener">Abrir</a></td>
-                                <td>{{ donation.status_label }}</td>
+                                <td>{{ donation.confirmed_by.username|default:"-" }} em {{ donation.confirmed_at|date:"d/m/Y H:i" }}</td>
                             </tr>
                         {% empty %}
-                            <tr>
-                                <td colspan="6">Nenhum comprovante de doação opcional enviado.</td>
-                            </tr>
+                            <tr><td colspan="6">Nenhum comprovante de doa&ccedil;&atilde;o conferido.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -147,7 +107,7 @@
         </section>
 
         <section class="admin-section">
-            <h2>Cadastrar custo ou entrada</h2>
+            <h2>Cadastrar sa&iacute;da ou entrada manual</h2>
             <form method="post" enctype="multipart/form-data" class="finance-form" novalidate>
                 {% csrf_token %}
                 <div class="form-grid">
@@ -161,34 +121,6 @@
                 </div>
                 <button type="submit">Cadastrar lan&ccedil;amento</button>
             </form>
-        </section>
-
-        <section class="admin-section">
-            <h2>Relat&oacute;rio por categoria</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Categoria</th>
-                            <th>Tipo</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in category_summary %}
-                            <tr>
-                                <td>{{ item.category }}</td>
-                                <td>{{ item.transaction_type|title }}</td>
-                                <td>R$ {{ item.total|floatformat:2 }}</td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="3">Nenhum lan&ccedil;amento financeiro cadastrado.</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
         </section>
 
         <section class="admin-section">
@@ -206,13 +138,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for transaction in transactions %}
+                        {% for transaction in statement_entries %}
                             <tr>
-                                <td>{{ transaction.transaction_date|date:"d/m/Y" }}</td>
-                                <td>{{ transaction.get_transaction_type_display }}</td>
+                                <td>{{ transaction.date|date:"d/m/Y H:i" }}</td>
+                                <td>{{ transaction.type }}</td>
                                 <td>{{ transaction.category }}</td>
                                 <td>{{ transaction.description }}</td>
-                                <td>R$ {{ transaction.amount|floatformat:2 }}</td>
+                                <td>R$ {{ transaction.amount_brl }}</td>
                                 <td>
                                     {% if transaction.receipt %}
                                         <a href="{{ transaction.receipt.url }}" target="_blank" rel="noopener">Abrir</a>
@@ -222,9 +154,7 @@
                                 </td>
                             </tr>
                         {% empty %}
-                            <tr>
-                                <td colspan="6">Nenhum lan&ccedil;amento financeiro cadastrado.</td>
-                            </tr>
+                            <tr><td colspan="6">Nenhum lan&ccedil;amento financeiro cadastrado.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -233,9 +163,7 @@
     </main>
 
     <script>
-        const moneyInput = document.querySelector('.money-input');
-
-        if (moneyInput) {
+        document.querySelectorAll('.money-input').forEach((moneyInput) => {
             moneyInput.addEventListener('input', () => {
                 const numbers = moneyInput.value.replace(/\D/g, '');
                 const cents = numbers.padStart(3, '0');
@@ -244,7 +172,7 @@
                 const formattedReais = Number(reais).toLocaleString('pt-BR');
                 moneyInput.value = `${formattedReais},${centavos}`;
             });
-        }
+        });
     </script>
 </body>
 </html>
