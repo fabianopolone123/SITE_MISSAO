@@ -33,13 +33,13 @@
         {% endif %}
 
         <section class="report-grid">
-            <article class="report-card"><span>Entradas totais</span><strong>R$ {{ total_income|floatformat:2 }}</strong></article>
-            <article class="report-card"><span>Sa&iacute;das totais</span><strong>R$ {{ total_expenses|floatformat:2 }}</strong></article>
-            <article class="report-card"><span>Saldo</span><strong>R$ {{ balance|floatformat:2 }}</strong></article>
-            <article class="report-card"><span>Inscri&ccedil;&otilde;es</span><strong>R$ {{ participation_total|floatformat:2 }}</strong></article>
-            <article class="report-card"><span>Cestas</span><strong>R$ {{ baskets_total|floatformat:2 }}</strong></article>
-            <article class="report-card"><span>Doa&ccedil;&otilde;es</span><strong>R$ {{ donations_total|floatformat:2 }}</strong></article>
-            <article class="report-card"><span>Entradas manuais</span><strong>R$ {{ manual_income|floatformat:2 }}</strong></article>
+            <article class="report-card"><span>Entradas totais</span><strong>R$ {{ total_income_brl }}</strong></article>
+            <article class="report-card"><span>Sa&iacute;das totais</span><strong>R$ {{ total_expenses_brl }}</strong></article>
+            <article class="report-card"><span>Saldo</span><strong>R$ {{ balance_brl }}</strong></article>
+            <article class="report-card"><span>Inscri&ccedil;&otilde;es</span><strong>R$ {{ participation_total_brl }}</strong></article>
+            <article class="report-card"><span>Cestas</span><strong>R$ {{ baskets_total_brl }}</strong></article>
+            <article class="report-card"><span>Doa&ccedil;&otilde;es</span><strong>R$ {{ donations_total_brl }}</strong></article>
+            <article class="report-card"><span>Entradas manuais</span><strong>R$ {{ manual_income_brl }}</strong></article>
         </section>
 
         <section class="admin-section">

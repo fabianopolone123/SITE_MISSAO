@@ -529,6 +529,7 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'Inscri')
         self.assertContains(response, '1.600,00')
         self.assertContains(response, '125,50')
+        self.assertContains(response, 'R$ 1.725,50')
 
     def test_admin_financial_dashboard_handles_confirmed_donation_without_receipt(self):
         admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
