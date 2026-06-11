@@ -131,7 +131,26 @@
                                         </div>
                                     {% endif %}
 
-                                    {% if not group.volunteer.signed_registration_document and not group.volunteer.insurance_policy_document %}
+                                    {% if group.volunteer.flight_ticket_document or group.volunteer.flight_date or group.volunteer.flight_time %}
+                                        <div class="conference-file">
+                                            <div>
+                                                <strong>Passagem a&eacute;rea</strong>
+                                                <p class="section-note">
+                                                    Data: {{ group.volunteer.flight_date|date:"d/m/Y"|default:"-" }}
+                                                    | Hora: {{ group.volunteer.flight_time|time:"H:i"|default:"-" }}
+                                                </p>
+                                            </div>
+                                            <div class="conference-actions">
+                                                {% if group.volunteer.flight_ticket_document %}
+                                                    <a class="primary-link-button secondary-button compact-link-button" href="{{ group.volunteer.flight_ticket_document.url }}" target="_blank" rel="noopener">Ver passagem</a>
+                                                {% else %}
+                                                    <span class="document-status pending">Arquivo pendente</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if not group.volunteer.signed_registration_document and not group.volunteer.insurance_policy_document and not group.volunteer.flight_ticket_document and not group.volunteer.flight_date and not group.volunteer.flight_time %}
                                         <p class="section-note">Nenhum documento enviado.</p>
                                     {% endif %}
                                 </section>

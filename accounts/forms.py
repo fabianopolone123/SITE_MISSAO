@@ -41,6 +41,9 @@ class VolunteerForm(forms.ModelForm):
             'registration',
             'signed_registration_document',
             'insurance_policy_document',
+            'flight_ticket_document',
+            'flight_date',
+            'flight_time',
             'created_at',
         ]
         widgets = {
@@ -100,10 +103,17 @@ class VolunteerForm(forms.ModelForm):
 class VolunteerDocumentationForm(forms.ModelForm):
     class Meta:
         model = Volunteer
-        fields = ['signed_registration_document', 'insurance_policy_document']
+        fields = ['signed_registration_document', 'insurance_policy_document', 'flight_ticket_document', 'flight_date', 'flight_time']
         labels = {
             'signed_registration_document': 'Ficha de inscrição assinada pelo gov.br',
             'insurance_policy_document': 'Apólice de seguro assinada',
+            'flight_ticket_document': 'Passagem aérea',
+            'flight_date': 'Data do voo',
+            'flight_time': 'Hora do voo',
+        }
+        widgets = {
+            'flight_date': forms.DateInput(attrs={'type': 'date'}),
+            'flight_time': forms.TimeInput(attrs={'type': 'time'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -119,6 +129,11 @@ class VolunteerDocumentationForm(forms.ModelForm):
             file = cleaned_data.get(field_name)
             if file and Path(file.name).suffix.lower() != '.pdf':
                 self.add_error(field_name, 'Envie um arquivo PDF.')
+
+        flight_ticket = cleaned_data.get('flight_ticket_document')
+        allowed_ticket_suffixes = {'.pdf', '.jpg', '.jpeg', '.png'}
+        if flight_ticket and Path(flight_ticket.name).suffix.lower() not in allowed_ticket_suffixes:
+            self.add_error('flight_ticket_document', 'Envie a passagem em PDF, JPG ou PNG.')
 
         return cleaned_data
 

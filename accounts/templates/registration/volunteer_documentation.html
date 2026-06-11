@@ -103,6 +103,24 @@
                                         </dd>
                                     </div>
                                     <div>
+                                        <dt>Passagem a&eacute;rea</dt>
+                                        <dd>
+                                            {% if volunteer.flight_ticket_document %}
+                                                <a href="{{ volunteer.flight_ticket_document.url }}" target="_blank" rel="noopener">Arquivo enviado</a>
+                                            {% else %}
+                                                Pendente
+                                            {% endif %}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt>Data do voo</dt>
+                                        <dd>{{ volunteer.flight_date|date:"d/m/Y"|default:"Pendente" }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Hora do voo</dt>
+                                        <dd>{{ volunteer.flight_time|time:"H:i"|default:"Pendente" }}</dd>
+                                    </div>
+                                    <div>
                                         <dt>Status</dt>
                                         <dd>{{ volunteer.documentation_status_label }}</dd>
                                     </div>
@@ -118,6 +136,18 @@
                                         <div class="field">
                                             <label for="id_insurance_policy_document_{{ volunteer.id }}">Ap&oacute;lice de seguro assinada</label>
                                             <input type="file" name="insurance_policy_document" id="id_insurance_policy_document_{{ volunteer.id }}" accept=".pdf,application/pdf">
+                                        </div>
+                                        <div class="field">
+                                            <label for="id_flight_ticket_document_{{ volunteer.id }}">Passagem a&eacute;rea</label>
+                                            <input type="file" name="flight_ticket_document" id="id_flight_ticket_document_{{ volunteer.id }}" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+                                        </div>
+                                        <div class="field">
+                                            <label for="id_flight_date_{{ volunteer.id }}">Data do voo</label>
+                                            <input type="date" name="flight_date" id="id_flight_date_{{ volunteer.id }}" value="{{ volunteer.flight_date|date:'Y-m-d' }}">
+                                        </div>
+                                        <div class="field">
+                                            <label for="id_flight_time_{{ volunteer.id }}">Hora do voo</label>
+                                            <input type="time" name="flight_time" id="id_flight_time_{{ volunteer.id }}" value="{{ volunteer.flight_time|time:'H:i' }}">
                                         </div>
                                     </div>
                                     <button type="submit">Enviar documenta&ccedil;&atilde;o</button>

@@ -608,7 +608,13 @@ def conference_dashboard(request):
     document_volunteers = (
         Volunteer.objects
         .select_related('registration__user', 'documentation_reviewed_by')
-        .filter(Q(signed_registration_document__gt='') | Q(insurance_policy_document__gt=''))
+        .filter(
+            Q(signed_registration_document__gt='')
+            | Q(insurance_policy_document__gt='')
+            | Q(flight_ticket_document__gt='')
+            | Q(flight_date__isnull=False)
+            | Q(flight_time__isnull=False)
+        )
         .order_by('documentation_reviewed_at', 'full_name')
     )
     missionary_payments = (

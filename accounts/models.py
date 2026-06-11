@@ -157,6 +157,13 @@ class Volunteer(models.Model):
         upload_to='documentos/apolices/',
         blank=True,
     )
+    flight_ticket_document = models.FileField(
+        'Passagem aérea',
+        upload_to='documentos/passagens/',
+        blank=True,
+    )
+    flight_date = models.DateField('Data do voo', null=True, blank=True)
+    flight_time = models.TimeField('Hora do voo', null=True, blank=True)
     signed_registration_document_confirmed = models.BooleanField('Ficha assinada conferida', default=False)
     insurance_policy_document_confirmed = models.BooleanField('Apolice de seguro conferida', default=False)
     documentation_reviewed_by = models.ForeignKey(
@@ -183,6 +190,10 @@ class Volunteer(models.Model):
     @property
     def has_insurance_policy_document(self):
         return bool(self.insurance_policy_document)
+
+    @property
+    def has_flight_ticket_document(self):
+        return bool(self.flight_ticket_document)
 
     @property
     def documentation_complete(self):

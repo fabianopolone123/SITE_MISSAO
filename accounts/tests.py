@@ -313,6 +313,9 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'Documenta&ccedil;&atilde;o pendente')
         self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
         self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
+        self.assertContains(response, 'name="flight_ticket_document"')
+        self.assertContains(response, 'name="flight_date"')
+        self.assertContains(response, 'name="flight_time"')
 
     def test_conference_dashboard_requires_permission(self):
         user, _, _ = create_registration()
@@ -351,6 +354,28 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, volunteer.full_name)
         self.assertContains(response, 'Ver arquivo')
         self.assertContains(response, 'Ver comprovante')
+
+    def test_conference_dashboard_lists_flight_ticket_information(self):
+        reviewer, _, _ = create_registration(username='revisor')
+        PanelPermission.objects.create(user=reviewer, can_review_submissions=True)
+        _, _, volunteer = create_registration(username='missionario')
+        volunteer.flight_ticket_document = SimpleUploadedFile(
+            'passagem.pdf',
+            b'%PDF-1.4 passagem',
+            content_type='application/pdf',
+        )
+        volunteer.flight_date = date(2026, 7, 3)
+        volunteer.flight_time = '12:30'
+        volunteer.save(update_fields=['flight_ticket_document', 'flight_date', 'flight_time'])
+        self.client.force_login(reviewer)
+
+        response = self.client.get(reverse('conference_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Passagem a&eacute;rea')
+        self.assertContains(response, '03/07/2026')
+        self.assertContains(response, '12:30')
+        self.assertContains(response, 'Ver passagem')
 
     def test_conference_dashboard_can_confirm_documentation_file(self):
         reviewer, _, _ = create_registration(username='revisor')
@@ -613,12 +638,22 @@ class VolunteerDashboardTests(TestCase):
                     b'%PDF-1.4 apolice assinada',
                     content_type='application/pdf',
                 ),
+                'flight_ticket_document': SimpleUploadedFile(
+                    'passagem.pdf',
+                    b'%PDF-1.4 passagem',
+                    content_type='application/pdf',
+                ),
+                'flight_date': '2026-07-03',
+                'flight_time': '12:30',
             },
         )
 
         volunteer.refresh_from_db()
         self.assertEqual(response.status_code, 302)
         self.assertTrue(volunteer.documentation_complete)
+        self.assertTrue(volunteer.flight_ticket_document)
+        self.assertEqual(volunteer.flight_date, date(2026, 7, 3))
+        self.assertEqual(volunteer.flight_time.strftime('%H:%M'), '12:30')
 
     def test_volunteer_cannot_upload_documentation_for_another_user(self):
         user, _, _ = create_registration()
