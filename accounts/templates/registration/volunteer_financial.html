@@ -173,15 +173,24 @@
             });
         }
 
+        const formatMoneyInput = (moneyInput) => {
+            const numbers = moneyInput.value.replace(/\D/g, '');
+
+            if (!numbers) {
+                moneyInput.value = '';
+                return;
+            }
+
+            const cents = numbers.padStart(3, '0');
+            const reais = cents.slice(0, -2);
+            const centavos = cents.slice(-2);
+            const formattedReais = Number(reais).toLocaleString('pt-BR');
+            moneyInput.value = `${formattedReais},${centavos}`;
+        };
+
         document.querySelectorAll('.money-input').forEach((moneyInput) => {
-            moneyInput.addEventListener('input', () => {
-                const numbers = moneyInput.value.replace(/\D/g, '');
-                const cents = numbers.padStart(3, '0');
-                const reais = cents.slice(0, -2);
-                const centavos = cents.slice(-2);
-                const formattedReais = Number(reais).toLocaleString('pt-BR');
-                moneyInput.value = `${formattedReais},${centavos}`;
-            });
+            formatMoneyInput(moneyInput);
+            moneyInput.addEventListener('input', () => formatMoneyInput(moneyInput));
         });
     </script>
 </body>
