@@ -505,6 +505,25 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, '1.600,00')
         self.assertContains(response, '125,50')
 
+    def test_admin_financial_dashboard_handles_confirmed_donation_without_receipt(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        _, _, volunteer = create_registration()
+        MissionaryDonationReceipt.objects.create(
+            volunteer=volunteer,
+            description='Doacao sem arquivo',
+            amount='50.00',
+            receipt='',
+            is_confirmed=True,
+            confirmed_by=admin,
+            confirmed_at=timezone.now(),
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('financial_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Doacao sem arquivo')
+
     def test_admin_financial_dashboard_does_not_confirm_missionary_payment(self):
         admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
         _, _, volunteer = create_registration()

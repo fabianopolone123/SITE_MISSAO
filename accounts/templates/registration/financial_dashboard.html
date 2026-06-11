@@ -95,7 +95,13 @@
                                 <td>{{ donation.volunteer.registration.user.username }}</td>
                                 <td>{{ donation.description|default:"Doa&ccedil;&atilde;o opcional" }}</td>
                                 <td>R$ {{ donation.amount_brl }}</td>
-                                <td><a href="{{ donation.receipt.url }}" target="_blank" rel="noopener">Abrir</a></td>
+                                <td>
+                                    {% if donation.receipt %}
+                                        <a href="{{ donation.receipt.url }}" target="_blank" rel="noopener">Abrir</a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
                                 <td>{{ donation.confirmed_by.username|default:"-" }} em {{ donation.confirmed_at|date:"d/m/Y H:i" }}</td>
                             </tr>
                         {% empty %}
