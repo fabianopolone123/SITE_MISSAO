@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import MissionaryDonationReceipt, MissionaryPayment, PanelPermission, Registration, Volunteer
+from .models import FinancialTransaction, MissionaryDonationReceipt, MissionaryPayment, PanelPermission, Registration, Volunteer
 
 
 def create_registration(username='voluntario', password='senha-forte-123'):
@@ -523,6 +523,23 @@ class VolunteerDashboardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Doacao sem arquivo')
+
+    def test_admin_financial_dashboard_handles_manual_transaction_date(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        FinancialTransaction.objects.create(
+            transaction_type='entrada',
+            category='Oferta',
+            description='Entrada manual',
+            amount='100.00',
+            transaction_date=date(2026, 6, 11),
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('financial_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Entrada manual')
+        self.assertContains(response, '11/06/2026')
 
     def test_admin_financial_dashboard_does_not_confirm_missionary_payment(self):
         admin = User.objects.create_superuser(username='admin', password='senha-forte-123')

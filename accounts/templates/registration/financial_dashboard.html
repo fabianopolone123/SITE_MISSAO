@@ -146,7 +146,7 @@
                     <tbody>
                         {% for transaction in statement_entries %}
                             <tr>
-                                <td>{{ transaction.date|date:"d/m/Y H:i" }}</td>
+                                <td>{{ transaction.date|date:transaction.date_format }}</td>
                                 <td>{{ transaction.type }}</td>
                                 <td>{{ transaction.category }}</td>
                                 <td>{{ transaction.description }}</td>

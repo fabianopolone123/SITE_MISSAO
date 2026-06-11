@@ -478,6 +478,7 @@ def financial_dashboard(request):
         signed_amount = entry.amount if entry.transaction_type == 'entrada' else -entry.amount
         statement_entries.append({
             'date': entry.transaction_date,
+            'date_format': 'd/m/Y',
             'type': entry.get_transaction_type_display(),
             'category': entry.category,
             'description': entry.description,
@@ -490,6 +491,7 @@ def financial_dashboard(request):
         category = 'Inscrição' if payment.payment_type == 'participacao' else 'Cestas básicas'
         statement_entries.append({
             'date': payment.confirmed_at or payment.submitted_at,
+            'date_format': 'd/m/Y H:i',
             'type': 'Entrada',
             'category': category,
             'description': f'{category} - {payment.volunteer.full_name}',
@@ -501,6 +503,7 @@ def financial_dashboard(request):
     for donation in confirmed_donation_receipts:
         statement_entries.append({
             'date': donation.confirmed_at or donation.submitted_at,
+            'date_format': 'd/m/Y H:i',
             'type': 'Entrada',
             'category': 'Doação',
             'description': f'{donation.description or "Doação opcional"} - {donation.volunteer.full_name}',
