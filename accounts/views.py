@@ -139,6 +139,14 @@ def ensure_missionary_payments(volunteer):
 class SmartLoginView(LoginView):
     template_name = 'registration/login.html'
 
+    def get_success_url(self):
+        try:
+            if self.request.user.registration.force_password_change:
+                return '/trocar-senha/'
+        except Exception:
+            pass
+        return super().get_success_url()
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['logged_redirect_url'] = first_available_panel_url(self.request.user)
@@ -675,6 +683,52 @@ def conference_dashboard(request):
         'active_menu': 'conference',
     }
     return render(request, 'registration/conference_dashboard.html', context)
+
+
+@user_passes_test(can_view_registrations, login_url='login')
+@require_POST
+def admin_reset_password(request, registration_id):
+    registration = get_object_or_404(Registration, pk=registration_id)
+    registration.user.set_password('1234')
+    registration.user.save()
+    registration.force_password_change = True
+    registration.save(update_fields=['force_password_change'])
+    messages.success(request, f'Senha de {registration.user.username} redefinida para 1234.')
+    return redirect('admin_dashboard')
+
+
+@login_required(login_url='login')
+def change_password(request):
+    try:
+        registration = request.user.registration
+    except Registration.DoesNotExist:
+        return redirect('volunteer_dashboard')
+
+    if not registration.force_password_change:
+        return redirect(first_available_panel_url(request.user))
+
+    error = None
+
+    if request.method == 'POST':
+        password1 = request.POST.get('password1', '')
+        password2 = request.POST.get('password2', '')
+
+        if not password1:
+            error = 'Digite a nova senha.'
+        elif password1 != password2:
+            error = 'As senhas não coincidem.'
+        elif len(password1) < 6:
+            error = 'A senha deve ter pelo menos 6 caracteres.'
+        else:
+            request.user.set_password(password1)
+            request.user.save()
+            registration.force_password_change = False
+            registration.save(update_fields=['force_password_change'])
+            login(request, request.user)
+            messages.success(request, 'Senha alterada com sucesso.')
+            return redirect(first_available_panel_url(request.user))
+
+    return render(request, 'registration/change_password.html', {'error': error})
 
 
 @user_passes_test(can_manage_permissions, login_url='login')

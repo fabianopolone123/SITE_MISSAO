@@ -48,6 +48,7 @@ class PanelPermission(models.Model):
 
 class Registration(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    force_password_change = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

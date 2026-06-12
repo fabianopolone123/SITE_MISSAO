@@ -552,6 +552,18 @@ button:focus,
     color: var(--green-dark);
 }
 
+.danger-button {
+    background: #fef3f2;
+    color: var(--danger);
+    border: 1px solid rgba(180, 35, 24, 0.22);
+}
+
+.danger-button:hover,
+.danger-button:focus {
+    background: #fde8e7;
+    color: var(--danger);
+}
+
 .link-button {
     min-height: 38px;
     padding: 8px 12px;

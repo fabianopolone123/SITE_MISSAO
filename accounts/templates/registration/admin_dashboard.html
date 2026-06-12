@@ -194,6 +194,13 @@
                         <p class="section-note">Nenhum mission&aacute;rio vinculado.</p>
                     {% endfor %}
                 </div>
+
+                <div class="modal-actions">
+                    <form method="post" action="{% url 'admin_reset_password' registration.id %}" onsubmit="return confirm('Redefinir a senha de {{ registration.user.username }} para 1234?')">
+                        {% csrf_token %}
+                        <button type="submit" class="danger-button">Redefinir senha para 1234</button>
+                    </form>
+                </div>
             </dialog>
         {% endfor %}
 
