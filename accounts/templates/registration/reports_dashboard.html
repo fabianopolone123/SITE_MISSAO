@@ -31,6 +31,14 @@
                 <span>Restri&ccedil;&atilde;o alimentar</span>
                 <strong>{{ food_restriction_count }}</strong>
             </article>
+            <article class="report-card" style="cursor:pointer;" data-modal-target="modal-age-ranges">
+                <span>Faixa et&aacute;ria</span>
+                <strong>{{ volunteer_count }}</strong>
+            </article>
+            <article class="report-card" style="cursor:pointer;" data-modal-target="modal-work-areas">
+                <span>&Aacute;reas de atua&ccedil;&atilde;o</span>
+                <strong>{{ volunteer_count }}</strong>
+            </article>
         </section>
     </main>
 
@@ -68,6 +76,84 @@
                 </tbody>
             </table>
         </div>
+    </dialog>
+
+    <dialog class="detail-modal" id="modal-age-ranges" aria-labelledby="modal-age-ranges-title">
+        <div class="modal-header">
+            <div>
+                <p class="eyebrow">Relat&oacute;rio</p>
+                <h2 id="modal-age-ranges-title">Faixa et&aacute;ria</h2>
+            </div>
+            <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
+        </div>
+        {% for age_range in age_ranges %}
+            <div class="modal-list">
+                <h3>{{ age_range.label }} <span style="font-weight:normal;font-size:0.9em;">({{ age_range.volunteers|length }})</span></h3>
+                {% if age_range.volunteers %}
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Idade</th>
+                                    <th>Login</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for volunteer in age_range.volunteers %}
+                                    <tr>
+                                        <td>{{ volunteer.full_name }}</td>
+                                        <td>{{ volunteer.age }} anos</td>
+                                        <td>{{ volunteer.registration.user.username }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="section-note">Nenhum mission&aacute;rio nesta faixa.</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </dialog>
+
+    <dialog class="detail-modal" id="modal-work-areas" aria-labelledby="modal-work-areas-title">
+        <div class="modal-header">
+            <div>
+                <p class="eyebrow">Relat&oacute;rio</p>
+                <h2 id="modal-work-areas-title">&Aacute;reas de atua&ccedil;&atilde;o</h2>
+            </div>
+            <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
+        </div>
+        {% for area in work_areas %}
+            <div class="modal-list">
+                <h3>{{ area.label }} <span style="font-weight:normal;font-size:0.9em;">({{ area.volunteers|length }})</span></h3>
+                {% if area.volunteers %}
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Login</th>
+                                    <th>E-mail</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for volunteer in area.volunteers %}
+                                    <tr>
+                                        <td>{{ volunteer.full_name }}</td>
+                                        <td>{{ volunteer.registration.user.username }}</td>
+                                        <td>{{ volunteer.email }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="section-note">Nenhum mission&aacute;rio nesta &aacute;rea.</p>
+                {% endif %}
+            </div>
+        {% endfor %}
     </dialog>
 
     <script>

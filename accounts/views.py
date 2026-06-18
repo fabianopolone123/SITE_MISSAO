@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -778,12 +780,47 @@ def reports_dashboard(request):
         .order_by('full_name')
     )
 
+    today = date.today()
+    all_volunteers = list(
+        Volunteer.objects.select_related('registration__user').order_by('full_name')
+    )
+
+    age_ranges = [
+        {'label': 'Até 20 anos', 'min': 0, 'max': 20, 'volunteers': []},
+        {'label': '21 a 30 anos', 'min': 21, 'max': 30, 'volunteers': []},
+        {'label': '31 a 40 anos', 'min': 31, 'max': 40, 'volunteers': []},
+        {'label': '41 a 50 anos', 'min': 41, 'max': 50, 'volunteers': []},
+        {'label': '51 anos ou mais', 'min': 51, 'max': 999, 'volunteers': []},
+    ]
+
+    work_areas = [
+        {'label': 'Saúde', 'field': 'work_health', 'volunteers': []},
+        {'label': 'Educação', 'field': 'work_education', 'volunteers': []},
+        {'label': 'Apoio geral', 'field': 'work_general_help', 'volunteers': []},
+        {'label': 'Evangelismo', 'field': 'work_evangelism', 'volunteers': []},
+        {'label': 'Outra', 'field': 'work_other', 'volunteers': []},
+    ]
+
+    for volunteer in all_volunteers:
+        age = (today - volunteer.birth_date).days // 365
+        volunteer.age = age
+        for age_range in age_ranges:
+            if age_range['min'] <= age <= age_range['max']:
+                age_range['volunteers'].append(volunteer)
+                break
+        for area in work_areas:
+            if getattr(volunteer, area['field']):
+                area['volunteers'].append(volunteer)
+
     return render(
         request,
         'registration/reports_dashboard.html',
         {
             'food_restriction_volunteers': food_restriction_volunteers,
             'food_restriction_count': food_restriction_volunteers.count(),
+            'age_ranges': age_ranges,
+            'volunteer_count': len(all_volunteers),
+            'work_areas': work_areas,
             'panel_permissions': get_panel_permissions(request.user),
             'active_menu': 'reports',
         },
