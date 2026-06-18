@@ -26,50 +26,77 @@
 
         {% include "registration/partials/admin_menu.html" %}
 
-        {% if messages %}
-            <ul class="messages">
-                {% for message in messages %}
-                    <li class="{{ message.tags }}">{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-
         <section class="report-grid">
-            <article class="report-card">
+            <article class="report-card" style="cursor:pointer;" data-modal-target="modal-food-restriction">
                 <span>Restri&ccedil;&atilde;o alimentar</span>
                 <strong>{{ food_restriction_count }}</strong>
             </article>
         </section>
-
-        <section class="admin-section">
-            <h2>Restri&ccedil;&atilde;o alimentar</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>Login</th>
-                            <th>E-mail</th>
-                            <th>Restri&ccedil;&otilde;es</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for volunteer in food_restriction_volunteers %}
-                            <tr>
-                                <td>{{ volunteer.full_name }}</td>
-                                <td>{{ volunteer.registration.user.username }}</td>
-                                <td>{{ volunteer.email }}</td>
-                                <td>{{ volunteer.food_restrictions|default:"-" }}</td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="4">Nenhum volunt&aacute;rio com restri&ccedil;&atilde;o alimentar.</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
     </main>
+
+    <dialog class="detail-modal" id="modal-food-restriction" aria-labelledby="modal-food-restriction-title">
+        <div class="modal-header">
+            <div>
+                <p class="eyebrow">Relat&oacute;rio</p>
+                <h2 id="modal-food-restriction-title">Restri&ccedil;&atilde;o alimentar</h2>
+            </div>
+            <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Login</th>
+                        <th>E-mail</th>
+                        <th>Restri&ccedil;&otilde;es</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for volunteer in food_restriction_volunteers %}
+                        <tr>
+                            <td>{{ volunteer.full_name }}</td>
+                            <td>{{ volunteer.registration.user.username }}</td>
+                            <td>{{ volunteer.email }}</td>
+                            <td>{{ volunteer.food_restrictions|default:"-" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">Nenhum volunt&aacute;rio com restri&ccedil;&atilde;o alimentar.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </dialog>
+
+    <script>
+        const openModalButtons = document.querySelectorAll('[data-modal-target]');
+        const closeModalButtons = document.querySelectorAll('[data-modal-close]');
+
+        openModalButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const modal = document.getElementById(button.dataset.modalTarget);
+                if (!modal) return;
+                if (typeof modal.showModal === 'function') {
+                    modal.showModal();
+                } else {
+                    modal.setAttribute('open', 'open');
+                }
+            });
+        });
+
+        closeModalButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                button.closest('dialog').close();
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            if (event.target.matches('dialog.detail-modal')) {
+                event.target.close();
+            }
+        });
+    </script>
 </body>
 </html>
