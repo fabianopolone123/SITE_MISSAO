@@ -767,3 +767,24 @@ def permissions_dashboard(request):
             'active_menu': 'permissions',
         },
     )
+
+
+@user_passes_test(can_view_registrations, login_url='login')
+def reports_dashboard(request):
+    food_restriction_volunteers = (
+        Volunteer.objects
+        .select_related('registration__user')
+        .filter(has_food_restriction='sim')
+        .order_by('full_name')
+    )
+
+    return render(
+        request,
+        'registration/reports_dashboard.html',
+        {
+            'food_restriction_volunteers': food_restriction_volunteers,
+            'food_restriction_count': food_restriction_volunteers.count(),
+            'panel_permissions': get_panel_permissions(request.user),
+            'active_menu': 'reports',
+        },
+    )

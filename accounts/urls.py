@@ -20,6 +20,7 @@ urlpatterns = [
     path('painel/financeiro/', views.financial_dashboard, name='financial_dashboard'),
     path('painel/conferencia/', views.conference_dashboard, name='conference_dashboard'),
     path('painel/permissoes/', views.permissions_dashboard, name='permissions_dashboard'),
+    path('painel/relatorios/', views.reports_dashboard, name='reports_dashboard'),
     path('painel/inscricao/<int:registration_id>/redefinir-senha/', views.admin_reset_password, name='admin_reset_password'),
     path('trocar-senha/', views.change_password, name='change_password'),
 ]

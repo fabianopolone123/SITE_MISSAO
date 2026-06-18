@@ -1,0 +1,75 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relat&oacute;rios | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body class="admin-body">
+    {% include "registration/partials/mission_splash.html" %}
+    <main class="admin-page">
+        <header class="admin-header">
+            <div class="page-brand">
+                <img class="page-logo" src="{% static 'accounts/images/logo-full-transparent.png' %}" alt="Miss&atilde;o Andrews">
+                <div>
+                    <p class="eyebrow">Painel administrativo</p>
+                    <h1>Relat&oacute;rios</h1>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a class="primary-link-button compact-link-button" href="{% url 'volunteer_dashboard' %}">Perfil mission&aacute;rio</a>
+                <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+            </div>
+        </header>
+
+        {% include "registration/partials/admin_menu.html" %}
+
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <section class="report-grid">
+            <article class="report-card">
+                <span>Restri&ccedil;&atilde;o alimentar</span>
+                <strong>{{ food_restriction_count }}</strong>
+            </article>
+        </section>
+
+        <section class="admin-section">
+            <h2>Restri&ccedil;&atilde;o alimentar</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Login</th>
+                            <th>E-mail</th>
+                            <th>Restri&ccedil;&otilde;es</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for volunteer in food_restriction_volunteers %}
+                            <tr>
+                                <td>{{ volunteer.full_name }}</td>
+                                <td>{{ volunteer.registration.user.username }}</td>
+                                <td>{{ volunteer.email }}</td>
+                                <td>{{ volunteer.food_restrictions|default:"-" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4">Nenhum volunt&aacute;rio com restri&ccedil;&atilde;o alimentar.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
