@@ -267,7 +267,10 @@
                         <div class="progress-bar" id="charge-progress-bar"></div>
                     </div>
 
-                    <button type="submit" id="charge-documentation-submit" {% if not pending_documentation_volunteers %}disabled{% endif %}>Enviar cobran&ccedil;a</button>
+                    <div class="charge-toolbar">
+                        <button type="submit" id="charge-documentation-submit" {% if not pending_documentation_volunteers %}disabled{% endif %}>Enviar cobran&ccedil;a</button>
+                        <button type="button" id="charge-documentation-cancel" class="secondary-button" style="display:none;">Cancelar envio</button>
+                    </div>
                 </form>
 
                 <div class="charge-results" id="charge-results-panel" {% if not charge_results %}style="display:none;"{% endif %}>
@@ -328,11 +331,21 @@
         const chargeForm = document.getElementById('charge-documentation-form');
         const chargeProgressBar = document.getElementById('charge-progress-bar');
         const chargeSubmit = document.getElementById('charge-documentation-submit');
+        const chargeCancel = document.getElementById('charge-documentation-cancel');
         const chargeResultsPanel = document.getElementById('charge-results-panel');
         const chargeResultsBody = document.getElementById('charge-results-body');
         const chargeProgressStatus = document.getElementById('charge-progress-status');
         const checkboxes = () => Array.from(document.querySelectorAll('.documentation-charge-checkbox'));
         const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+        let chargeCancelled = false;
+
+        if (chargeCancel) {
+            chargeCancel.addEventListener('click', () => {
+                chargeCancelled = true;
+                chargeCancel.disabled = true;
+                chargeCancel.textContent = 'Cancelando...';
+            });
+        }
 
         function openChargeModal() {
             if (!chargeModal) return;
@@ -407,15 +420,30 @@
                 if (chargeProgressStatus) chargeProgressStatus.textContent = selected.length ? `0 de ${selected.length} enviados.` : 'Nenhum missionário selecionado.';
                 if (!selected.length) return;
 
+                chargeCancelled = false;
                 if (chargeSubmit) {
                     chargeSubmit.disabled = true;
                     chargeSubmit.textContent = 'Enviando...';
                 }
+                if (chargeCancel) {
+                    chargeCancel.style.display = '';
+                    chargeCancel.disabled = false;
+                    chargeCancel.textContent = 'Cancelar envio';
+                }
 
                 for (let index = 0; index < selected.length; index += 1) {
+                    if (chargeCancelled) {
+                        if (chargeProgressStatus) chargeProgressStatus.textContent = `Cancelado após ${index} de ${selected.length} envio(s).`;
+                        break;
+                    }
+
                     if (index > 0 && delaySeconds) {
                         if (chargeProgressStatus) chargeProgressStatus.textContent = `Aguardando ${delaySeconds} segundo(s) para o próximo envio...`;
                         await wait(delaySeconds * 1000);
+                        if (chargeCancelled) {
+                            if (chargeProgressStatus) chargeProgressStatus.textContent = `Cancelado após ${index} de ${selected.length} envio(s).`;
+                            break;
+                        }
                     }
 
                     const body = new URLSearchParams();
@@ -433,26 +461,42 @@
                             },
                             body,
                         });
-                        const result = await response.json();
+                        let result;
+                        try {
+                            result = await response.json();
+                        } catch (_) {
+                            result = {
+                                volunteer: selected[index].closest('tr')?.querySelector('strong')?.textContent || '-',
+                                ok: false,
+                                error_message: `erro HTTP ${response.status}`,
+                                phone: '',
+                                message: '',
+                            };
+                        }
                         appendChargeResult(result);
-                    } catch (error) {
+                    } catch (err) {
                         appendChargeResult({
                             volunteer: selected[index].closest('tr')?.querySelector('strong')?.textContent || '-',
                             ok: false,
-                            error_message: 'erro interno ao enviar',
-                            phone: '-',
+                            error_message: err.message || 'erro de rede',
+                            phone: '',
                             message: '',
                         });
                     }
 
                     const completed = index + 1;
                     if (chargeProgressBar) chargeProgressBar.style.width = `${Math.round((completed / selected.length) * 100)}%`;
-                    if (chargeProgressStatus) chargeProgressStatus.textContent = `${completed} de ${selected.length} enviados.`;
+                    if (!chargeCancelled) {
+                        if (chargeProgressStatus) chargeProgressStatus.textContent = `${completed} de ${selected.length} enviados.`;
+                    }
                 }
 
                 if (chargeSubmit) {
                     chargeSubmit.disabled = false;
                     chargeSubmit.textContent = 'Enviar cobrança';
+                }
+                if (chargeCancel) {
+                    chargeCancel.style.display = 'none';
                 }
             });
         }

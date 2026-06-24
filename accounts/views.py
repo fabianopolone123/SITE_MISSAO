@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from datetime import date
 
@@ -47,6 +48,8 @@ from .models import (
 )
 from .pdf import build_prestacao_contas_pdf, build_registration_pdf
 from . import whatsapp
+
+logger = logging.getLogger(__name__)
 
 
 PANEL_PERMISSION_FIELDS = {
@@ -795,11 +798,15 @@ def whatsapp_dashboard(request):
                 notification_type=WhatsAppNotificationType.DOCUMENTATION,
                 defaults={'message_text': charge_template_text},
             )
-            volunteer = get_object_or_404(
-                Volunteer.objects.select_related('registration__user'),
-                pk=request.POST.get('volunteer_id'),
-            )
-            return JsonResponse(send_documentation_charge(request, volunteer, charge_template_text, sent_by))
+            try:
+                volunteer = get_object_or_404(
+                    Volunteer.objects.select_related('registration__user'),
+                    pk=request.POST.get('volunteer_id'),
+                )
+                return JsonResponse(send_documentation_charge(request, volunteer, charge_template_text, sent_by))
+            except Exception as exc:
+                logger.exception('Erro ao enviar cobranca de documentacao individual: %s', exc)
+                return JsonResponse({'volunteer': '-', 'ok': False, 'error_message': str(exc), 'phone': '', 'message': ''}, status=200)
 
         elif action == 'charge_documentation':
             sent_by = request.user.get_full_name() or request.user.username
