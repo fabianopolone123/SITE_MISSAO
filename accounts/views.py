@@ -1,6 +1,8 @@
 import json
+import time
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -760,11 +762,17 @@ def whatsapp_dashboard(request):
                 sent_by=sent_by,
                 message='Por favor, envie os documentos pendentes para concluir sua documentação.',
             )
+            volunteers_to_charge = []
 
             for volunteer in selected_volunteers:
                 pending_items = volunteer_pending_documentation_items(volunteer)
                 if not pending_items:
                     continue
+                volunteers_to_charge.append((volunteer, pending_items))
+
+            send_delay = max(0.0, float(getattr(settings, 'WHATSAPP_DOCUMENTATION_SEND_DELAY_SECONDS', 2) or 0))
+
+            for index, (volunteer, pending_items) in enumerate(volunteers_to_charge):
                 payload = {
                     **base_payload,
                     'missionario': volunteer.full_name,
@@ -785,6 +793,8 @@ def whatsapp_dashboard(request):
                     'phone': normalized_phone or volunteer.phone,
                     'message': message_text,
                 })
+                if send_delay and index < len(volunteers_to_charge) - 1:
+                    time.sleep(send_delay)
 
             sent_count = sum(1 for item in charge_results if item['ok'])
             if sent_count:

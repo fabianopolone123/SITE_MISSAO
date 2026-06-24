@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -983,6 +983,60 @@ class VolunteerDashboardTests(TestCase):
         self.assertIn('carteira', payload['message'])
         self.assertContains(response, 'Resultado do envio')
         self.assertContains(response, 'Docs')
+
+    @override_settings(WHATSAPP_DOCUMENTATION_SEND_DELAY_SECONDS=1)
+    def test_whatsapp_dashboard_waits_between_documentation_charges(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        _, _, first_volunteer = create_registration(username='pendente1')
+        _, _, second_volunteer = create_registration(username='pendente2')
+        first_volunteer.phone = '(16) 99999-8888'
+        second_volunteer.phone = '(16) 98888-7777'
+        first_volunteer.save(update_fields=['phone'])
+        second_volunteer.save(update_fields=['phone'])
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        WhatsAppConfig.objects.create(
+            notifications_enabled=True,
+            provider='wapi',
+            wapi_token='token-123',
+            wapi_instance='instance-01',
+            wapi_base_url='https://api.w-api.app/v1',
+        )
+        WhatsAppTemplate.objects.create(
+            notification_type=WhatsAppNotificationType.DOCUMENTATION,
+            message_text='Docs {missionario}: {documentos_pendentes}',
+        )
+        self.client.force_login(user)
+
+        class ResponseMock:
+            status = 200
+
+            def getcode(self):
+                return 200
+
+            def read(self):
+                return json.dumps({'status': 'success'}).encode('utf-8')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        with (
+            patch('accounts.whatsapp.request.urlopen', return_value=ResponseMock()) as mocked_urlopen,
+            patch('accounts.views.time.sleep') as mocked_sleep,
+        ):
+            response = self.client.post(
+                reverse('whatsapp_dashboard'),
+                {
+                    'action': 'charge_documentation',
+                    'volunteer_ids': [str(first_volunteer.id), str(second_volunteer.id)],
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(mocked_urlopen.call_count, 2)
+        mocked_sleep.assert_called_once_with(1.0)
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()
