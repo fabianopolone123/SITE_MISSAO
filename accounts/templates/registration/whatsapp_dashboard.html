@@ -52,48 +52,9 @@
                 <p class="field-hint">Placeholders dispon&iacute;veis: <code>{data_hora}</code>, <code>{usuario}</code></p>
             </div>
 
-            <div class="charge-toolbar" style="margin-bottom: 8px;">
-                <button type="button" class="secondary-button" id="select-all-manual">Selecionar todos</button>
-                <button type="button" class="secondary-button" id="clear-all-manual">Desmarcar todos</button>
-            </div>
-
-            <div class="table-wrap">
-                <table id="manual-recipients-table">
-                    <thead>
-                        <tr>
-                            <th>Enviar</th>
-                            <th>Usu&aacute;rio</th>
-                            <th>Telefone</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in rows %}
-                            <tr id="manual-row-{{ row.user.id }}">
-                                <td>
-                                    <input type="checkbox" class="checkbox-control manual-notify-checkbox"
-                                        data-phone="{{ row.effective_phone }}"
-                                        data-name="{{ row.user.get_full_name|default:row.user.username }}"
-                                        {% if row.effective_phone %}checked{% else %}disabled{% endif %}>
-                                </td>
-                                <td>
-                                    <strong>{{ row.user.get_full_name|default:row.user.username }}</strong><br>
-                                    <small>{{ row.user.username }}</small>
-                                </td>
-                                <td>
-                                    {% if row.effective_phone %}
-                                        {{ row.effective_phone }}
-                                    {% else %}
-                                        <span class="document-status pending">Sem telefone</span>
-                                    {% endif %}
-                                </td>
-                                <td id="manual-status-{{ row.user.id }}"></td>
-                            </tr>
-                        {% empty %}
-                            <tr><td colspan="4">Nenhum usu&aacute;rio ativo.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="charge-toolbar" style="margin-top: 10px;">
+                <button type="button" class="secondary-button" id="open-manual-recipients">Selecionar destinat&aacute;rios</button>
+                <span class="field-hint" id="manual-selected-count" style="align-self:center;">Nenhum selecionado</span>
             </div>
 
             <div class="progress-wrap" aria-hidden="true" style="margin-top: 12px;">
@@ -111,6 +72,57 @@
                 <button type="button" class="secondary-button" id="open-charge-documentation">Cobrar documenta&ccedil;&atilde;o</button>
             </div>
         </section>
+
+        <dialog class="detail-modal" id="manual-recipients-modal" aria-labelledby="manual-recipients-title">
+            <div class="modal-header">
+                <h2 id="manual-recipients-title">Selecionar destinat&aacute;rios</h2>
+                <button type="button" class="secondary-button" id="manual-recipients-close">Fechar</button>
+            </div>
+            <div class="modal-content">
+                <div class="charge-toolbar" style="margin-bottom: 8px;">
+                    <button type="button" class="secondary-button" id="select-all-manual">Selecionar todos</button>
+                    <button type="button" class="secondary-button" id="clear-all-manual">Desmarcar todos</button>
+                </div>
+                <div class="table-wrap">
+                    <table id="manual-recipients-table">
+                        <thead>
+                            <tr>
+                                <th>Enviar</th>
+                                <th>Usu&aacute;rio</th>
+                                <th>Telefone</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                                <tr id="manual-row-{{ row.user.id }}">
+                                    <td>
+                                        <input type="checkbox" class="checkbox-control manual-notify-checkbox"
+                                            data-phone="{{ row.effective_phone }}"
+                                            data-name="{{ row.user.get_full_name|default:row.user.username }}"
+                                            {% if not row.effective_phone %}disabled{% endif %}>
+                                    </td>
+                                    <td>
+                                        <strong>{{ row.user.get_full_name|default:row.user.username }}</strong><br>
+                                        <small>{{ row.user.username }}</small>
+                                    </td>
+                                    <td>
+                                        {% if row.effective_phone %}
+                                            {{ row.effective_phone }}
+                                        {% else %}
+                                            <span class="document-status pending">Sem telefone</span>
+                                        {% endif %}
+                                    </td>
+                                    <td id="manual-status-{{ row.user.id }}"></td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="4">Nenhum usu&aacute;rio ativo.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </dialog>
 
         <section class="admin-section">
             <h2>Destinat&aacute;rios e templates</h2>
@@ -324,6 +336,7 @@
         .charge-results { margin-top: 20px; }
         .message-preview { white-space: pre-wrap; margin: 0; font: inherit; color: inherit; max-width: 520px; }
         .charge-delay-field { max-width: 280px; }
+        #manual-recipients-modal .modal-content { max-height: 60vh; overflow-y: auto; }
         @media (max-width: 760px) {
             .template-grid { grid-template-columns: 1fr; }
         }
@@ -335,13 +348,38 @@
         const manualProgressBar = document.getElementById('manual-progress-bar');
         const manualProgressStatus = document.getElementById('manual-progress-status');
         const manualMessageInput = document.getElementById('manual-message');
+        const manualSelectedCount = document.getElementById('manual-selected-count');
         const manualCheckboxes = () => Array.from(document.querySelectorAll('.manual-notify-checkbox'));
         const selectAllManual = document.getElementById('select-all-manual');
         const clearAllManual = document.getElementById('clear-all-manual');
+        const manualRecipientsModal = document.getElementById('manual-recipients-modal');
+        const openManualRecipientsBtn = document.getElementById('open-manual-recipients');
+        const closeManualRecipientsBtn = document.getElementById('manual-recipients-close');
         let manualCancelled = false;
 
-        if (selectAllManual) selectAllManual.addEventListener('click', () => manualCheckboxes().forEach(c => { if (!c.disabled) c.checked = true; }));
-        if (clearAllManual) clearAllManual.addEventListener('click', () => manualCheckboxes().forEach(c => { c.checked = false; }));
+        function updateManualCount() {
+            const n = manualCheckboxes().filter(c => c.checked && !c.disabled).length;
+            if (manualSelectedCount) manualSelectedCount.textContent = n ? `${n} selecionado(s)` : 'Nenhum selecionado';
+        }
+
+        function openManualRecipientsModal() {
+            if (!manualRecipientsModal) return;
+            if (typeof manualRecipientsModal.showModal === 'function') manualRecipientsModal.showModal();
+            else manualRecipientsModal.setAttribute('open', 'open');
+        }
+        function closeManualRecipientsModal() {
+            if (!manualRecipientsModal) return;
+            if (typeof manualRecipientsModal.close === 'function') manualRecipientsModal.close();
+            else manualRecipientsModal.removeAttribute('open');
+        }
+
+        if (openManualRecipientsBtn) openManualRecipientsBtn.addEventListener('click', openManualRecipientsModal);
+        if (closeManualRecipientsBtn) closeManualRecipientsBtn.addEventListener('click', () => { updateManualCount(); closeManualRecipientsModal(); });
+
+        document.getElementById('manual-recipients-table')?.addEventListener('change', updateManualCount);
+
+        if (selectAllManual) selectAllManual.addEventListener('click', () => { manualCheckboxes().forEach(c => { if (!c.disabled) c.checked = true; }); updateManualCount(); });
+        if (clearAllManual) clearAllManual.addEventListener('click', () => { manualCheckboxes().forEach(c => { c.checked = false; }); updateManualCount(); });
 
         if (manualCancelBtn) {
             manualCancelBtn.addEventListener('click', () => {
