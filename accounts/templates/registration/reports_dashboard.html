@@ -135,11 +135,11 @@
             </div>
 
             <div class="hero-grid">
-                <div class="hero-card hero-card--green">
+                <div class="hero-card hero-card--green" id="card-entradas" style="cursor:pointer;" title="Clique para ver detalhes">
                     <div class="lbl">Entradas totais</div>
                     <div class="val">R$&nbsp;{{ total_income_brl }}</div>
                 </div>
-                <div class="hero-card hero-card--red">
+                <div class="hero-card hero-card--red" id="card-saidas" style="cursor:pointer;" title="Clique para ver detalhes">
                     <div class="lbl">Sa&iacute;das totais</div>
                     <div class="val">R$&nbsp;{{ total_expenses_brl }}</div>
                 </div>
@@ -618,6 +618,48 @@
         row.addEventListener('mouseleave', () => row.querySelector('.income-bar-fill').style.opacity = '1');
         barsEl.appendChild(row);
     });
+    /* ═══════════════════════════════════════
+       CARDS HERO CLICÁVEIS
+    ═══════════════════════════════════════ */
+    const cardEntradas = document.getElementById('card-entradas');
+    const cardSaidas   = document.getElementById('card-saidas');
+
+    if (cardEntradas) {
+        cardEntradas.addEventListener('click', () => {
+            // Junta todos os itens de todas as categorias de entrada
+            const allItems = incomeData.flatMap(d =>
+                (d.items || []).map(item => ({ ...item, _tipo: d.label }))
+            );
+            const cols = [
+                { key: '_tipo',       label: 'Tipo' },
+                { key: 'name',        label: 'Missionário' },
+                { key: 'description', label: 'Descrição' },
+                { key: 'amount',      label: 'Valor (R$)' },
+                { key: 'date',        label: 'Data' },
+            ];
+            openDetailModal('Financeiro', 'Entradas totais', allItems, cols);
+        });
+        cardEntradas.addEventListener('mouseenter', () => cardEntradas.style.boxShadow = '0 4px 18px rgba(47,104,68,.18)');
+        cardEntradas.addEventListener('mouseleave', () => cardEntradas.style.boxShadow = '');
+    }
+
+    if (cardSaidas) {
+        cardSaidas.addEventListener('click', () => {
+            // Junta todos os lançamentos de saída de todas as categorias
+            const allItems = expenseData.flatMap(d =>
+                (d.items || []).map(item => ({ ...item, _cat: d.label }))
+            );
+            const cols = [
+                { key: '_cat',        label: 'Categoria' },
+                { key: 'date',        label: 'Data' },
+                { key: 'description', label: 'Descrição' },
+                { key: 'amount',      label: 'Valor (R$)' },
+            ];
+            openDetailModal('Financeiro', 'Saídas totais', allItems, cols);
+        });
+        cardSaidas.addEventListener('mouseenter', () => cardSaidas.style.boxShadow = '0 4px 18px rgba(192,57,43,.18)');
+        cardSaidas.addEventListener('mouseleave', () => cardSaidas.style.boxShadow = '');
+    }
     {% endif %}
     </script>
 </body>
