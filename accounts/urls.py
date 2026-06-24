@@ -18,6 +18,7 @@ urlpatterns = [
     path('missionario/<int:volunteer_id>/documentacao/', views.volunteer_documentation_upload, name='volunteer_documentation_upload'),
     path('painel/', views.admin_dashboard, name='admin_dashboard'),
     path('painel/financeiro/', views.financial_dashboard, name='financial_dashboard'),
+    path('painel/registro-despesas/', views.expense_registration_dashboard, name='expense_registration_dashboard'),
     path('painel/prestacao-contas/', views.prestacao_contas, name='prestacao_contas'),
     path('painel/prestacao-contas/pdf/', views.prestacao_contas_pdf, name='prestacao_contas_pdf'),
     path('painel/conferencia/', views.conference_dashboard, name='conference_dashboard'),

@@ -216,7 +216,9 @@ class PanelPermissionForm(forms.ModelForm):
         fields = [
             'is_staff',
             'can_view_registrations',
+            'can_view_reports',
             'can_manage_financial',
+            'can_register_expenses',
             'can_manage_permissions',
             'can_review_submissions',
         ]
@@ -284,3 +286,46 @@ class FinancialTransactionForm(forms.ModelForm):
             return Decimal(normalized_amount)
         except InvalidOperation:
             raise forms.ValidationError('Informe um valor válido no formato 1.234,56.')
+
+
+class ExpenseRegistrationForm(forms.ModelForm):
+    amount = forms.CharField(
+        label='Valor',
+        widget=forms.TextInput(attrs={'inputmode': 'decimal', 'placeholder': '0,00'}),
+    )
+
+    class Meta:
+        model = FinancialTransaction
+        fields = ['category', 'description', 'amount', 'transaction_date', 'receipt']
+        widgets = {
+            'transaction_date': forms.DateInput(attrs={'type': 'date'}),
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+        labels = {
+            'category': 'Categoria',
+            'description': 'DescriÃ§Ã£o',
+            'amount': 'Valor',
+            'transaction_date': 'Data',
+            'receipt': 'Anexar comprovante',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault('class', 'form-control')
+
+        self.fields['amount'].widget.attrs['class'] = 'form-control money-input'
+
+        if self.instance and self.instance.pk and not self.is_bound:
+            amount = Decimal(str(self.instance.amount))
+            value = f'{amount:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+            self.initial['amount'] = value
+
+    def clean_amount(self):
+        amount = str(self.cleaned_data['amount'])
+        normalized_amount = amount.replace('.', '').replace(',', '.')
+
+        try:
+            return Decimal(normalized_amount)
+        except InvalidOperation:
+            raise forms.ValidationError('Informe um valor vÃ¡lido no formato 1.234,56.')

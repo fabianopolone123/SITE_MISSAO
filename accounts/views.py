@@ -16,6 +16,7 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from .forms import (
+    ExpenseRegistrationForm,
     FinancialTransactionForm,
     MissionaryDonationReceiptForm,
     MissionaryPaymentReceiptForm,
@@ -41,7 +42,9 @@ from .pdf import build_prestacao_contas_pdf, build_registration_pdf
 
 PANEL_PERMISSION_FIELDS = {
     'registrations': 'can_view_registrations',
+    'reports': 'can_view_reports',
     'financial': 'can_manage_financial',
+    'expense_registration': 'can_register_expenses',
     'permissions': 'can_manage_permissions',
     'conference': 'can_review_submissions',
 }
@@ -64,7 +67,9 @@ def format_brl(amount):
 def get_panel_permissions(user):
     permissions = {
         'can_view_registrations': False,
+        'can_view_reports': False,
         'can_manage_financial': False,
+        'can_register_expenses': False,
         'can_manage_permissions': False,
         'can_review_submissions': False,
     }
@@ -97,8 +102,16 @@ def can_view_registrations(user):
     return has_panel_permission(user, 'registrations')
 
 
+def can_view_reports(user):
+    return has_panel_permission(user, 'reports')
+
+
 def can_manage_financial(user):
     return has_panel_permission(user, 'financial')
+
+
+def can_register_expenses(user):
+    return has_panel_permission(user, 'expense_registration')
 
 
 def can_manage_permissions(user):
@@ -118,8 +131,12 @@ def can_view_volunteer(user, volunteer):
 def first_available_panel_url(user):
     if has_panel_permission(user, 'registrations'):
         return 'admin_dashboard'
+    if has_panel_permission(user, 'reports'):
+        return 'reports_dashboard'
     if has_panel_permission(user, 'financial'):
         return 'financial_dashboard'
+    if has_panel_permission(user, 'expense_registration'):
+        return 'expense_registration_dashboard'
     if has_panel_permission(user, 'permissions'):
         return 'permissions_dashboard'
     if has_panel_permission(user, 'conference'):
@@ -459,7 +476,9 @@ def financial_dashboard(request):
         form = FinancialTransactionForm(request.POST, request.FILES)
 
         if form.is_valid():
-            form.save()
+            financial_transaction = form.save(commit=False)
+            financial_transaction.created_by = request.user
+            financial_transaction.save()
             messages.success(request, 'Lançamento financeiro cadastrado com sucesso.')
             return redirect('financial_dashboard')
     else:
@@ -567,6 +586,59 @@ def financial_dashboard(request):
         'active_menu': 'financial',
     }
     return render(request, 'registration/financial_dashboard.html', context)
+
+
+@user_passes_test(can_register_expenses, login_url='login')
+def expense_registration_dashboard(request):
+    editing_transaction = None
+    edit_id = request.GET.get('editar')
+
+    if edit_id:
+        editing_transaction = get_object_or_404(
+            FinancialTransaction,
+            pk=edit_id,
+            created_by=request.user,
+            transaction_type='saida',
+        )
+
+    if request.method == 'POST':
+        transaction_id = request.POST.get('transaction_id')
+
+        if transaction_id:
+            editing_transaction = get_object_or_404(
+                FinancialTransaction,
+                pk=transaction_id,
+                created_by=request.user,
+                transaction_type='saida',
+            )
+
+        form = ExpenseRegistrationForm(request.POST, request.FILES, instance=editing_transaction)
+
+        if form.is_valid():
+            expense = form.save(commit=False)
+            expense.transaction_type = 'saida'
+            expense.created_by = request.user
+            expense.save()
+            messages.success(request, 'Despesa registrada com sucesso.' if not transaction_id else 'Despesa atualizada com sucesso.')
+            return redirect('expense_registration_dashboard')
+    else:
+        form = ExpenseRegistrationForm(instance=editing_transaction)
+
+    transactions = (
+        FinancialTransaction.objects
+        .filter(created_by=request.user, transaction_type='saida')
+        .order_by('-transaction_date', '-created_at')
+    )
+
+    context = {
+        'form': form,
+        'transactions': transactions,
+        'editing_transaction': editing_transaction,
+        'expense_categories_json': json.dumps(EXPENSE_CATEGORIES, ensure_ascii=False),
+        'panel_permissions': get_panel_permissions(request.user),
+        'active_menu': 'expense_registration',
+    }
+    return render(request, 'registration/expense_registration_dashboard.html', context)
 
 
 @user_passes_test(can_review_submissions, login_url='login')
@@ -949,7 +1021,7 @@ def prestacao_contas_pdf(request):
     return response
 
 
-@user_passes_test(can_view_registrations, login_url='login')
+@user_passes_test(can_view_reports, login_url='login')
 def reports_dashboard(request):
     from collections import defaultdict
 

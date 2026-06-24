@@ -148,6 +148,49 @@ class AdminDashboardTests(TestCase):
         self.assertFalse(permission.can_manage_permissions)
         self.assertFalse(permission.can_review_submissions)
 
+    def test_permissions_dashboard_grants_reports_access(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        user, _, _ = create_registration()
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse('permissions_dashboard'),
+            {
+                'user_id': user.id,
+                'is_staff': 'on',
+                'can_view_reports': 'on',
+            },
+            follow=True,
+        )
+
+        user.refresh_from_db()
+        permission = PanelPermission.objects.get(user=user)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(permission.can_view_reports)
+        self.assertFalse(permission.can_view_registrations)
+
+    def test_reports_dashboard_requires_reports_permission(self):
+        user, _, _ = create_registration()
+        PanelPermission.objects.create(user=user, can_view_registrations=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('reports_dashboard'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response['Location'])
+
+    def test_reports_dashboard_allows_reports_permission_without_registrations(self):
+        user, _, _ = create_registration()
+        PanelPermission.objects.create(user=user, can_view_reports=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('reports_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Relat')
+        self.assertNotContains(response, 'href="/painel/"')
+
     def test_permissions_dashboard_grants_conference_access(self):
         admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
         user, _, _ = create_registration()
@@ -594,6 +637,83 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(payment.is_confirmed)
         self.assertIsNone(payment.confirmed_by)
+
+    def test_expense_registration_requires_specific_permission(self):
+        user = User.objects.create_user(username='lancador', password='senha-forte-123')
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('expense_registration_dashboard'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response['Location'])
+
+    def test_expense_registration_lists_only_own_expenses_without_financial_statement(self):
+        user = User.objects.create_user(username='lancador', password='senha-forte-123')
+        other = User.objects.create_user(username='outro', password='senha-forte-123')
+        PanelPermission.objects.create(user=user, can_register_expenses=True)
+        FinancialTransaction.objects.create(
+            created_by=user,
+            transaction_type='saida',
+            category='Transporte',
+            description='Barco local',
+            amount='120.00',
+            transaction_date=date(2026, 6, 11),
+        )
+        FinancialTransaction.objects.create(
+            created_by=other,
+            transaction_type='saida',
+            category='Alimentacao',
+            description='Compra de outro usuario',
+            amount='80.00',
+            transaction_date=date(2026, 6, 12),
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('expense_registration_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Barco local')
+        self.assertNotContains(response, 'Compra de outro usuario')
+        self.assertNotContains(response, 'Extrato financeiro')
+        self.assertNotContains(response, 'Entradas totais')
+
+    def test_expense_registration_creates_and_edits_own_expense(self):
+        user = User.objects.create_user(username='lancador', password='senha-forte-123')
+        PanelPermission.objects.create(user=user, can_register_expenses=True)
+        self.client.force_login(user)
+
+        create_response = self.client.post(
+            reverse('expense_registration_dashboard'),
+            {
+                'category': 'Transporte',
+                'description': 'Combustivel',
+                'amount': '150,50',
+                'transaction_date': '2026-06-11',
+            },
+        )
+
+        expense = FinancialTransaction.objects.get(created_by=user)
+        self.assertEqual(create_response.status_code, 302)
+        self.assertEqual(expense.transaction_type, 'saida')
+        self.assertEqual(expense.description, 'Combustivel')
+        self.assertEqual(str(expense.amount), '150.50')
+
+        edit_response = self.client.post(
+            reverse('expense_registration_dashboard'),
+            {
+                'transaction_id': expense.id,
+                'category': 'Medicamento',
+                'description': 'Remedios',
+                'amount': '99,90',
+                'transaction_date': '2026-06-12',
+            },
+        )
+
+        expense.refresh_from_db()
+        self.assertEqual(edit_response.status_code, 302)
+        self.assertEqual(expense.category, 'Medicamento')
+        self.assertEqual(expense.description, 'Remedios')
+        self.assertEqual(str(expense.amount), '99.90')
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()

@@ -1,10 +1,15 @@
 <nav class="admin-menu" aria-label="Menu do painel administrativo">
     {% if panel_permissions.can_view_registrations %}
         <a class="menu-item {% if active_menu == 'registrations' %}active{% endif %}" href="{% url 'admin_dashboard' %}">Inscritos</a>
+    {% endif %}
+    {% if panel_permissions.can_view_reports %}
         <a class="menu-item {% if active_menu == 'reports' %}active{% endif %}" href="{% url 'reports_dashboard' %}">Relat&oacute;rios</a>
     {% endif %}
     {% if panel_permissions.can_manage_financial %}
         <a class="menu-item {% if active_menu == 'financial' %}active{% endif %}" href="{% url 'financial_dashboard' %}">Financeiro</a>
+    {% endif %}
+    {% if panel_permissions.can_register_expenses %}
+        <a class="menu-item {% if active_menu == 'expense_registration' %}active{% endif %}" href="{% url 'expense_registration_dashboard' %}">Registro de despesa</a>
     {% endif %}
     {% if panel_permissions.can_review_submissions %}
         <a class="menu-item {% if active_menu == 'conference' %}active{% endif %}" href="{% url 'conference_dashboard' %}">Confer&ecirc;ncia</a>

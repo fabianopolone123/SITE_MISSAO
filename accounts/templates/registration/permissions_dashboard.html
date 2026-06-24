@@ -67,8 +67,16 @@
                                             Inscritos
                                         </label>
                                         <label class="inline-check" form="permission-form-{{ account.id }}">
+                                            <input form="permission-form-{{ account.id }}" type="checkbox" name="can_view_reports" class="checkbox-control" {% if account.panel_permission.can_view_reports %}checked{% endif %}>
+                                            Relat&oacute;rios
+                                        </label>
+                                        <label class="inline-check" form="permission-form-{{ account.id }}">
                                             <input form="permission-form-{{ account.id }}" type="checkbox" name="can_manage_financial" class="checkbox-control" {% if account.panel_permission.can_manage_financial %}checked{% endif %}>
                                             Financeiro
+                                        </label>
+                                        <label class="inline-check" form="permission-form-{{ account.id }}">
+                                            <input form="permission-form-{{ account.id }}" type="checkbox" name="can_register_expenses" class="checkbox-control" {% if account.panel_permission.can_register_expenses %}checked{% endif %}>
+                                            Registro de despesa
                                         </label>
                                         <label class="inline-check" form="permission-form-{{ account.id }}">
                                             <input form="permission-form-{{ account.id }}" type="checkbox" name="can_review_submissions" class="checkbox-control" {% if account.panel_permission.can_review_submissions %}checked{% endif %}>

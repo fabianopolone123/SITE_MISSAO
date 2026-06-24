@@ -52,7 +52,9 @@ MISSIONARY_PAYMENT_AMOUNTS = {
 class PanelPermission(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='panel_permission')
     can_view_registrations = models.BooleanField('Ver inscritos', default=False)
+    can_view_reports = models.BooleanField('Ver relatórios', default=False)
     can_manage_financial = models.BooleanField('Acessar financeiro', default=False)
+    can_register_expenses = models.BooleanField('Registrar despesas', default=False)
     can_manage_permissions = models.BooleanField('Gerenciar permissões', default=False)
     can_review_submissions = models.BooleanField('Conferir documentos e comprovantes', default=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -238,6 +240,14 @@ class Volunteer(models.Model):
 
 
 class FinancialTransaction(models.Model):
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='financial_transactions',
+        verbose_name='Cadastrado por',
+    )
     transaction_type = models.CharField('Tipo', max_length=10, choices=FINANCIAL_TRANSACTION_TYPES)
     category = models.CharField('Categoria', max_length=120)
     description = models.TextField('Descrição')

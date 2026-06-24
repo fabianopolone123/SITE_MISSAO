@@ -40,7 +40,9 @@ class PanelPermissionAdmin(admin.ModelAdmin):
     list_display = (
         'user',
         'can_view_registrations',
+        'can_view_reports',
         'can_manage_financial',
+        'can_register_expenses',
         'can_manage_permissions',
         'can_review_submissions',
         'updated_at',
