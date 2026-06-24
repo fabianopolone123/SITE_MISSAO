@@ -1052,6 +1052,36 @@ def reports_dashboard(request):
             key=lambda x: x['volunteer'].full_name,
         )
 
+        # Detalhes por categoria de saída (para o donut clicável)
+        expense_detail_by_cat = {}
+        for t in transactions.filter(transaction_type='saida').order_by('-transaction_date'):
+            cat = t.category
+            expense_detail_by_cat.setdefault(cat, []).append({
+                'date': t.transaction_date.strftime('%d/%m/%Y') if t.transaction_date else '-',
+                'description': t.description,
+                'amount': format_brl(t.amount),
+            })
+
+        # Detalhes por tipo de entrada (para as barras clicáveis)
+        income_detail = {
+            'Inscrições': [
+                {'name': p.volunteer.full_name, 'amount': p.amount_brl, 'date': p.confirmed_at.strftime('%d/%m/%Y') if p.confirmed_at else '-'}
+                for p in confirmed_missionary_payments.filter(payment_type='participacao')
+            ],
+            'Cestas': [
+                {'name': p.volunteer.full_name, 'amount': p.amount_brl, 'date': p.confirmed_at.strftime('%d/%m/%Y') if p.confirmed_at else '-'}
+                for p in confirmed_missionary_payments.filter(payment_type='cestas')
+            ],
+            'Doações': [
+                {'name': d.volunteer.full_name, 'amount': d.amount_brl, 'description': d.description or '—', 'date': d.submitted_at.strftime('%d/%m/%Y') if d.submitted_at else '-'}
+                for d in confirmed_donation_receipts
+            ],
+            'Manuais': [
+                {'date': t.transaction_date.strftime('%d/%m/%Y') if t.transaction_date else '-', 'description': t.description, 'amount': format_brl(t.amount)}
+                for t in transactions.filter(transaction_type='entrada').order_by('-transaction_date')
+            ],
+        }
+
         financial_ctx = {
             'total_income': total_income,
             'total_income_brl': format_brl(total_income),
@@ -1069,14 +1099,15 @@ def reports_dashboard(request):
             'manual_income_brl': format_brl(manual_income),
             'expense_by_category': expense_by_category,
             'expense_by_category_json': json.dumps(
-                [{'label': i['category'], 'value': float(i['total']), 'pct': i['percent']} for i in expense_by_category],
+                [{'label': i['category'], 'value': float(i['total']), 'pct': i['percent'],
+                  'items': expense_detail_by_cat.get(i['category'], [])} for i in expense_by_category],
                 ensure_ascii=False,
             ),
             'income_chart_json': json.dumps([
-                {'label': 'Inscrições', 'value': float(participation_total)},
-                {'label': 'Cestas', 'value': float(baskets_total)},
-                {'label': 'Doações', 'value': float(donations_total)},
-                {'label': 'Manuais', 'value': float(manual_income)},
+                {'label': 'Inscrições', 'value': float(participation_total), 'items': income_detail['Inscrições']},
+                {'label': 'Cestas',     'value': float(baskets_total),       'items': income_detail['Cestas']},
+                {'label': 'Doações',    'value': float(donations_total),     'items': income_detail['Doações']},
+                {'label': 'Manuais',    'value': float(manual_income),       'items': income_detail['Manuais']},
             ], ensure_ascii=False),
             'volunteer_contributions': volunteer_contributions,
             'missionario_count': len(volunteer_contributions),

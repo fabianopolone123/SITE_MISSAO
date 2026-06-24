@@ -506,7 +506,7 @@
 
     {% if has_financial_access %}
     /* ═══════════════════════════════════════
-       GRÁFICO FINANCEIRO - DONUT SAÍDAS
+       GRÁFICO FINANCEIRO - DONUT SAÍDAS (clicável)
     ═══════════════════════════════════════ */
     const expenseData = {{ expense_by_category_json|safe }};
     if (expenseData.length) {
@@ -525,7 +525,7 @@
             ctx.closePath();
             ctx.fillStyle = PALETTE[i % PALETTE.length];
             ctx.fill();
-            slices.push({ startAngle: angle, endAngle: angle + sweep, item: d, color: PALETTE[i % PALETTE.length] });
+            slices.push({ startAngle: angle, endAngle: angle + sweep, item: d });
             angle += sweep;
         });
         ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI);
@@ -535,29 +535,80 @@
         ctx.font = '11px Arial'; ctx.fillStyle = '#647067';
         ctx.fillText(expenseData.length + ' categorias', cx, cy + 10);
 
+        // Legenda clicável
         const legend = document.getElementById('cat-legend');
         expenseData.forEach((d, i) => {
             const row = document.createElement('div');
             row.className = 'cat-legend-row';
+            row.style.cursor = 'pointer';
             row.innerHTML = `<span class="cat-dot" style="background:${PALETTE[i % PALETTE.length]}"></span><span class="cat-name">${d.label}</span><span class="cat-pct">${d.pct}%</span>`;
+            row.addEventListener('click', () => openExpenseModal(d));
             legend.appendChild(row);
+        });
+
+        // Clique no donut
+        canvas.style.cursor = 'pointer';
+        canvas.addEventListener('click', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) * (canvas.width / rect.width) - cx;
+            const my = (e.clientY - rect.top)  * (canvas.height / rect.height) - cy;
+            const dist = Math.sqrt(mx * mx + my * my);
+            if (dist < r || dist > R) return;
+            let a = Math.atan2(my, mx);
+            if (a < -Math.PI / 2) a += 2 * Math.PI;
+            for (const sl of slices) {
+                let s = sl.startAngle, en = sl.endAngle;
+                if (s < -Math.PI / 2) { s += 2 * Math.PI; en += 2 * Math.PI; }
+                if (a >= s && a <= en) { openExpenseModal(sl.item); break; }
+            }
         });
     }
 
+    function openExpenseModal(d) {
+        const cols = [
+            { key: 'date',        label: 'Data' },
+            { key: 'description', label: 'Descrição' },
+            { key: 'amount',      label: 'Valor (R$)' },
+        ];
+        openDetailModal('Saídas por Categoria', d.label, d.items || [], cols);
+    }
+
     /* ═══════════════════════════════════════
-       GRÁFICO FINANCEIRO - BARRAS ENTRADAS
+       GRÁFICO FINANCEIRO - BARRAS ENTRADAS (clicáveis)
     ═══════════════════════════════════════ */
     const incomeData   = {{ income_chart_json|safe }};
     const incomeColors = ['#2f6844','#4a9366','#d95d18','#647067'];
     const maxIncome    = Math.max(...incomeData.map(d => d.value), 1);
     const barsEl       = document.getElementById('income-bars');
+
+    // Colunas por tipo de entrada
+    const incomeCols = {
+        'Inscrições': [{ key:'name', label:'Missionário' }, { key:'amount', label:'Valor' }, { key:'date', label:'Conferido em' }],
+        'Cestas':     [{ key:'name', label:'Missionário' }, { key:'amount', label:'Valor' }, { key:'date', label:'Conferido em' }],
+        'Doações':    [{ key:'name', label:'Missionário' }, { key:'description', label:'Descrição' }, { key:'amount', label:'Valor' }, { key:'date', label:'Data' }],
+        'Manuais':    [{ key:'date', label:'Data' }, { key:'description', label:'Descrição' }, { key:'amount', label:'Valor' }],
+    };
+
     incomeData.forEach((d, i) => {
         const pct    = (d.value / maxIncome * 100).toFixed(1);
         const valFmt = d.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         const row    = document.createElement('div');
         row.className = 'income-bar-row';
-        row.innerHTML = `<div class="income-bar-label"><span>${d.label}</span><span>R$ ${valFmt}</span></div>
-            <div class="income-bar-track"><div class="income-bar-fill" style="width:${pct}%;background:${incomeColors[i]}"></div></div>`;
+        row.style.cursor = 'pointer';
+        row.title = 'Clique para ver detalhes';
+        row.innerHTML =
+            `<div class="income-bar-label">
+                <span>${d.label}</span>
+                <span style="color:#1d442c;font-weight:700;">R$ ${valFmt}</span>
+            </div>
+            <div class="income-bar-track">
+                <div class="income-bar-fill" style="width:${pct}%;background:${incomeColors[i]};transition:opacity .15s;"></div>
+            </div>`;
+        row.addEventListener('click', () =>
+            openDetailModal('Entradas', d.label, d.items || [], incomeCols[d.label] || [{ key:'description', label:'Descrição' }])
+        );
+        row.addEventListener('mouseenter', () => row.querySelector('.income-bar-fill').style.opacity = '.75');
+        row.addEventListener('mouseleave', () => row.querySelector('.income-bar-fill').style.opacity = '1');
         barsEl.appendChild(row);
     });
     {% endif %}
