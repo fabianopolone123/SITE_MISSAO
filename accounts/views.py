@@ -774,10 +774,7 @@ def whatsapp_dashboard(request):
                 .order_by('full_name')
             )
             documentation_url = request.build_absolute_uri('/minha-inscricao/documentacao/')
-            base_payload = whatsapp.template_context(
-                sent_by=sent_by,
-                message='Por favor, envie os documentos pendentes para concluir sua documentação.',
-            )
+            base_payload = whatsapp.template_context(sent_by=sent_by)
             volunteers_to_charge = []
 
             for volunteer in selected_volunteers:

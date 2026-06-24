@@ -949,7 +949,7 @@ class VolunteerDashboardTests(TestCase):
         )
         WhatsAppTemplate.objects.create(
             notification_type=WhatsAppNotificationType.DOCUMENTATION,
-            message_text='Docs {missionario}: {documentos_pendentes}. {mensagem}',
+            message_text='Docs {missionario}: {documentos_pendentes}',
         )
         self.client.force_login(user)
 

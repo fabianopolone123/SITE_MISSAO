@@ -28,7 +28,6 @@ DEFAULT_TEMPLATE_MESSAGES = {
     'documentation': (
         'Ola, {missionario}!\n'
         'Identificamos que ainda falta anexar a seguinte documentacao: {documentos_pendentes}.\n'
-        '{mensagem}\n'
         'Acesse para enviar: {link_documentacao}'
     ),
     'general': (
