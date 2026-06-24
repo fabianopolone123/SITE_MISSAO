@@ -193,6 +193,13 @@
                                 <select id="id_category" name="category" class="form-control" required>
                                     <option value="">&#8212; Selecione a categoria &#8212;</option>
                                 </select>
+                                <input type="text" id="id_category_nova" name="category" class="form-control"
+                                    placeholder="Digite o nome da nova categoria"
+                                    style="display:none;margin-top:8px;" autocomplete="off">
+                                <button type="button" id="btn-voltar-categoria"
+                                    style="display:none;margin-top:6px;font-size:0.8rem;color:#2f6844;background:none;border:none;cursor:pointer;padding:0;">
+                                    &larr; Voltar para a lista
+                                </button>
                             {% else %}
                                 {{ field }}
                             {% endif %}
@@ -238,24 +245,70 @@
 
         /* ── Category select dinâmico ── */
         const transactionTypeSelect = document.getElementById('id_transaction_type');
+        const categorySelect = document.getElementById('id_category');
+        const categoryNova = document.getElementById('id_category_nova');
+        const btnVoltarCategoria = document.getElementById('btn-voltar-categoria');
+
+        const NOVA_KEY = '__nova__';
 
         function buildCategorySelect(currentValue) {
-            const select = document.getElementById('id_category');
-            if (!select) return;
+            if (!categorySelect) return;
             const type = transactionTypeSelect ? transactionTypeSelect.value : 'saida';
             const cats = type === 'entrada' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-            select.innerHTML = '<option value="">&#8212; Selecione a categoria &#8212;</option>';
-            cats.forEach(cat => {
+            const mid = Math.ceil(cats.length / 2);
+
+            categorySelect.innerHTML = '<option value="">&#8212; Selecione a categoria &#8212;</option>';
+            cats.slice(0, mid).forEach(cat => {
                 const opt = document.createElement('option');
-                opt.value = cat;
-                opt.textContent = cat;
+                opt.value = cat; opt.textContent = cat;
                 if (cat === currentValue) opt.selected = true;
-                select.appendChild(opt);
+                categorySelect.appendChild(opt);
+            });
+
+            // Opção especial no meio
+            const divOpt = document.createElement('option');
+            divOpt.value = NOVA_KEY;
+            divOpt.textContent = '＋ Cadastrar nova categoria';
+            divOpt.style.fontWeight = '700';
+            divOpt.style.color = '#2f6844';
+            categorySelect.appendChild(divOpt);
+
+            cats.slice(mid).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat; opt.textContent = cat;
+                if (cat === currentValue) opt.selected = true;
+                categorySelect.appendChild(opt);
             });
         }
 
+        function mostrarNova() {
+            categorySelect.style.display = 'none';
+            categorySelect.removeAttribute('name');
+            categoryNova.style.display = 'block';
+            categoryNova.setAttribute('name', 'category');
+            categoryNova.required = true;
+            categoryNova.focus();
+            btnVoltarCategoria.style.display = 'inline-block';
+        }
+
+        function voltarParaLista() {
+            categorySelect.style.display = 'block';
+            categorySelect.setAttribute('name', 'category');
+            categorySelect.value = '';
+            categoryNova.style.display = 'none';
+            categoryNova.removeAttribute('name');
+            categoryNova.value = '';
+            categoryNova.required = false;
+            btnVoltarCategoria.style.display = 'none';
+        }
+
+        categorySelect.addEventListener('change', () => {
+            if (categorySelect.value === NOVA_KEY) mostrarNova();
+        });
+        btnVoltarCategoria.addEventListener('click', voltarParaLista);
+
         if (transactionTypeSelect) {
-            transactionTypeSelect.addEventListener('change', () => buildCategorySelect(''));
+            transactionTypeSelect.addEventListener('change', () => { voltarParaLista(); buildCategorySelect(''); });
             buildCategorySelect('{{ form.category.value|default:"" }}');
         }
 
