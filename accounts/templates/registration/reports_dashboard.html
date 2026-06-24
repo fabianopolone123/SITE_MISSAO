@@ -408,12 +408,19 @@
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
 
-        const size = Math.min(canvas.parentElement.clientWidth - 40, 200);
-        canvas.width = size; canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        const cx = size / 2, cy = size / 2, R = size * 0.4, r = size * 0.24;
+        const parentW = canvas.parentElement.clientWidth || 260;
+        const size    = Math.min(parentW - 40, 180);
+        const legH    = 52;
+
+        // Definir dimensões ANTES de qualquer desenho (mudar depois apaga tudo)
+        canvas.width  = size;
+        canvas.height = size + legH;
+
+        const ctx   = canvas.getContext('2d');
+        const cx    = size / 2, cy = size / 2;
+        const R     = size * 0.38, r = size * 0.22;
         const total = data.reduce((s, d) => s + d.count, 0) || 1;
-        let angle = -Math.PI / 2;
+        let angle   = -Math.PI / 2;
 
         data.forEach((d, i) => {
             const slice = (d.count / total) * 2 * Math.PI;
@@ -426,33 +433,33 @@
             angle += slice;
         });
 
-        // Hole
+        // Buraco central
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, 2 * Math.PI);
         ctx.fillStyle = '#fff';
         ctx.fill();
 
-        // Center text
-        ctx.fillStyle = '#1d442c';
-        ctx.font = `bold ${Math.round(size * 0.11)}px Arial`;
-        ctx.textAlign = 'center';
+        // Texto central
+        ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(data[0].count, cx, cy - size * 0.04);
-        ctx.font = `${Math.round(size * 0.075)}px Arial`;
+        ctx.fillStyle    = '#1d442c';
+        ctx.font         = `bold ${Math.round(size * 0.13)}px Arial`;
+        ctx.fillText(data[0].count, cx, cy - size * 0.05);
+        ctx.font      = `${Math.round(size * 0.08)}px Arial`;
         ctx.fillStyle = '#647067';
-        ctx.fillText('com restrição', cx, cy + size * 0.09);
+        ctx.fillText('com restrição', cx, cy + size * 0.1);
 
-        // Legend below
-        const legendY = size + 12;
-        canvas.height = size + 48;
+        // Legenda abaixo (desenhada depois, mas canvas.height já está certo)
+        const ly = size + 14;
         data.forEach((d, i) => {
-            const lx = i === 0 ? size * 0.05 : size * 0.5;
+            const lx = i === 0 ? 8 : size * 0.52;
             ctx.fillStyle = colors[i % colors.length];
-            ctx.fillRect(lx, legendY, 12, 12);
-            ctx.fillStyle = '#27322d';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillText(`${d.label} (${d.count})`, lx + 16, legendY + 9);
+            ctx.fillRect(lx, ly, 12, 12);
+            ctx.fillStyle    = '#27322d';
+            ctx.font         = '12px Arial';
+            ctx.textAlign    = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`${d.label} (${d.count})`, lx + 16, ly + 1);
         });
 
         return canvas;
