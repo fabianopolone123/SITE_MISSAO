@@ -848,6 +848,23 @@ class VolunteerDashboardTests(TestCase):
         self.assertFalse(preference.notify_financial)
         self.assertEqual(template.message_text, 'Geral: {mensagem}')
 
+    def test_whatsapp_dashboard_updates_legacy_documentation_template(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        template = WhatsAppTemplate.objects.create(
+            notification_type=WhatsAppNotificationType.DOCUMENTATION,
+            message_text='Atualização de documentação - Missão Andrews\nData/Hora: {data_hora}\nMensagem: {mensagem}',
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('whatsapp_dashboard'))
+
+        template.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('{missionario}', template.message_text)
+        self.assertIn('{documentos_pendentes}', template.message_text)
+        self.assertIn('{link_documentacao}', template.message_text)
+
     def test_whatsapp_dashboard_sends_manual_message_via_wapi(self):
         user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
         target = User.objects.create_user(username='destino', password='senha-forte-123')

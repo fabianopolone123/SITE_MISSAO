@@ -26,9 +26,10 @@ DEFAULT_TEMPLATE_MESSAGES = {
         'Mensagem: {mensagem}'
     ),
     'documentation': (
-        'Atualização de documentação - Missão Andrews\n'
-        'Data/Hora: {data_hora}\n'
-        'Mensagem: {mensagem}'
+        'Ola, {missionario}!\n'
+        'Identificamos que ainda falta anexar a seguinte documentacao: {documentos_pendentes}.\n'
+        '{mensagem}\n'
+        'Acesse para enviar: {link_documentacao}'
     ),
     'general': (
         'Aviso Missão Andrews\n'
@@ -39,6 +40,13 @@ DEFAULT_TEMPLATE_MESSAGES = {
         'Teste de WhatsApp - Missão Andrews\n'
         'Enviado por: {usuario}\n'
         'Data/Hora: {data_hora}'
+    ),
+}
+LEGACY_DOCUMENTATION_TEMPLATE_MESSAGES = {
+    (
+        'Atualização de documentação - Missão Andrews\n'
+        'Data/Hora: {data_hora}\n'
+        'Mensagem: {mensagem}'
     ),
 }
 
@@ -278,6 +286,16 @@ def send_template_to_phone(notification_type, phone_number: str, payload=None, s
 def ensure_default_templates():
     for notification_type in DEFAULT_TEMPLATE_MESSAGES:
         get_template_message(notification_type)
+
+    from .models import WhatsAppTemplate
+
+    documentation_template = WhatsAppTemplate.objects.filter(notification_type='documentation').first()
+    if (
+        documentation_template
+        and (documentation_template.message_text or '').strip() in LEGACY_DOCUMENTATION_TEMPLATE_MESSAGES
+    ):
+        documentation_template.message_text = DEFAULT_TEMPLATE_MESSAGES['documentation']
+        documentation_template.save(update_fields=['message_text', 'updated_at'])
 
 
 def _send_wapi(phone_number: str, message: str) -> tuple[bool, str]:
