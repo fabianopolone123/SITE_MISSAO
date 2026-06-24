@@ -7,6 +7,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from .models import (
+    EXPENSE_CATEGORIES,
+    INCOME_CATEGORIES,
     FinancialTransaction,
     MissionaryDonationReceipt,
     MissionaryPayment,

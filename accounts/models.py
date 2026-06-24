@@ -19,6 +19,27 @@ FINANCIAL_TRANSACTION_TYPES = [
     ('saida', 'Saída'),
 ]
 
+EXPENSE_CATEGORIES = [
+    'Medicamento',
+    'Alimentação',
+    'Transporte',
+    'Hospedagem / Estadia',
+    'Comunicação',
+    'Material / Equipamento',
+    'Despesa administrativa',
+    'Despesa extra',
+    'Outros',
+]
+
+INCOME_CATEGORIES = [
+    'Taxa de inscrição',
+    'Cestas básicas',
+    'Doação',
+    'Oferta',
+    'Apoio institucional',
+    'Outros',
+]
+
 MISSIONARY_PAYMENT_TYPES = [
     ('participacao', 'Taxa de participação'),
     ('cestas', 'Doação solidária - 5 cestas básicas'),
@@ -234,6 +255,12 @@ class FinancialTransaction(models.Model):
 
     def __str__(self):
         return f'{self.get_transaction_type_display()} - {self.category} - R$ {self.amount}'
+
+    @property
+    def amount_brl(self):
+        amount = Decimal(str(self.amount))
+        value = f'{amount:,.2f}'
+        return value.replace(',', 'X').replace('.', ',').replace('X', '.')
 
 
 class MissionaryPayment(models.Model):

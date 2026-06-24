@@ -117,6 +117,189 @@ def first_page_header(styles):
     return table
 
 
+def build_prestacao_contas_pdf(data):
+    buffer = BytesIO()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.2 * cm,
+        bottomMargin=1.2 * cm,
+        title='Prestação de Contas - Missão Andrews',
+        pageCompression=0,
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='HeaderTitle', parent=styles['Title'], fontSize=16, leading=18, textColor=GREEN_DARK, alignment=1))
+    styles.add(ParagraphStyle(name='HeaderText', parent=styles['BodyText'], fontSize=9, leading=11, textColor=TEXT, alignment=1))
+    styles.add(ParagraphStyle(name='HeaderMotto', parent=styles['BodyText'], fontSize=10, leading=12, textColor=ORANGE, alignment=1))
+    styles.add(ParagraphStyle(name='FormTitle', parent=styles['Heading1'], fontSize=15, leading=18, textColor=GREEN_DARK, alignment=1, spaceAfter=12))
+    styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Heading2'], fontSize=11, leading=13, textColor=colors.white, backColor=GREEN, borderPadding=5, spaceBefore=10, spaceAfter=8))
+    styles.add(ParagraphStyle(name='FormBody', parent=styles['BodyText'], fontSize=9, leading=12, textColor=TEXT, spaceAfter=4))
+    styles.add(ParagraphStyle(name='Muted', parent=styles['BodyText'], fontSize=8, leading=10, textColor=MUTED, alignment=1))
+    styles.add(ParagraphStyle(name='TableHeader', parent=styles['BodyText'], fontSize=9, leading=11, textColor=colors.white, alignment=1))
+    styles.add(ParagraphStyle(name='TableCell', parent=styles['BodyText'], fontSize=8, leading=11, textColor=TEXT))
+    styles.add(ParagraphStyle(name='TableCellRight', parent=styles['BodyText'], fontSize=8, leading=11, textColor=TEXT, alignment=2))
+    styles.add(ParagraphStyle(name='SummaryValue', parent=styles['BodyText'], fontSize=12, leading=14, textColor=GREEN_DARK, alignment=1))
+    styles.add(ParagraphStyle(name='SummaryLabel', parent=styles['BodyText'], fontSize=8, leading=10, textColor=MUTED, alignment=1))
+
+    def brl(amount):
+        value = f'{float(amount or 0):,.2f}'
+        return 'R$ ' + value.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    total_income = data['total_income']
+    total_expenses = data['total_expenses']
+    balance = data['balance']
+
+    summary_data = [
+        [
+            [Paragraph('ENTRADAS TOTAIS', styles['SummaryLabel']), Paragraph(brl(total_income), styles['SummaryValue'])],
+            [Paragraph('SAÍDAS TOTAIS', styles['SummaryLabel']), Paragraph(brl(total_expenses), styles['SummaryValue'])],
+            [Paragraph('SALDO', styles['SummaryLabel']), Paragraph(brl(balance), styles['SummaryValue'])],
+        ]
+    ]
+    summary_table = Table(summary_data, colWidths=[5.7 * cm, 5.7 * cm, 5.7 * cm])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), GREEN_SOFT),
+        ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, LINE),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+
+    # Expense by category table
+    expense_by_category = data.get('expense_by_category', [])
+    if expense_by_category:
+        cat_rows = [[
+            Paragraph('CATEGORIA', styles['TableHeader']),
+            Paragraph('VALOR', styles['TableHeader']),
+            Paragraph('%', styles['TableHeader']),
+        ]]
+        for item in expense_by_category:
+            cat_rows.append([
+                Paragraph(text(item['category']), styles['TableCell']),
+                Paragraph(item['total_brl'], styles['TableCellRight']),
+                Paragraph(f"{item['percent']}%", styles['TableCellRight']),
+            ])
+        cat_rows.append([
+            Paragraph('<b>TOTAL</b>', styles['TableCell']),
+            Paragraph(f'<b>{brl(total_expenses)}</b>', styles['TableCellRight']),
+            Paragraph('<b>100%</b>', styles['TableCellRight']),
+        ])
+        cat_table = Table(cat_rows, colWidths=[10 * cm, 4 * cm, 3 * cm])
+        cat_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), GREEN),
+            ('BACKGROUND', (0, -1), (-1, -1), GREEN_SOFT),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, GREEN_SOFT]),
+            ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+            ('INNERGRID', (0, 0), (-1, -1), 0.4, LINE),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+    else:
+        cat_table = Paragraph('Nenhuma saída registrada.', styles['FormBody'])
+
+    # Volunteer contributions table
+    volunteer_contributions = data.get('volunteer_contributions', [])
+    if volunteer_contributions:
+        vol_rows = [[
+            Paragraph('MISSIONÁRIO', styles['TableHeader']),
+            Paragraph('INSCRIÇÃO', styles['TableHeader']),
+            Paragraph('CESTAS', styles['TableHeader']),
+            Paragraph('DOAÇÃO', styles['TableHeader']),
+            Paragraph('TOTAL', styles['TableHeader']),
+        ]]
+        for v in volunteer_contributions:
+            vol_rows.append([
+                Paragraph(text(v['volunteer'].full_name), styles['TableCell']),
+                Paragraph(brl(v['participacao']), styles['TableCellRight']),
+                Paragraph(brl(v['cestas']), styles['TableCellRight']),
+                Paragraph(brl(v['doacao']), styles['TableCellRight']),
+                Paragraph(brl(v['total']), styles['TableCellRight']),
+            ])
+        vol_table = Table(vol_rows, colWidths=[6.5 * cm, 2.5 * cm, 2.5 * cm, 2.5 * cm, 3 * cm])
+        vol_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), GREEN),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, GREEN_SOFT]),
+            ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+            ('INNERGRID', (0, 0), (-1, -1), 0.4, LINE),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+    else:
+        vol_table = Paragraph('Nenhuma entrada de missionário conferida.', styles['FormBody'])
+
+    # Expense detail table
+    manual_expense_entries = data.get('manual_expense_entries', [])
+    if manual_expense_entries:
+        exp_rows = [[
+            Paragraph('DATA', styles['TableHeader']),
+            Paragraph('CATEGORIA', styles['TableHeader']),
+            Paragraph('DESCRIÇÃO', styles['TableHeader']),
+            Paragraph('VALOR', styles['TableHeader']),
+        ]]
+        for entry in manual_expense_entries:
+            date_str = entry.transaction_date.strftime('%d/%m/%Y') if entry.transaction_date else '-'
+            val = f'{float(entry.amount):,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+            exp_rows.append([
+                Paragraph(date_str, styles['TableCell']),
+                Paragraph(text(entry.category), styles['TableCell']),
+                Paragraph(text(entry.description), styles['TableCell']),
+                Paragraph(f'R$ {val}', styles['TableCellRight']),
+            ])
+        exp_table = Table(exp_rows, colWidths=[2.5 * cm, 3.5 * cm, 8 * cm, 3 * cm])
+        exp_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), GREEN),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, GREEN_SOFT]),
+            ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+            ('INNERGRID', (0, 0), (-1, -1), 0.4, LINE),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+    else:
+        exp_table = Paragraph('Nenhuma saída registrada.', styles['FormBody'])
+
+    story = [
+        first_page_header(styles),
+        Spacer(1, 10),
+        Paragraph('PRESTAÇÃO DE CONTAS<br/>AMAZONAS SEM FRONTEIRAS 2026', styles['FormTitle']),
+        Spacer(1, 6),
+        summary_table,
+        Spacer(1, 6),
+        info_card([
+            Paragraph(
+                f'<b>Inscrições:</b> {brl(data["participation_total"])}   '
+                f'<b>Cestas:</b> {brl(data["baskets_total"])}   '
+                f'<b>Doações:</b> {brl(data["donations_total"])}   '
+                f'<b>Entradas manuais:</b> {brl(data["manual_income"])}',
+                styles['FormBody'],
+            )
+        ]),
+        Spacer(1, 10),
+        section_title('Saídas por Categoria', styles),
+        cat_table,
+        Spacer(1, 10),
+        section_title('Entradas por Missionário', styles),
+        vol_table,
+        Spacer(1, 10),
+        section_title('Detalhamento das Saídas', styles),
+        exp_table,
+    ]
+
+    document.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 def build_registration_pdf(volunteer):
     buffer = BytesIO()
     document = SimpleDocTemplate(

@@ -19,6 +19,7 @@
                 </div>
             </div>
             <div class="header-actions">
+                <a class="primary-link-button compact-link-button" href="{% url 'prestacao_contas' %}">Presta&ccedil;&atilde;o de Contas</a>
                 <a class="primary-link-button compact-link-button" href="{% url 'volunteer_dashboard' %}">Perfil mission&aacute;rio</a>
                 <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
             </div>
@@ -35,12 +36,30 @@
         <section class="report-grid">
             <article class="report-card"><span>Entradas totais</span><strong>R$ {{ total_income_brl }}</strong></article>
             <article class="report-card"><span>Sa&iacute;das totais</span><strong>R$ {{ total_expenses_brl }}</strong></article>
-            <article class="report-card"><span>Saldo</span><strong>R$ {{ balance_brl }}</strong></article>
+            <article class="report-card {% if balance < 0 %}report-card--danger{% endif %}"><span>Saldo</span><strong>R$ {{ balance_brl }}</strong></article>
             <article class="report-card"><span>Inscri&ccedil;&otilde;es</span><strong>R$ {{ participation_total_brl }}</strong></article>
             <article class="report-card"><span>Cestas</span><strong>R$ {{ baskets_total_brl }}</strong></article>
             <article class="report-card"><span>Doa&ccedil;&otilde;es</span><strong>R$ {{ donations_total_brl }}</strong></article>
             <article class="report-card"><span>Entradas manuais</span><strong>R$ {{ manual_income_brl }}</strong></article>
         </section>
+
+        {% if expense_by_category %}
+        <section class="admin-section">
+            <h2>Sa&iacute;das por categoria</h2>
+            <div class="category-breakdown">
+                {% for item in expense_by_category %}
+                <div class="category-row">
+                    <span class="category-name">{{ item.category }}</span>
+                    <div class="category-bar-wrap">
+                        <div class="category-bar" style="width: {{ item.percent }}%;"></div>
+                    </div>
+                    <span class="category-value">R$ {{ item.total_brl }}</span>
+                    <span class="category-percent">{{ item.percent }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
 
         <section class="admin-section">
             <h2>Entradas conferidas de inscri&ccedil;&atilde;o e cestas</h2>
@@ -118,9 +137,15 @@
                 {% csrf_token %}
                 <div class="form-grid">
                     {% for field in form %}
-                        <div class="field {% if field.name == 'description' or field.name == 'receipt' %}wide{% endif %}">
+                        <div class="field {% if field.name == 'description' or field.name == 'receipt' %}wide{% endif %}" data-field="{{ field.name }}">
                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
+                            {% if field.name == 'category' %}
+                                <select id="id_category" name="category" class="form-control" required>
+                                    <option value="">&#8212; Selecione a categoria &#8212;</option>
+                                </select>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
                             {{ field.errors }}
                         </div>
                     {% endfor %}
@@ -168,22 +193,54 @@
         </section>
     </main>
 
+    <style>
+        .report-card--danger strong { color: #c0392b; }
+        .category-breakdown { display: flex; flex-direction: column; gap: 10px; }
+        .category-row { display: grid; grid-template-columns: 200px 1fr 110px 60px; align-items: center; gap: 12px; }
+        .category-name { font-size: 0.9rem; color: var(--text, #101513); font-weight: 500; }
+        .category-bar-wrap { background: #e8f0eb; border-radius: 4px; height: 10px; overflow: hidden; }
+        .category-bar { background: #2f6844; height: 100%; border-radius: 4px; transition: width 0.4s ease; min-width: 2px; }
+        .category-value { font-size: 0.88rem; font-weight: 600; color: #1d442c; text-align: right; }
+        .category-percent { font-size: 0.82rem; color: #647067; text-align: right; }
+    </style>
+
     <script>
+        const EXPENSE_CATEGORIES = {{ expense_categories_json|safe }};
+        const INCOME_CATEGORIES = {{ income_categories_json|safe }};
+
+        const transactionTypeSelect = document.getElementById('id_transaction_type');
+        const categoryContainer = document.querySelector('[data-field="category"]');
+
+        function buildCategorySelect(currentValue) {
+            const select = document.getElementById('id_category');
+            if (!select) return;
+            const type = transactionTypeSelect ? transactionTypeSelect.value : 'saida';
+            const cats = type === 'entrada' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+            select.innerHTML = '<option value="">— Selecione a categoria —</option>';
+            cats.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                if (cat === currentValue) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        if (transactionTypeSelect) {
+            transactionTypeSelect.addEventListener('change', () => buildCategorySelect(''));
+            buildCategorySelect('');
+        }
+
+        // Money input formatting
         const formatMoneyInput = (moneyInput) => {
             const numbers = moneyInput.value.replace(/\D/g, '');
-
-            if (!numbers) {
-                moneyInput.value = '';
-                return;
-            }
-
+            if (!numbers) { moneyInput.value = ''; return; }
             const cents = numbers.padStart(3, '0');
             const reais = cents.slice(0, -2);
             const centavos = cents.slice(-2);
             const formattedReais = Number(reais).toLocaleString('pt-BR');
             moneyInput.value = `${formattedReais},${centavos}`;
         };
-
         document.querySelectorAll('.money-input').forEach((moneyInput) => {
             formatMoneyInput(moneyInput);
             moneyInput.addEventListener('input', () => formatMoneyInput(moneyInput));
