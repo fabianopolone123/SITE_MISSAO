@@ -28,7 +28,6 @@ EXPENSE_CATEGORIES = [
     'Material / Equipamento',
     'Despesa administrativa',
     'Despesa extra',
-    'Outros',
 ]
 
 INCOME_CATEGORIES = [
@@ -37,7 +36,6 @@ INCOME_CATEGORIES = [
     'Doação',
     'Oferta',
     'Apoio institucional',
-    'Outros',
 ]
 
 MISSIONARY_PAYMENT_TYPES = [

@@ -255,30 +255,21 @@
             if (!categorySelect) return;
             const type = transactionTypeSelect ? transactionTypeSelect.value : 'saida';
             const cats = type === 'entrada' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-            const mid = Math.ceil(cats.length / 2);
 
             categorySelect.innerHTML = '<option value="">&#8212; Selecione a categoria &#8212;</option>';
-            cats.slice(0, mid).forEach(cat => {
+            cats.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = cat; opt.textContent = cat;
                 if (cat === currentValue) opt.selected = true;
                 categorySelect.appendChild(opt);
             });
 
-            // Opção especial no meio
+            // Opção especial no final
             const divOpt = document.createElement('option');
             divOpt.value = NOVA_KEY;
             divOpt.textContent = '＋ Cadastrar nova categoria';
             divOpt.style.fontWeight = '700';
-            divOpt.style.color = '#2f6844';
             categorySelect.appendChild(divOpt);
-
-            cats.slice(mid).forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat; opt.textContent = cat;
-                if (cat === currentValue) opt.selected = true;
-                categorySelect.appendChild(opt);
-            });
         }
 
         function mostrarNova() {
