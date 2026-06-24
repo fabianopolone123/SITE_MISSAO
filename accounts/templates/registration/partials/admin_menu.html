@@ -5,7 +5,6 @@
     {% endif %}
     {% if panel_permissions.can_manage_financial %}
         <a class="menu-item {% if active_menu == 'financial' %}active{% endif %}" href="{% url 'financial_dashboard' %}">Financeiro</a>
-        <a class="menu-item {% if active_menu == 'prestacao_contas' %}active{% endif %}" href="{% url 'prestacao_contas' %}">Presta&ccedil;&atilde;o de Contas</a>
     {% endif %}
     {% if panel_permissions.can_review_submissions %}
         <a class="menu-item {% if active_menu == 'conference' %}active{% endif %}" href="{% url 'conference_dashboard' %}">Confer&ecirc;ncia</a>
