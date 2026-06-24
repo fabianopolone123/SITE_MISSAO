@@ -53,6 +53,7 @@
         .chart-card .hint { font-size: 0.75rem; color: #647067; margin: 10px 0 0 0; }
         canvas { max-width: 100%; display: block; }
         .clickable-canvas { cursor: pointer; }
+        #chart-food { margin: 0 auto; }
 
         /* ── Category legend ── */
         .cat-legend { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
@@ -450,16 +451,20 @@
         ctx.fillStyle = '#647067';
         ctx.fillText('com restrição', cx, cy + size * 0.1);
 
-        // Legenda vertical abaixo do donut
+        // Legenda vertical centralizada abaixo do donut
+        const dotW = 13, gap = 6, fontSize = 13;
+        ctx.font = `${fontSize}px Arial`;
         data.forEach((d, i) => {
-            const ly = size + 10 + i * rowH;
+            const ly   = size + 10 + i * rowH;
+            const text = `${d.label}  (${d.count})`;
+            const rowW = dotW + gap + ctx.measureText(text).width;
+            const lx   = (size - rowW) / 2;
             ctx.fillStyle = colors[i % colors.length];
-            ctx.fillRect(8, ly + 4, 13, 13);
+            ctx.fillRect(lx, ly + 4, dotW, dotW);
             ctx.fillStyle    = '#27322d';
-            ctx.font         = '13px Arial';
             ctx.textAlign    = 'left';
             ctx.textBaseline = 'top';
-            ctx.fillText(`${d.label}  (${d.count})`, 28, ly + 4);
+            ctx.fillText(text, lx + dotW + gap, ly + 4);
         });
 
         return canvas;
