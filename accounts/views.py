@@ -1082,16 +1082,52 @@ def reports_dashboard(request):
             'missionario_count': len(volunteer_contributions),
         }
 
+    food_restriction_count = food_restriction_volunteers.count()
+    no_restriction_count = len(all_volunteers) - food_restriction_count
+
+    age_ranges_json = json.dumps([
+        {
+            'label': r['label'],
+            'count': len(r['volunteers']),
+            'volunteers': [
+                {'name': v.full_name, 'age': v.age, 'login': v.registration.user.username, 'email': v.email}
+                for v in r['volunteers']
+            ],
+        }
+        for r in age_ranges
+    ], ensure_ascii=False)
+
+    work_areas_json = json.dumps([
+        {
+            'label': a['label'],
+            'count': len(a['volunteers']),
+            'volunteers': [
+                {'name': v.full_name, 'login': v.registration.user.username, 'email': v.email}
+                for v in a['volunteers']
+            ],
+        }
+        for a in work_areas
+    ], ensure_ascii=False)
+
+    food_json = json.dumps([
+        {'label': 'Com restrição', 'count': food_restriction_count,
+         'volunteers': [{'name': v.full_name, 'login': v.registration.user.username, 'email': v.email, 'restrictions': v.food_restrictions} for v in food_restriction_volunteers]},
+        {'label': 'Sem restrição', 'count': no_restriction_count, 'volunteers': []},
+    ], ensure_ascii=False)
+
     return render(
         request,
         'registration/reports_dashboard.html',
         {
             'food_restriction_volunteers': food_restriction_volunteers,
-            'food_restriction_count': food_restriction_volunteers.count(),
+            'food_restriction_count': food_restriction_count,
             'age_ranges': age_ranges,
             'volunteer_count': len(all_volunteers),
             'work_areas': work_areas,
             'has_financial_access': has_financial_access,
+            'age_ranges_json': age_ranges_json,
+            'work_areas_json': work_areas_json,
+            'food_json': food_json,
             'panel_permissions': get_panel_permissions(request.user),
             'active_menu': 'reports',
             **financial_ctx,
