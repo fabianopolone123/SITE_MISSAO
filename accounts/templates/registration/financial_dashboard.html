@@ -19,8 +19,6 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button type="button" class="primary-link-button compact-link-button" id="btn-novo-lancamento">+ Novo Lan&ccedil;amento</button>
-                <a class="primary-link-button compact-link-button" href="{% url 'prestacao_contas' %}">Presta&ccedil;&atilde;o de Contas</a>
                 <a class="primary-link-button compact-link-button" href="{% url 'volunteer_dashboard' %}">Perfil mission&aacute;rio</a>
                 <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
             </div>
@@ -43,6 +41,11 @@
             <article class="report-card"><span>Doa&ccedil;&otilde;es</span><strong>R$ {{ donations_total_brl }}</strong></article>
             <article class="report-card"><span>Entradas manuais</span><strong>R$ {{ manual_income_brl }}</strong></article>
         </section>
+
+        <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+            <button type="button" class="primary-link-button compact-link-button" id="btn-novo-lancamento">+ Novo Lan&ccedil;amento</button>
+            <a class="primary-link-button compact-link-button" href="{% url 'prestacao_contas' %}">Presta&ccedil;&atilde;o de Contas</a>
+        </div>
 
         {% if expense_by_category %}
         <section class="admin-section">
