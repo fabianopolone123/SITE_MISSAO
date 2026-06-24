@@ -24,6 +24,8 @@ from .forms import (
     SignUpForm,
     VolunteerDocumentationForm,
     VolunteerForm,
+    WhatsAppConfigForm,
+    WhatsAppMessageForm,
 )
 from .models import (
     EXPENSE_CATEGORIES,
@@ -36,8 +38,10 @@ from .models import (
     PanelPermission,
     Registration,
     Volunteer,
+    WhatsAppConfig,
 )
 from .pdf import build_prestacao_contas_pdf, build_registration_pdf
+from . import whatsapp
 
 
 PANEL_PERMISSION_FIELDS = {
@@ -45,6 +49,7 @@ PANEL_PERMISSION_FIELDS = {
     'reports': 'can_view_reports',
     'financial': 'can_manage_financial',
     'expense_registration': 'can_register_expenses',
+    'whatsapp': 'can_manage_whatsapp',
     'permissions': 'can_manage_permissions',
     'conference': 'can_review_submissions',
 }
@@ -70,6 +75,7 @@ def get_panel_permissions(user):
         'can_view_reports': False,
         'can_manage_financial': False,
         'can_register_expenses': False,
+        'can_manage_whatsapp': False,
         'can_manage_permissions': False,
         'can_review_submissions': False,
     }
@@ -114,6 +120,10 @@ def can_register_expenses(user):
     return has_panel_permission(user, 'expense_registration')
 
 
+def can_manage_whatsapp(user):
+    return has_panel_permission(user, 'whatsapp')
+
+
 def can_manage_permissions(user):
     return has_panel_permission(user, 'permissions')
 
@@ -137,6 +147,8 @@ def first_available_panel_url(user):
         return 'financial_dashboard'
     if has_panel_permission(user, 'expense_registration'):
         return 'expense_registration_dashboard'
+    if has_panel_permission(user, 'whatsapp'):
+        return 'whatsapp_dashboard'
     if has_panel_permission(user, 'permissions'):
         return 'permissions_dashboard'
     if has_panel_permission(user, 'conference'):
@@ -646,6 +658,54 @@ def expense_registration_dashboard(request):
         'active_menu': 'expense_registration',
     }
     return render(request, 'registration/expense_registration_dashboard.html', context)
+
+
+@user_passes_test(can_manage_whatsapp, login_url='login')
+def whatsapp_dashboard(request):
+    config = WhatsAppConfig.get()
+    config_form = WhatsAppConfigForm(instance=config)
+    initial_message = config.default_message or 'Olá! Esta é uma notificação da Missão Andrews.'
+    message_form = WhatsAppMessageForm(initial={'message': initial_message})
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'save_config':
+            config_form = WhatsAppConfigForm(request.POST, instance=config)
+            if config_form.is_valid():
+                config_form.save()
+                messages.success(request, 'Configurações de WhatsApp salvas com sucesso.')
+                return redirect('whatsapp_dashboard')
+            message_form = WhatsAppMessageForm(initial={'message': request.POST.get('default_message') or initial_message})
+
+        elif action == 'send_message':
+            message_form = WhatsAppMessageForm(request.POST)
+            if message_form.is_valid():
+                sent_by = request.user.get_full_name() or request.user.username
+                ok, error_message = whatsapp.send_message(message_form.cleaned_data['message'], sent_by=sent_by)
+                if ok:
+                    messages.success(request, 'Notificação enviada com sucesso para o WhatsApp.')
+                    return redirect('whatsapp_dashboard')
+                messages.error(request, f'Falha ao enviar notificação: {error_message}')
+
+        elif action == 'send_test':
+            sent_by = request.user.get_full_name() or request.user.username
+            ok, error_message = whatsapp.send_test_message(sent_by=sent_by)
+            if ok:
+                messages.success(request, 'Mensagem de teste enviada com sucesso para o WhatsApp.')
+            else:
+                messages.error(request, f'Falha ao enviar teste: {error_message}')
+            return redirect('whatsapp_dashboard')
+
+    context = {
+        'config_form': config_form,
+        'message_form': message_form,
+        'active_provider': whatsapp.active_provider(),
+        'notifications_enabled': whatsapp.notifications_enabled(),
+        'panel_permissions': get_panel_permissions(request.user),
+        'active_menu': 'whatsapp',
+    }
+    return render(request, 'registration/whatsapp_dashboard.html', context)
 
 
 @user_passes_test(can_review_submissions, login_url='login')

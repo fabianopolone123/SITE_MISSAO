@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp | Miss&atilde;o Andrews</title>
+    <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body class="admin-body">
+    {% include "registration/partials/mission_splash.html" %}
+    <main class="admin-page">
+        <header class="admin-header">
+            <div class="page-brand">
+                <img class="page-logo" src="{% static 'accounts/images/logo-full-transparent.png' %}" alt="Miss&atilde;o Andrews">
+                <div>
+                    <p class="eyebrow">Painel administrativo</p>
+                    <h1>WhatsApp</h1>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a class="primary-link-button compact-link-button" href="{% url 'volunteer_dashboard' %}">Perfil mission&aacute;rio</a>
+                <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
+            </div>
+        </header>
+
+        {% include "registration/partials/admin_menu.html" %}
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="form-alert {% if message.tags == 'success' %}success-alert{% endif %}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <section class="report-grid">
+            <article class="report-card">
+                <span>Notifica&ccedil;&otilde;es</span>
+                <strong>{% if notifications_enabled %}Ativas{% else %}Inativas{% endif %}</strong>
+            </article>
+            <article class="report-card">
+                <span>Provider ativo</span>
+                <strong>{% if active_provider %}{{ active_provider|upper }}{% else %}Nenhum{% endif %}</strong>
+            </article>
+        </section>
+
+        <section class="admin-section">
+            <h2>Enviar notifica&ccedil;&atilde;o</h2>
+            <form method="post" class="finance-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="send_message">
+                <div class="field">
+                    <label for="{{ message_form.message.id_for_label }}">{{ message_form.message.label }}</label>
+                    {{ message_form.message }}
+                    {% if message_form.message.errors %}<div class="form-error">{{ message_form.message.errors }}</div>{% endif %}
+                </div>
+                <button type="submit">Enviar WhatsApp</button>
+            </form>
+
+            <form method="post" style="margin-top: 10px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="send_test">
+                <button type="submit" class="secondary-button">Testar envio</button>
+            </form>
+        </section>
+
+        <section class="admin-section">
+            <h2>Configura&ccedil;&otilde;es</h2>
+            <form method="post" class="finance-form" autocomplete="off" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_config">
+
+                <div class="form-grid">
+                    <div class="field">
+                        <label class="inline-check" for="{{ config_form.notifications_enabled.id_for_label }}">
+                            {{ config_form.notifications_enabled }}
+                            Ativar notifica&ccedil;&otilde;es de WhatsApp
+                        </label>
+                    </div>
+                    <div class="field">
+                        <label for="{{ config_form.provider.id_for_label }}">Provider</label>
+                        {{ config_form.provider }}
+                    </div>
+                    <div class="field wide">
+                        <label for="{{ config_form.group_jid.id_for_label }}">JID do grupo</label>
+                        {{ config_form.group_jid }}
+                        <p class="field-hint">Exemplo: 120363421981424263@g.us</p>
+                    </div>
+                    <div class="field wide">
+                        <label for="{{ config_form.default_message.id_for_label }}">Mensagem padr&atilde;o</label>
+                        {{ config_form.default_message }}
+                    </div>
+                </div>
+
+                <h3 class="subsection-title">W-API</h3>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="{{ config_form.wapi_token.id_for_label }}">Token</label>
+                        {{ config_form.wapi_token }}
+                    </div>
+                    <div class="field">
+                        <label for="{{ config_form.wapi_instance.id_for_label }}">Instance ID</label>
+                        {{ config_form.wapi_instance }}
+                    </div>
+                    <div class="field wide">
+                        <label for="{{ config_form.wapi_base_url.id_for_label }}">Base URL</label>
+                        {{ config_form.wapi_base_url }}
+                        <p class="field-hint">Deixe em branco para usar https://api.w-api.app/v1</p>
+                    </div>
+                </div>
+
+                <h3 class="subsection-title">Webhook personalizado</h3>
+                <div class="form-grid">
+                    <div class="field wide">
+                        <label for="{{ config_form.webhook_url.id_for_label }}">URL do Webhook</label>
+                        {{ config_form.webhook_url }}
+                    </div>
+                    <div class="field wide">
+                        <label for="{{ config_form.webhook_token.id_for_label }}">Token Bearer opcional</label>
+                        {{ config_form.webhook_token }}
+                    </div>
+                </div>
+
+                {% if config_form.errors %}
+                    <div class="form-alert">Corrija os campos antes de salvar.</div>
+                {% endif %}
+
+                <button type="submit">Salvar configura&ccedil;&otilde;es</button>
+            </form>
+        </section>
+    </main>
+
+    <style>
+        .form-error { color: #b42318; font-size: 0.82rem; margin-top: 3px; }
+    </style>
+</body>
+</html>

@@ -1,4 +1,6 @@
+import json
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -6,7 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import FinancialTransaction, MissionaryDonationReceipt, MissionaryPayment, PanelPermission, Registration, Volunteer
+from .models import FinancialTransaction, MissionaryDonationReceipt, MissionaryPayment, PanelPermission, Registration, Volunteer, WhatsAppConfig
 
 
 def create_registration(username='voluntario', password='senha-forte-123'):
@@ -169,6 +171,27 @@ class AdminDashboardTests(TestCase):
         self.assertTrue(user.is_staff)
         self.assertTrue(permission.can_view_reports)
         self.assertFalse(permission.can_view_registrations)
+
+    def test_permissions_dashboard_grants_whatsapp_access(self):
+        admin = User.objects.create_superuser(username='admin', password='senha-forte-123')
+        user, _, _ = create_registration()
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse('permissions_dashboard'),
+            {
+                'user_id': user.id,
+                'is_staff': 'on',
+                'can_manage_whatsapp': 'on',
+            },
+            follow=True,
+        )
+
+        user.refresh_from_db()
+        permission = PanelPermission.objects.get(user=user)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(permission.can_manage_whatsapp)
 
     def test_reports_dashboard_requires_reports_permission(self):
         user, _, _ = create_registration()
@@ -747,6 +770,86 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(expense.category, 'Medicamento')
         self.assertEqual(expense.description, 'Remedios')
         self.assertEqual(str(expense.amount), '99.90')
+
+    def test_whatsapp_dashboard_requires_permission(self):
+        user = User.objects.create_user(username='semwhatsapp', password='senha-forte-123')
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('whatsapp_dashboard'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response['Location'])
+
+    def test_whatsapp_dashboard_saves_configuration(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse('whatsapp_dashboard'),
+            {
+                'action': 'save_config',
+                'notifications_enabled': 'on',
+                'provider': 'wapi',
+                'group_jid': '120363421981424263@g.us',
+                'default_message': 'Aviso da missao',
+                'wapi_token': 'token-123',
+                'wapi_instance': 'instance-01',
+                'wapi_base_url': 'https://api.w-api.app/v1',
+                'webhook_url': '',
+                'webhook_token': '',
+            },
+        )
+
+        config = WhatsAppConfig.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(config.notifications_enabled)
+        self.assertEqual(config.provider, 'wapi')
+        self.assertEqual(config.group_jid, '120363421981424263@g.us')
+
+    def test_whatsapp_dashboard_sends_manual_message_via_wapi(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        WhatsAppConfig.objects.create(
+            notifications_enabled=True,
+            provider='wapi',
+            group_jid='120363421981424263@g.us',
+            wapi_token='token-123',
+            wapi_instance='instance-01',
+            wapi_base_url='https://api.w-api.app/v1',
+        )
+        self.client.force_login(user)
+
+        class ResponseMock:
+            status = 200
+
+            def getcode(self):
+                return 200
+
+            def read(self):
+                return json.dumps({'status': 'success', 'messageId': 'abc123'}).encode('utf-8')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        with patch('accounts.whatsapp.request.urlopen', return_value=ResponseMock()) as mocked_urlopen:
+            response = self.client.post(
+                reverse('whatsapp_dashboard'),
+                {
+                    'action': 'send_message',
+                    'message': 'Aviso importante da missao',
+                },
+            )
+
+        request_obj = mocked_urlopen.call_args.args[0]
+        payload = json.loads(request_obj.data.decode('utf-8'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('message/send-text?instanceId=instance-01', request_obj.full_url)
+        self.assertEqual(payload['phone'], '120363421981424263@g.us')
+        self.assertEqual(payload['message'], 'Aviso importante da missao')
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()

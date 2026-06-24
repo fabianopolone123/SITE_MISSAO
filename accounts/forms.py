@@ -14,6 +14,7 @@ from .models import (
     MissionaryPayment,
     PanelPermission,
     Volunteer,
+    WhatsAppConfig,
     YES_NO_CHOICES,
 )
 
@@ -232,6 +233,7 @@ class PanelPermissionForm(forms.ModelForm):
             'can_view_reports',
             'can_manage_financial',
             'can_register_expenses',
+            'can_manage_whatsapp',
             'can_manage_permissions',
             'can_review_submissions',
         ]
@@ -299,6 +301,51 @@ class FinancialTransactionForm(forms.ModelForm):
             return Decimal(normalized_amount)
         except InvalidOperation:
             raise forms.ValidationError('Informe um valor válido no formato 1.234,56.')
+
+
+class WhatsAppConfigForm(forms.ModelForm):
+    class Meta:
+        model = WhatsAppConfig
+        fields = [
+            'notifications_enabled',
+            'provider',
+            'group_jid',
+            'default_message',
+            'wapi_token',
+            'wapi_instance',
+            'wapi_base_url',
+            'webhook_url',
+            'webhook_token',
+        ]
+        widgets = {
+            'group_jid': forms.TextInput(attrs={'placeholder': 'Ex.: 120363421981424263@g.us'}),
+            'default_message': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Mensagem padrão para notificações manuais'}),
+            'wapi_token': forms.TextInput(attrs={'placeholder': 'Token da W-API'}),
+            'wapi_instance': forms.TextInput(attrs={'placeholder': 'Instance ID da W-API'}),
+            'wapi_base_url': forms.TextInput(attrs={'placeholder': 'https://api.w-api.app/v1'}),
+            'webhook_url': forms.TextInput(attrs={'placeholder': 'https://seu-servidor.com/webhook'}),
+            'webhook_token': forms.TextInput(attrs={'placeholder': 'Bearer token opcional'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault('class', 'form-control')
+
+        self.fields['notifications_enabled'].widget.attrs['class'] = 'checkbox-control'
+
+
+class WhatsAppMessageForm(forms.Form):
+    message = forms.CharField(
+        label='Mensagem',
+        widget=forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
+    )
+
+    def clean_message(self):
+        message = self.cleaned_data['message'].strip()
+        if not message:
+            raise forms.ValidationError('Informe a mensagem.')
+        return message
 
 
 class ExpenseRegistrationForm(forms.ModelForm):

@@ -55,6 +55,7 @@ class PanelPermission(models.Model):
     can_view_reports = models.BooleanField('Ver relatórios', default=False)
     can_manage_financial = models.BooleanField('Acessar financeiro', default=False)
     can_register_expenses = models.BooleanField('Registrar despesas', default=False)
+    can_manage_whatsapp = models.BooleanField('Gerenciar WhatsApp', default=False)
     can_manage_permissions = models.BooleanField('Gerenciar permissões', default=False)
     can_review_submissions = models.BooleanField('Conferir documentos e comprovantes', default=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -65,6 +66,40 @@ class PanelPermission(models.Model):
 
     def __str__(self):
         return f'Permissões de {self.user.username}'
+
+
+class WhatsAppConfig(models.Model):
+    class Provider(models.TextChoices):
+        AUTO = '', 'Automático'
+        WAPI = 'wapi', 'W-API (w-api.app)'
+        WEBHOOK = 'webhook', 'Webhook personalizado'
+
+    notifications_enabled = models.BooleanField('Notificações ativadas', default=False)
+    provider = models.CharField('Provider', max_length=10, choices=Provider.choices, blank=True, default='')
+    group_jid = models.CharField('JID do grupo', max_length=100, blank=True, default='')
+    default_message = models.TextField('Mensagem padrão', blank=True, default='')
+    wapi_token = models.CharField('W-API Token', max_length=300, blank=True, default='')
+    wapi_instance = models.CharField('W-API Instance ID', max_length=200, blank=True, default='')
+    wapi_base_url = models.CharField('W-API Base URL', max_length=300, blank=True, default='')
+    webhook_url = models.CharField('Webhook URL', max_length=500, blank=True, default='')
+    webhook_token = models.CharField('Webhook Token (Bearer)', max_length=300, blank=True, default='')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Configuração WhatsApp'
+        verbose_name_plural = 'Configuração WhatsApp'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return 'Configuração WhatsApp'
 
 
 class Registration(models.Model):

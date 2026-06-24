@@ -17,6 +17,13 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {'1', 'true', 'yes', 'on', 'sim'}
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -131,3 +138,16 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 LOGIN_REDIRECT_URL = '/'
+
+# WhatsApp notifications
+WHATSAPP_NOTIFICATIONS_ENABLED = env_bool('WHATSAPP_NOTIFICATIONS_ENABLED', False)
+WHATSAPP_PROVIDER = (os.environ.get('WHATSAPP_PROVIDER', '') or '').strip().lower()
+WHATSAPP_WEBHOOK_URL = (os.environ.get('WHATSAPP_WEBHOOK_URL', '') or '').strip()
+WHATSAPP_WEBHOOK_TOKEN = (os.environ.get('WHATSAPP_WEBHOOK_TOKEN', '') or '').strip()
+WHATSAPP_WEBHOOK_TIMEOUT_SECONDS = int(os.environ.get('WHATSAPP_WEBHOOK_TIMEOUT_SECONDS', '10') or '10')
+WAPI_TOKEN = (os.environ.get('WAPI_TOKEN', '') or '').strip()
+WAPI_INSTANCE = (os.environ.get('WAPI_INSTANCE', '') or '').strip()
+WAPI_BASE_URL = (os.environ.get('WAPI_BASE_URL', 'https://api.w-api.app/v1') or 'https://api.w-api.app/v1').rstrip('/')
+WAPI_SEND_CONNECT_TIMEOUT = float(os.environ.get('WAPI_SEND_CONNECT_TIMEOUT', '6.0') or '6.0')
+WAPI_SEND_READ_TIMEOUT = float(os.environ.get('WAPI_SEND_READ_TIMEOUT', '20.0') or '20.0')
+WHATSAPP_GROUP_JID = (os.environ.get('WHATSAPP_GROUP_JID', '') or '').strip()

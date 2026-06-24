@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import FinancialTransaction, MissionaryDonationReceipt, MissionaryPayment, PanelPermission, Registration, Volunteer
+from .models import FinancialTransaction, MissionaryDonationReceipt, MissionaryPayment, PanelPermission, Registration, Volunteer, WhatsAppConfig
 
 
 class VolunteerInline(admin.TabularInline):
@@ -43,6 +43,7 @@ class PanelPermissionAdmin(admin.ModelAdmin):
         'can_view_reports',
         'can_manage_financial',
         'can_register_expenses',
+        'can_manage_whatsapp',
         'can_manage_permissions',
         'can_review_submissions',
         'updated_at',
@@ -62,3 +63,8 @@ class MissionaryDonationReceiptAdmin(admin.ModelAdmin):
     list_display = ('volunteer', 'description', 'amount', 'submitted_at', 'is_confirmed', 'confirmed_by', 'confirmed_at')
     list_filter = ('is_confirmed', 'submitted_at')
     search_fields = ('volunteer__full_name', 'volunteer__cpf', 'volunteer__email', 'description')
+
+
+@admin.register(WhatsAppConfig)
+class WhatsAppConfigAdmin(admin.ModelAdmin):
+    list_display = ('notifications_enabled', 'provider', 'group_jid', 'updated_at')
