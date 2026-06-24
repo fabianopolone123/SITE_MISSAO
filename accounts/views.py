@@ -52,10 +52,10 @@ from . import whatsapp
 logger = logging.getLogger(__name__)
 
 
-def _auto_notify(notification_type, message, extra_payload=None):
+def _auto_notify(notification_type, extra_payload=None):
     try:
         payload = {
-            **whatsapp.template_context(sent_by='sistema', message=message),
+            **whatsapp.template_context(sent_by='sistema'),
             **(extra_payload or {}),
         }
         whatsapp.send_template_notification(notification_type, payload=payload, sent_by='sistema')
@@ -228,7 +228,7 @@ def signup(request):
 
             _auto_notify(
                 WhatsAppNotificationType.REGISTRATIONS,
-                f'Nova inscrição realizada!\nMissionário(s): {", ".join(saved_volunteers)}\nTotal de inscritos: {Volunteer.objects.count()}',
+                extra_payload={'missionario': ', '.join(saved_volunteers)},
             )
             login(request, user)
             return redirect('signup_success')
@@ -276,7 +276,7 @@ def volunteer_dashboard(request):
 
                 _auto_notify(
                     WhatsAppNotificationType.REGISTRATIONS,
-                    f'Novo perfil missionário criado!\nMissionário(s): {", ".join(new_names)}\nTotal de inscritos: {Volunteer.objects.count()}',
+                    extra_payload={'missionario': ', '.join(new_names)},
                 )
                 messages.success(request, 'Perfil missionário criado com sucesso.')
                 return redirect('volunteer_dashboard')
@@ -315,7 +315,7 @@ def volunteer_dashboard(request):
                 formset.save()
                 _auto_notify(
                     WhatsAppNotificationType.REGISTRATIONS,
-                    f'Cadastro atualizado por {request.user.get_full_name() or request.user.username}.',
+                    extra_payload={'missionario': request.user.get_full_name() or request.user.username},
                 )
                 messages.success(request, 'Dados atualizados com sucesso.')
                 return redirect('volunteer_dashboard')
@@ -406,7 +406,7 @@ def volunteer_payment_upload(request, payment_id):
         payment.save()
         _auto_notify(
             WhatsAppNotificationType.FINANCIAL,
-            f'Comprovante enviado!\nTipo: {payment.get_payment_type_display()}\nMissionário: {payment.volunteer.full_name}\nAguarda conferência.',
+            extra_payload={'mensagem': f'Comprovante de {payment.get_payment_type_display()} enviado por {payment.volunteer.full_name}. Aguarda conferência.'},
         )
         messages.success(request, f'Comprovante de {payment.get_payment_type_display()} enviado.')
     else:
@@ -435,7 +435,7 @@ def volunteer_donation_receipt_upload(request, volunteer_id):
         donation_receipt.save()
         _auto_notify(
             WhatsAppNotificationType.FINANCIAL,
-            f'Comprovante de doação enviado!\nMissionário: {donation_receipt.volunteer.full_name}\nAguarda conferência.',
+            extra_payload={'mensagem': f'Comprovante de doação enviado por {donation_receipt.volunteer.full_name}. Aguarda conferência.'},
         )
         messages.success(request, 'Comprovante de doação enviado.')
     else:
@@ -502,7 +502,6 @@ def volunteer_documentation_upload(request, volunteer_id):
             docs_str = ', '.join(uploaded_docs)
             _auto_notify(
                 WhatsAppNotificationType.DOCUMENTATION,
-                f'Documento(s) enviado(s): {docs_str}',
                 extra_payload={
                     'missionario': volunteer.full_name,
                     'documentos_pendentes': docs_str,
@@ -560,7 +559,7 @@ def financial_dashboard(request):
             financial_transaction.save()
             _auto_notify(
                 WhatsAppNotificationType.FINANCIAL,
-                f'Novo lançamento financeiro!\nTipo: {financial_transaction.get_transaction_type_display()}\nCategoria: {financial_transaction.category}\nValor: R$ {financial_transaction.amount}',
+                extra_payload={'mensagem': f'{financial_transaction.get_transaction_type_display()}: {financial_transaction.category} - R$ {financial_transaction.amount}'},
             )
             messages.success(request, 'Lançamento financeiro cadastrado com sucesso.')
             return redirect('financial_dashboard')
@@ -705,7 +704,7 @@ def expense_registration_dashboard(request):
             action_label = 'atualizada' if transaction_id else 'registrada'
             _auto_notify(
                 WhatsAppNotificationType.FINANCIAL,
-                f'Despesa {action_label}!\nCategoria: {expense.category}\nValor: R$ {expense.amount}\nPor: {request.user.get_full_name() or request.user.username}',
+                extra_payload={'mensagem': f'Despesa {action_label}: {expense.category} - R$ {expense.amount} (por {request.user.get_full_name() or request.user.username})'},
             )
             messages.success(request, 'Despesa registrada com sucesso.' if not transaction_id else 'Despesa atualizada com sucesso.')
             return redirect('expense_registration_dashboard')
@@ -997,7 +996,7 @@ def conference_dashboard(request):
             payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
             _auto_notify(
                 WhatsAppNotificationType.FINANCIAL,
-                f'Comprovante conferido!\nTipo: {payment.get_payment_type_display()}\nMissionário: {payment.volunteer.full_name}',
+                extra_payload={'mensagem': f'Comprovante de {payment.get_payment_type_display()} de {payment.volunteer.full_name} conferido.'},
             )
             messages.success(request, 'Comprovante obrigatorio conferido.')
         elif action == 'unconfirm':
@@ -1020,7 +1019,7 @@ def conference_dashboard(request):
             donation.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at'])
             _auto_notify(
                 WhatsAppNotificationType.FINANCIAL,
-                f'Doação conferida!\nMissionário: {donation.volunteer.full_name}',
+                extra_payload={'mensagem': f'Doação de {donation.volunteer.full_name} conferida.'},
             )
             messages.success(request, 'Comprovante de doacao conferido.')
         elif action == 'unconfirm':
@@ -1062,7 +1061,6 @@ def conference_dashboard(request):
                 }
                 _auto_notify(
                     WhatsAppNotificationType.DOCUMENTATION,
-                    f'Documento conferido: {doc_labels.get(document_type, document_type)}',
                     extra_payload={
                         'missionario': volunteer.full_name,
                         'documentos_pendentes': doc_labels.get(document_type, document_type),
