@@ -951,6 +951,8 @@ def prestacao_contas_pdf(request):
 
 @user_passes_test(can_view_registrations, login_url='login')
 def reports_dashboard(request):
+    from collections import defaultdict
+
     food_restriction_volunteers = (
         Volunteer.objects
         .select_related('registration__user')
@@ -990,6 +992,96 @@ def reports_dashboard(request):
             if getattr(volunteer, area['field']):
                 area['volunteers'].append(volunteer)
 
+    # Financial data (shown only if user has financial permission)
+    has_financial_access = can_manage_financial(request.user)
+    financial_ctx = {}
+    if has_financial_access:
+        transactions = FinancialTransaction.objects.all()
+        confirmed_missionary_payments = (
+            MissionaryPayment.objects
+            .select_related('volunteer', 'confirmed_by')
+            .filter(receipt__gt='', is_confirmed=True)
+            .order_by('volunteer__full_name', 'payment_type')
+        )
+        confirmed_donation_receipts = (
+            MissionaryDonationReceipt.objects
+            .select_related('volunteer', 'confirmed_by')
+            .filter(is_confirmed=True)
+            .order_by('volunteer__full_name', '-submitted_at')
+        )
+
+        manual_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
+        total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
+        participation_total = confirmed_missionary_payments.filter(payment_type='participacao').aggregate(total=Sum('amount'))['total'] or 0
+        baskets_total = confirmed_missionary_payments.filter(payment_type='cestas').aggregate(total=Sum('amount'))['total'] or 0
+        donations_total = confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0
+        total_income = manual_income + participation_total + baskets_total + donations_total
+        balance = total_income - total_expenses
+
+        expense_by_category = list(
+            transactions.filter(transaction_type='saida')
+            .values('category').annotate(total=Sum('amount')).order_by('-total')
+        )
+        for item in expense_by_category:
+            item['total_brl'] = format_brl(item['total'])
+            item['percent'] = round(float(item['total']) / float(total_expenses) * 100, 1) if total_expenses else 0
+
+        contrib_map = defaultdict(lambda: {
+            'volunteer': None, 'participacao': 0, 'cestas': 0, 'doacao': 0, 'total': 0,
+            'participacao_brl': '0,00', 'cestas_brl': '0,00', 'doacao_brl': '0,00', 'total_brl': '0,00',
+        })
+        for payment in confirmed_missionary_payments:
+            key = payment.volunteer.id
+            if contrib_map[key]['volunteer'] is None:
+                contrib_map[key]['volunteer'] = payment.volunteer
+            contrib_map[key][payment.payment_type] = float(payment.amount)
+            contrib_map[key]['total'] += float(payment.amount)
+        for donation in confirmed_donation_receipts:
+            key = donation.volunteer.id
+            if contrib_map[key]['volunteer'] is None:
+                contrib_map[key]['volunteer'] = donation.volunteer
+            contrib_map[key]['doacao'] += float(donation.amount)
+            contrib_map[key]['total'] += float(donation.amount)
+        for v in contrib_map.values():
+            v['participacao_brl'] = format_brl(v['participacao'])
+            v['cestas_brl'] = format_brl(v['cestas'])
+            v['doacao_brl'] = format_brl(v['doacao'])
+            v['total_brl'] = format_brl(v['total'])
+        volunteer_contributions = sorted(
+            [v for v in contrib_map.values() if v['volunteer']],
+            key=lambda x: x['volunteer'].full_name,
+        )
+
+        financial_ctx = {
+            'total_income': total_income,
+            'total_income_brl': format_brl(total_income),
+            'total_expenses': total_expenses,
+            'total_expenses_brl': format_brl(total_expenses),
+            'balance': balance,
+            'balance_brl': format_brl(balance),
+            'participation_total': participation_total,
+            'participation_total_brl': format_brl(participation_total),
+            'baskets_total': baskets_total,
+            'baskets_total_brl': format_brl(baskets_total),
+            'donations_total': donations_total,
+            'donations_total_brl': format_brl(donations_total),
+            'manual_income': manual_income,
+            'manual_income_brl': format_brl(manual_income),
+            'expense_by_category': expense_by_category,
+            'expense_by_category_json': json.dumps(
+                [{'label': i['category'], 'value': float(i['total']), 'pct': i['percent']} for i in expense_by_category],
+                ensure_ascii=False,
+            ),
+            'income_chart_json': json.dumps([
+                {'label': 'Inscrições', 'value': float(participation_total)},
+                {'label': 'Cestas', 'value': float(baskets_total)},
+                {'label': 'Doações', 'value': float(donations_total)},
+                {'label': 'Manuais', 'value': float(manual_income)},
+            ], ensure_ascii=False),
+            'volunteer_contributions': volunteer_contributions,
+            'missionario_count': len(volunteer_contributions),
+        }
+
     return render(
         request,
         'registration/reports_dashboard.html',
@@ -999,7 +1091,9 @@ def reports_dashboard(request):
             'age_ranges': age_ranges,
             'volunteer_count': len(all_volunteers),
             'work_areas': work_areas,
+            'has_financial_access': has_financial_access,
             'panel_permissions': get_panel_permissions(request.user),
             'active_menu': 'reports',
+            **financial_ctx,
         },
     )

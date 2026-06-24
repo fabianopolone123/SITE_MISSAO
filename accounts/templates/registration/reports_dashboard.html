@@ -6,6 +6,111 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Relat&oacute;rios | Miss&atilde;o Andrews</title>
     <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+    <style>
+        /* ── Layout ── */
+        .dash-section { margin-bottom: 36px; }
+        .dash-section-title {
+            font-size: 1rem; font-weight: 700; color: #1d442c;
+            padding: 10px 16px; background: #e8f0eb;
+            border-left: 4px solid #2f6844; border-radius: 0 6px 6px 0;
+            margin-bottom: 16px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .dash-section-title a {
+            font-size: 0.8rem; font-weight: 600; color: #2f6844;
+            text-decoration: none; background: #fff; border: 1.5px solid #2f6844;
+            padding: 4px 12px; border-radius: 5px;
+        }
+        .dash-section-title a:hover { background: #f0f7f2; }
+
+        /* ── Hero cards ── */
+        .hero-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 16px; }
+        .hero-card {
+            background: #fff; border: 1.5px solid #dbe3de; border-radius: 12px;
+            padding: 22px 20px; text-align: center;
+        }
+        .hero-card .lbl { font-size: 0.72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #647067; margin-bottom: 6px; }
+        .hero-card .val { font-size: 1.8rem; font-weight: 800; color: #1d442c; line-height: 1; }
+        .hero-card--green { border-color: #2f6844; background: #f0f7f2; }
+        .hero-card--green .val { color: #2f6844; }
+        .hero-card--red { border-color: #c0392b; background: #fdf2f2; }
+        .hero-card--red .val { color: #c0392b; }
+        .hero-card--orange { border-color: #d95d18; background: #fdf6f2; }
+        .hero-card--orange .val { color: #d95d18; }
+
+        /* ── Sub cards ── */
+        .sub-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+        .sub-card {
+            background: #f5f8f5; border: 1px solid #dbe3de; border-radius: 10px;
+            padding: 14px 12px; text-align: center;
+        }
+        .sub-card .sub-lbl { font-size: 0.75rem; color: #647067; margin-bottom: 4px; display: block; }
+        .sub-card .sub-val { font-size: 1.1rem; font-weight: 700; color: #1d442c; }
+
+        /* ── Charts ── */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+        .chart-card {
+            background: #fff; border: 1px solid #dbe3de; border-radius: 12px;
+            padding: 20px; min-height: 280px;
+        }
+        .chart-card h3 { font-size: 0.88rem; font-weight: 700; color: #1d442c; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: .05em; }
+        .chart-wrap { position: relative; display: flex; justify-content: center; }
+        canvas { max-width: 100%; }
+
+        /* ── Category legend ── */
+        .cat-legend { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
+        .cat-legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+        .cat-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+        .cat-name { flex: 1; color: #27322d; }
+        .cat-pct { font-weight: 700; color: #1d442c; min-width: 38px; text-align: right; }
+        .cat-val { color: #647067; min-width: 80px; text-align: right; font-size: 0.78rem; }
+
+        /* ── Income bar chart ── */
+        .income-bars { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+        .income-bar-row { display: flex; flex-direction: column; gap: 5px; }
+        .income-bar-label { display: flex; justify-content: space-between; font-size: 0.82rem; }
+        .income-bar-label span:first-child { font-weight: 600; color: #27322d; }
+        .income-bar-label span:last-child { color: #647067; }
+        .income-bar-track { background: #e8f0eb; border-radius: 6px; height: 14px; overflow: hidden; }
+        .income-bar-fill { height: 100%; border-radius: 6px; transition: width .5s ease; }
+
+        /* ── Volunteer table ── */
+        .vol-table td:not(:first-child) { text-align: right; }
+        .vol-table tfoot td { font-weight: 700; background: #e8f0eb; }
+        .vol-table .zero { color: #bbb; }
+
+        /* ── Report cards (inscritos reports) ── */
+        .report-cards-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+        .report-card-btn {
+            background: #fff; border: 1.5px solid #dbe3de; border-radius: 12px;
+            padding: 20px; cursor: pointer; text-align: left; width: 100%;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .report-card-btn:hover { border-color: #2f6844; box-shadow: 0 4px 16px rgba(47,104,68,.12); }
+        .report-card-btn .rc-icon { font-size: 1.8rem; margin-bottom: 8px; }
+        .report-card-btn .rc-label { font-size: 0.8rem; color: #647067; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+        .report-card-btn .rc-count { font-size: 2rem; font-weight: 800; color: #1d442c; margin-top: 2px; }
+        .report-card-btn .rc-hint { font-size: 0.78rem; color: #647067; margin-top: 2px; }
+
+        /* ── PDF button ── */
+        .pdf-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #2f6844; color: #fff; padding: 10px 20px;
+            border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+            text-decoration: none; transition: background .15s;
+        }
+        .pdf-btn:hover { background: #1d442c; }
+
+        /* ── Empty state ── */
+        .empty-note { color: #647067; font-size: 0.9rem; padding: 16px 0; }
+
+        @media (max-width: 768px) {
+            .hero-grid { grid-template-columns: 1fr; }
+            .sub-grid { grid-template-columns: repeat(2,1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .report-cards-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body class="admin-body">
     {% include "registration/partials/mission_splash.html" %}
@@ -19,29 +124,156 @@
                 </div>
             </div>
             <div class="header-actions">
-                <a class="primary-link-button compact-link-button" href="{% url 'volunteer_dashboard' %}">Perfil mission&aacute;rio</a>
+                {% if has_financial_access %}
+                    <a class="pdf-btn" href="{% url 'prestacao_contas_pdf' %}">&#8675; Baixar PDF</a>
+                {% endif %}
+                <a class="primary-link-button compact-link-button" href="{% url 'volunteer_dashboard' %}">Minha inscri&ccedil;&atilde;o</a>
                 <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
             </div>
         </header>
 
         {% include "registration/partials/admin_menu.html" %}
 
-        <section class="report-grid">
-            <article class="report-card" style="cursor:pointer;" data-modal-target="modal-food-restriction">
-                <span>Restri&ccedil;&atilde;o alimentar</span>
-                <strong>{{ food_restriction_count }}</strong>
-            </article>
-            <article class="report-card" style="cursor:pointer;" data-modal-target="modal-age-ranges">
-                <span>Faixa et&aacute;ria</span>
-                <strong>{{ volunteer_count }}</strong>
-            </article>
-            <article class="report-card" style="cursor:pointer;" data-modal-target="modal-work-areas">
-                <span>&Aacute;reas de atua&ccedil;&atilde;o</span>
-                <strong>{{ volunteer_count }}</strong>
-            </article>
-        </section>
+        {% if has_financial_access %}
+        <!-- ══════════════════════════════════════════
+             PRESTAÇÃO DE CONTAS
+        ══════════════════════════════════════════ -->
+        <div class="dash-section">
+            <div class="dash-section-title">
+                <span>Presta&ccedil;&atilde;o de Contas</span>
+                <a href="{% url 'prestacao_contas_pdf' %}">&#8675; Baixar PDF</a>
+            </div>
+
+            <!-- Hero summary -->
+            <div class="hero-grid">
+                <div class="hero-card hero-card--green">
+                    <div class="lbl">Entradas totais</div>
+                    <div class="val">R$&nbsp;{{ total_income_brl }}</div>
+                </div>
+                <div class="hero-card hero-card--red">
+                    <div class="lbl">Sa&iacute;das totais</div>
+                    <div class="val">R$&nbsp;{{ total_expenses_brl }}</div>
+                </div>
+                <div class="hero-card {% if balance >= 0 %}hero-card--green{% else %}hero-card--red{% endif %}">
+                    <div class="lbl">Saldo</div>
+                    <div class="val">R$&nbsp;{{ balance_brl }}</div>
+                </div>
+            </div>
+
+            <!-- Sub-totals -->
+            <div class="sub-grid">
+                <div class="sub-card">
+                    <span class="sub-lbl">Taxa de inscri&ccedil;&atilde;o</span>
+                    <span class="sub-val">R$ {{ participation_total_brl }}</span>
+                </div>
+                <div class="sub-card">
+                    <span class="sub-lbl">Cestas b&aacute;sicas</span>
+                    <span class="sub-val">R$ {{ baskets_total_brl }}</span>
+                </div>
+                <div class="sub-card">
+                    <span class="sub-lbl">Doa&ccedil;&otilde;es opcionais</span>
+                    <span class="sub-val">R$ {{ donations_total_brl }}</span>
+                </div>
+                <div class="sub-card">
+                    <span class="sub-lbl">Entradas manuais</span>
+                    <span class="sub-val">R$ {{ manual_income_brl }}</span>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Sa&iacute;das por Categoria</h3>
+                    {% if expense_by_category %}
+                        <div class="chart-wrap">
+                            <canvas id="donut-chart" width="200" height="200"></canvas>
+                        </div>
+                        <div class="cat-legend" id="cat-legend"></div>
+                    {% else %}
+                        <p class="empty-note">Nenhuma sa&iacute;da cadastrada ainda.</p>
+                    {% endif %}
+                </div>
+                <div class="chart-card">
+                    <h3>Origem das Entradas</h3>
+                    <div class="income-bars" id="income-bars"></div>
+                </div>
+            </div>
+
+            <!-- Missionary contributions -->
+            <div class="dash-section">
+                <div class="dash-section-title">
+                    <span>Entradas por Mission&aacute;rio ({{ missionario_count }})</span>
+                </div>
+                {% if volunteer_contributions %}
+                <div class="table-wrap">
+                    <table class="vol-table">
+                        <thead>
+                            <tr>
+                                <th>Mission&aacute;rio</th>
+                                <th>Inscri&ccedil;&atilde;o</th>
+                                <th>Cestas</th>
+                                <th>Doa&ccedil;&atilde;o</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in volunteer_contributions %}
+                            <tr>
+                                <td>{{ c.volunteer.full_name }}</td>
+                                <td>{% if c.participacao %}R$ {{ c.participacao_brl }}{% else %}<span class="zero">&mdash;</span>{% endif %}</td>
+                                <td>{% if c.cestas %}R$ {{ c.cestas_brl }}{% else %}<span class="zero">&mdash;</span>{% endif %}</td>
+                                <td>{% if c.doacao %}R$ {{ c.doacao_brl }}{% else %}<span class="zero">&mdash;</span>{% endif %}</td>
+                                <td><strong>R$ {{ c.total_brl }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td>Total geral</td>
+                                <td>R$ {{ participation_total_brl }}</td>
+                                <td>R$ {{ baskets_total_brl }}</td>
+                                <td>R$ {{ donations_total_brl }}</td>
+                                <td>R$ {{ total_income_brl }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="empty-note">Nenhuma entrada de mission&aacute;rio conferida ainda.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ══════════════════════════════════════════
+             RELATÓRIOS DE INSCRITOS
+        ══════════════════════════════════════════ -->
+        <div class="dash-section">
+            <div class="dash-section-title"><span>Relat&oacute;rios de Inscritos</span></div>
+            <div class="report-cards-grid">
+                <button class="report-card-btn" data-modal-target="modal-food-restriction">
+                    <div class="rc-icon">&#127829;</div>
+                    <div class="rc-label">Restri&ccedil;&atilde;o alimentar</div>
+                    <div class="rc-count">{{ food_restriction_count }}</div>
+                    <div class="rc-hint">volunt&aacute;rios com restri&ccedil;&otilde;es</div>
+                </button>
+                <button class="report-card-btn" data-modal-target="modal-age-ranges">
+                    <div class="rc-icon">&#128100;</div>
+                    <div class="rc-label">Faixa et&aacute;ria</div>
+                    <div class="rc-count">{{ volunteer_count }}</div>
+                    <div class="rc-hint">mission&aacute;rios inscritos</div>
+                </button>
+                <button class="report-card-btn" data-modal-target="modal-work-areas">
+                    <div class="rc-icon">&#128736;</div>
+                    <div class="rc-label">&Aacute;reas de atua&ccedil;&atilde;o</div>
+                    <div class="rc-count">{{ volunteer_count }}</div>
+                    <div class="rc-hint">mission&aacute;rios cadastrados</div>
+                </button>
+            </div>
+        </div>
     </main>
 
+    <!-- ═══ MODALS ═══ -->
     <dialog class="detail-modal" id="modal-food-restriction" aria-labelledby="modal-food-restriction-title">
         <div class="modal-header">
             <div>
@@ -52,14 +284,7 @@
         </div>
         <div class="table-wrap">
             <table>
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Login</th>
-                        <th>E-mail</th>
-                        <th>Restri&ccedil;&otilde;es</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Nome</th><th>Login</th><th>E-mail</th><th>Restri&ccedil;&otilde;es</th></tr></thead>
                 <tbody>
                     {% for volunteer in food_restriction_volunteers %}
                         <tr>
@@ -69,9 +294,7 @@
                             <td>{{ volunteer.food_restrictions|default:"-" }}</td>
                         </tr>
                     {% empty %}
-                        <tr>
-                            <td colspan="4">Nenhum volunt&aacute;rio com restri&ccedil;&atilde;o alimentar.</td>
-                        </tr>
+                        <tr><td colspan="4">Nenhum volunt&aacute;rio com restri&ccedil;&atilde;o alimentar.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -88,24 +311,14 @@
         </div>
         {% for age_range in age_ranges %}
             <div class="modal-list">
-                <h3>{{ age_range.label }} <span style="font-weight:normal;font-size:0.9em;">({{ age_range.volunteers|length }})</span></h3>
+                <h3>{{ age_range.label }} <span style="font-weight:normal;font-size:.9em;">({{ age_range.volunteers|length }})</span></h3>
                 {% if age_range.volunteers %}
                     <div class="table-wrap">
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Idade</th>
-                                    <th>Login</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Nome</th><th>Idade</th><th>Login</th></tr></thead>
                             <tbody>
-                                {% for volunteer in age_range.volunteers %}
-                                    <tr>
-                                        <td>{{ volunteer.full_name }}</td>
-                                        <td>{{ volunteer.age }} anos</td>
-                                        <td>{{ volunteer.registration.user.username }}</td>
-                                    </tr>
+                                {% for v in age_range.volunteers %}
+                                    <tr><td>{{ v.full_name }}</td><td>{{ v.age }} anos</td><td>{{ v.registration.user.username }}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -127,24 +340,14 @@
         </div>
         {% for area in work_areas %}
             <div class="modal-list">
-                <h3>{{ area.label }} <span style="font-weight:normal;font-size:0.9em;">({{ area.volunteers|length }})</span></h3>
+                <h3>{{ area.label }} <span style="font-weight:normal;font-size:.9em;">({{ area.volunteers|length }})</span></h3>
                 {% if area.volunteers %}
                     <div class="table-wrap">
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Login</th>
-                                    <th>E-mail</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Nome</th><th>Login</th><th>E-mail</th></tr></thead>
                             <tbody>
-                                {% for volunteer in area.volunteers %}
-                                    <tr>
-                                        <td>{{ volunteer.full_name }}</td>
-                                        <td>{{ volunteer.registration.user.username }}</td>
-                                        <td>{{ volunteer.email }}</td>
-                                    </tr>
+                                {% for v in area.volunteers %}
+                                    <tr><td>{{ v.full_name }}</td><td>{{ v.registration.user.username }}</td><td>{{ v.email }}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -157,32 +360,99 @@
     </dialog>
 
     <script>
-        const openModalButtons = document.querySelectorAll('[data-modal-target]');
-        const closeModalButtons = document.querySelectorAll('[data-modal-close]');
-
-        openModalButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                const modal = document.getElementById(button.dataset.modalTarget);
+        /* ── Modals ── */
+        document.querySelectorAll('[data-modal-target]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = document.getElementById(btn.dataset.modalTarget);
                 if (!modal) return;
-                if (typeof modal.showModal === 'function') {
-                    modal.showModal();
-                } else {
-                    modal.setAttribute('open', 'open');
-                }
+                typeof modal.showModal === 'function' ? modal.showModal() : modal.setAttribute('open','open');
             });
         });
+        document.querySelectorAll('[data-modal-close]').forEach(btn => {
+            btn.addEventListener('click', () => btn.closest('dialog').close());
+        });
+        document.addEventListener('click', e => {
+            if (e.target.matches('dialog.detail-modal')) e.target.close();
+        });
 
-        closeModalButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                button.closest('dialog').close();
+        {% if has_financial_access %}
+        /* ── Chart colors ── */
+        const PALETTE = [
+            '#2f6844','#d95d18','#3b82f6','#9333ea','#f59e0b',
+            '#10b981','#ef4444','#6366f1','#ec4899','#14b8a6',
+        ];
+
+        /* ── Donut chart ── */
+        const expenseData = {{ expense_by_category_json|safe }};
+        if (expenseData.length) {
+            const canvas = document.getElementById('donut-chart');
+            const ctx = canvas.getContext('2d');
+            const cx = canvas.width / 2, cy = canvas.height / 2, R = 80, r = 48;
+            const total = expenseData.reduce((s, d) => s + d.value, 0);
+            let angle = -Math.PI / 2;
+
+            expenseData.forEach((d, i) => {
+                const slice = (d.value / total) * 2 * Math.PI;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, R, angle, angle + slice);
+                ctx.closePath();
+                ctx.fillStyle = PALETTE[i % PALETTE.length];
+                ctx.fill();
+
+                // Inner hole
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+
+                angle += slice;
             });
-        });
 
-        document.addEventListener('click', (event) => {
-            if (event.target.matches('dialog.detail-modal')) {
-                event.target.close();
-            }
+            // Center label
+            ctx.fillStyle = '#1d442c';
+            ctx.font = 'bold 13px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Saídas', cx, cy - 8);
+            ctx.font = '11px Arial';
+            ctx.fillStyle = '#647067';
+            ctx.fillText(expenseData.length + ' categorias', cx, cy + 10);
+
+            // Legend
+            const legend = document.getElementById('cat-legend');
+            expenseData.forEach((d, i) => {
+                const row = document.createElement('div');
+                row.className = 'cat-legend-row';
+                row.innerHTML =
+                    `<span class="cat-dot" style="background:${PALETTE[i % PALETTE.length]}"></span>` +
+                    `<span class="cat-name">${d.label}</span>` +
+                    `<span class="cat-pct">${d.pct}%</span>`;
+                legend.appendChild(row);
+            });
+        }
+
+        /* ── Income bars ── */
+        const incomeData = {{ income_chart_json|safe }};
+        const incomeColors = ['#2f6844','#4a9366','#d95d18','#647067'];
+        const maxIncome = Math.max(...incomeData.map(d => d.value), 1);
+        const barsEl = document.getElementById('income-bars');
+        incomeData.forEach((d, i) => {
+            const pct = (d.value / maxIncome * 100).toFixed(1);
+            const valFmt = d.value.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+            const row = document.createElement('div');
+            row.className = 'income-bar-row';
+            row.innerHTML =
+                `<div class="income-bar-label">
+                    <span>${d.label}</span>
+                    <span>R$ ${valFmt}</span>
+                </div>
+                <div class="income-bar-track">
+                    <div class="income-bar-fill" style="width:${pct}%;background:${incomeColors[i]}"></div>
+                </div>`;
+            barsEl.appendChild(row);
         });
+        {% endif %}
     </script>
 </body>
 </html>
