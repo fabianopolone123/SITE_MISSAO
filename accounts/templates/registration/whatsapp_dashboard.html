@@ -44,33 +44,74 @@
         </section>
 
         <section class="admin-section">
-            <h2>Enviar notifica&ccedil;&atilde;o</h2>
-            <form method="post" class="finance-form" novalidate>
-                {% csrf_token %}
-                <input type="hidden" name="action" value="send_message">
-                <div class="field">
-                    <label for="id_notification_type">Tipo de notifica&ccedil;&atilde;o</label>
-                    <select id="id_notification_type" name="notification_type" class="form-control">
-                        {% for value, label in notification_types %}
-                            <option value="{{ value }}" {% if selected_notification_type == value %}selected{% endif %}>{{ label }}</option>
+            <h2>Enviar notifica&ccedil;&atilde;o manual</h2>
+
+            <div class="field">
+                <label for="manual-message">Mensagem</label>
+                <textarea id="manual-message" class="form-control" rows="5" placeholder="Digite a mensagem..."></textarea>
+                <p class="field-hint">Placeholders dispon&iacute;veis: <code>{data_hora}</code>, <code>{usuario}</code></p>
+            </div>
+
+            <div class="charge-toolbar" style="margin-bottom: 8px;">
+                <button type="button" class="secondary-button" id="select-all-manual">Selecionar todos</button>
+                <button type="button" class="secondary-button" id="clear-all-manual">Desmarcar todos</button>
+            </div>
+
+            <div class="table-wrap">
+                <table id="manual-recipients-table">
+                    <thead>
+                        <tr>
+                            <th>Enviar</th>
+                            <th>Usu&aacute;rio</th>
+                            <th>Telefone</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                            <tr id="manual-row-{{ row.user.id }}">
+                                <td>
+                                    <input type="checkbox" class="checkbox-control manual-notify-checkbox"
+                                        data-phone="{{ row.effective_phone }}"
+                                        data-name="{{ row.user.get_full_name|default:row.user.username }}"
+                                        {% if row.effective_phone %}checked{% else %}disabled{% endif %}>
+                                </td>
+                                <td>
+                                    <strong>{{ row.user.get_full_name|default:row.user.username }}</strong><br>
+                                    <small>{{ row.user.username }}</small>
+                                </td>
+                                <td>
+                                    {% if row.effective_phone %}
+                                        {{ row.effective_phone }}
+                                    {% else %}
+                                        <span class="document-status pending">Sem telefone</span>
+                                    {% endif %}
+                                </td>
+                                <td id="manual-status-{{ row.user.id }}"></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4">Nenhum usu&aacute;rio ativo.</td></tr>
                         {% endfor %}
-                    </select>
-                </div>
-                <div class="field">
-                    <label for="{{ message_form.message.id_for_label }}">{{ message_form.message.label }}</label>
-                    {{ message_form.message }}
-                    {% if message_form.message.errors %}<div class="form-error">{{ message_form.message.errors }}</div>{% endif %}
-                </div>
-                <button type="submit">Enviar WhatsApp</button>
-            </form>
+                    </tbody>
+                </table>
+            </div>
 
-            <form method="post" style="margin-top: 10px;">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="send_test">
-                <button type="submit" class="secondary-button">Testar envio</button>
-            </form>
+            <div class="progress-wrap" aria-hidden="true" style="margin-top: 12px;">
+                <div class="progress-bar" id="manual-progress-bar"></div>
+            </div>
+            <p class="field-hint" id="manual-progress-status"></p>
 
-            <div style="margin-top: 10px;">
+            <div class="charge-toolbar" style="margin-top: 10px;">
+                <button type="button" class="primary-button" id="manual-send-btn">Enviar WhatsApp</button>
+                <button type="button" class="secondary-button" id="manual-cancel-btn" style="display:none;">Cancelar</button>
+            </div>
+
+            <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="send_test">
+                    <button type="submit" class="secondary-button">Testar envio</button>
+                </form>
                 <button type="button" class="secondary-button" id="open-charge-documentation">Cobrar documenta&ccedil;&atilde;o</button>
             </div>
         </section>
@@ -326,6 +367,97 @@
         }
     </style>
     <script>
+        // ── Envio manual de notificação ──────────────────────────────────────
+        const manualSendBtn = document.getElementById('manual-send-btn');
+        const manualCancelBtn = document.getElementById('manual-cancel-btn');
+        const manualProgressBar = document.getElementById('manual-progress-bar');
+        const manualProgressStatus = document.getElementById('manual-progress-status');
+        const manualMessageInput = document.getElementById('manual-message');
+        const manualCheckboxes = () => Array.from(document.querySelectorAll('.manual-notify-checkbox'));
+        const selectAllManual = document.getElementById('select-all-manual');
+        const clearAllManual = document.getElementById('clear-all-manual');
+        let manualCancelled = false;
+
+        if (selectAllManual) selectAllManual.addEventListener('click', () => manualCheckboxes().forEach(c => { if (!c.disabled) c.checked = true; }));
+        if (clearAllManual) clearAllManual.addEventListener('click', () => manualCheckboxes().forEach(c => { c.checked = false; }));
+
+        if (manualCancelBtn) {
+            manualCancelBtn.addEventListener('click', () => {
+                manualCancelled = true;
+                manualCancelBtn.disabled = true;
+                manualCancelBtn.textContent = 'Cancelando...';
+            });
+        }
+
+        function setManualRowStatus(checkbox, cssClass, text) {
+            const row = checkbox.closest('tr');
+            if (!row) return;
+            const statusCell = row.querySelector('td:last-child');
+            if (!statusCell) return;
+            statusCell.innerHTML = `<span class="document-status ${cssClass}">${text}</span>`;
+        }
+
+        if (manualSendBtn) {
+            manualSendBtn.addEventListener('click', async () => {
+                const selected = manualCheckboxes().filter(c => c.checked && !c.disabled);
+                const message = (manualMessageInput?.value || '').trim();
+
+                if (!message) { alert('Digite uma mensagem antes de enviar.'); return; }
+                if (!selected.length) { alert('Selecione ao menos um destinatário.'); return; }
+
+                manualCancelled = false;
+                manualSendBtn.disabled = true;
+                manualSendBtn.textContent = 'Enviando...';
+                if (manualCancelBtn) { manualCancelBtn.style.display = ''; manualCancelBtn.disabled = false; manualCancelBtn.textContent = 'Cancelar'; }
+                if (manualProgressBar) manualProgressBar.style.width = '0%';
+                if (manualProgressStatus) manualProgressStatus.textContent = `0 de ${selected.length} enviados.`;
+
+                // Limpa status anteriores
+                manualCheckboxes().forEach(c => setManualRowStatus(c, '', ''));
+
+                const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+
+                for (let i = 0; i < selected.length; i += 1) {
+                    if (manualCancelled) {
+                        if (manualProgressStatus) manualProgressStatus.textContent = `Cancelado após ${i} de ${selected.length} envio(s).`;
+                        break;
+                    }
+
+                    const phone = selected[i].dataset.phone || '';
+                    const name = selected[i].dataset.name || '-';
+                    setManualRowStatus(selected[i], '', 'Enviando...');
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('csrfmiddlewaretoken', csrfToken);
+                        formData.append('action', 'send_message_single_to_phone');
+                        formData.append('phone', phone);
+                        formData.append('message', message);
+
+                        const response = await fetch('{% url "whatsapp_dashboard" %}', { method: 'POST', body: formData });
+                        let result;
+                        try { result = await response.json(); } catch (_) { result = { ok: false, error: `HTTP ${response.status}` }; }
+
+                        if (result.ok) {
+                            setManualRowStatus(selected[i], 'confirmed', 'Enviado');
+                        } else {
+                            setManualRowStatus(selected[i], 'pending', `Falhou: ${result.error || 'erro'}`);
+                        }
+                    } catch (err) {
+                        setManualRowStatus(selected[i], 'pending', `Erro: ${err.message || 'rede'}`);
+                    }
+
+                    if (manualProgressBar) manualProgressBar.style.width = `${Math.round(((i + 1) / selected.length) * 100)}%`;
+                    if (!manualCancelled && manualProgressStatus) manualProgressStatus.textContent = `${i + 1} de ${selected.length} enviados.`;
+                }
+
+                manualSendBtn.disabled = false;
+                manualSendBtn.textContent = 'Enviar WhatsApp';
+                if (manualCancelBtn) manualCancelBtn.style.display = 'none';
+            });
+        }
+
+        // ── Cobrança de documentação ─────────────────────────────────────────
         const chargeModal = document.getElementById('charge-documentation-modal');
         const openChargeButton = document.getElementById('open-charge-documentation');
         const chargeForm = document.getElementById('charge-documentation-form');

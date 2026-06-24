@@ -52,6 +52,13 @@ from . import whatsapp
 logger = logging.getLogger(__name__)
 
 
+def _auto_notify(notification_type, message):
+    try:
+        whatsapp.send_plain_notification(notification_type, message)
+    except Exception:
+        logger.exception('Erro na notificacao automatica WhatsApp tipo %s', notification_type)
+
+
 PANEL_PERMISSION_FIELDS = {
     'registrations': 'can_view_registrations',
     'reports': 'can_view_reports',
@@ -208,11 +215,17 @@ def signup(request):
             user.save()
             registration = Registration.objects.create(user=user)
 
+            saved_volunteers = []
             for form in formset:
                 volunteer = form.save(commit=False)
                 volunteer.registration = registration
                 volunteer.save()
+                saved_volunteers.append(volunteer.full_name)
 
+            _auto_notify(
+                WhatsAppNotificationType.REGISTRATIONS,
+                f'Nova inscrição realizada!\nMissionário(s): {", ".join(saved_volunteers)}\nTotal de inscritos: {Volunteer.objects.count()}',
+            )
             login(request, user)
             return redirect('signup_success')
     else:
@@ -250,11 +263,17 @@ def volunteer_dashboard(request):
                 with transaction.atomic():
                     registration = Registration.objects.create(user=request.user)
 
+                    new_names = []
                     for form in formset:
                         volunteer = form.save(commit=False)
                         volunteer.registration = registration
                         volunteer.save()
+                        new_names.append(volunteer.full_name)
 
+                _auto_notify(
+                    WhatsAppNotificationType.REGISTRATIONS,
+                    f'Novo perfil missionário criado!\nMissionário(s): {", ".join(new_names)}\nTotal de inscritos: {Volunteer.objects.count()}',
+                )
                 messages.success(request, 'Perfil missionário criado com sucesso.')
                 return redirect('volunteer_dashboard')
         else:
@@ -290,6 +309,10 @@ def volunteer_dashboard(request):
                 messages.error(request, 'Não foi possível atualizar um cadastro de outro usuário.')
             else:
                 formset.save()
+                _auto_notify(
+                    WhatsAppNotificationType.REGISTRATIONS,
+                    f'Cadastro atualizado por {request.user.get_full_name() or request.user.username}.',
+                )
                 messages.success(request, 'Dados atualizados com sucesso.')
                 return redirect('volunteer_dashboard')
     else:
@@ -377,6 +400,10 @@ def volunteer_payment_upload(request, payment_id):
         payment.confirmed_by = None
         payment.confirmed_at = None
         payment.save()
+        _auto_notify(
+            WhatsAppNotificationType.FINANCIAL,
+            f'Comprovante enviado!\nTipo: {payment.get_payment_type_display()}\nMissionário: {payment.volunteer.full_name}\nAguarda conferência.',
+        )
         messages.success(request, f'Comprovante de {payment.get_payment_type_display()} enviado.')
     else:
         messages.error(request, f'Não foi possível enviar o comprovante de {payment.get_payment_type_display()}.')
@@ -402,6 +429,10 @@ def volunteer_donation_receipt_upload(request, volunteer_id):
         donation_receipt = form.save(commit=False)
         donation_receipt.volunteer = volunteer
         donation_receipt.save()
+        _auto_notify(
+            WhatsAppNotificationType.FINANCIAL,
+            f'Comprovante de doação enviado!\nMissionário: {donation_receipt.volunteer.full_name}\nAguarda conferência.',
+        )
         messages.success(request, 'Comprovante de doação enviado.')
     else:
         messages.error(request, 'Não foi possível enviar o comprovante de doação.')
@@ -456,6 +487,18 @@ def volunteer_documentation_upload(request, volunteer_id):
             volunteer.documentation_reviewed_at = None
 
         volunteer.save()
+        uploaded_docs = []
+        if 'signed_registration_document' in request.FILES:
+            uploaded_docs.append('Formulário assinado')
+        if 'insurance_policy_document' in request.FILES:
+            uploaded_docs.append('Apólice de seguro')
+        if 'vaccination_card_document' in request.FILES:
+            uploaded_docs.append('Carteira de vacinação')
+        if uploaded_docs:
+            _auto_notify(
+                WhatsAppNotificationType.DOCUMENTATION,
+                f'Documento enviado!\nMissionário: {volunteer.full_name}\nDocumento(s): {", ".join(uploaded_docs)}',
+            )
         messages.success(request, f'Documentação de {volunteer.full_name} atualizada.')
     else:
         messages.error(request, f'Não foi possível atualizar a documentação de {volunteer.full_name}.')
@@ -506,6 +549,10 @@ def financial_dashboard(request):
             financial_transaction = form.save(commit=False)
             financial_transaction.created_by = request.user
             financial_transaction.save()
+            _auto_notify(
+                WhatsAppNotificationType.FINANCIAL,
+                f'Novo lançamento financeiro!\nTipo: {financial_transaction.get_transaction_type_display()}\nCategoria: {financial_transaction.category}\nValor: R$ {financial_transaction.amount}',
+            )
             messages.success(request, 'Lançamento financeiro cadastrado com sucesso.')
             return redirect('financial_dashboard')
     else:
@@ -646,6 +693,11 @@ def expense_registration_dashboard(request):
             expense.transaction_type = 'saida'
             expense.created_by = request.user
             expense.save()
+            action_label = 'atualizada' if transaction_id else 'registrada'
+            _auto_notify(
+                WhatsAppNotificationType.FINANCIAL,
+                f'Despesa {action_label}!\nCategoria: {expense.category}\nValor: R$ {expense.amount}\nPor: {request.user.get_full_name() or request.user.username}',
+            )
             messages.success(request, 'Despesa registrada com sucesso.' if not transaction_id else 'Despesa atualizada com sucesso.')
             return redirect('expense_registration_dashboard')
     else:
@@ -788,6 +840,23 @@ def whatsapp_dashboard(request):
                 messages.error(request, f'Falha ao enviar teste: {error_message}')
             return redirect('whatsapp_dashboard')
 
+        elif action == 'send_message_single_to_phone':
+            phone = (request.POST.get('phone') or '').strip()
+            message_text = (request.POST.get('message') or '').strip()
+            sent_by = request.user.get_full_name() or request.user.username
+            try:
+                if not phone or not message_text:
+                    return JsonResponse({'ok': False, 'error': 'Dados inválidos.'})
+                normalized = whatsapp.normalize_phone_number(phone)
+                if not normalized:
+                    return JsonResponse({'ok': False, 'error': 'Telefone inválido.'})
+                rendered = whatsapp.render_message(message_text, whatsapp.template_context(sent_by=sent_by))
+                ok, error = whatsapp.send_message_to_phone(normalized, rendered, sent_by=sent_by)
+                return JsonResponse({'ok': ok, 'error': error or ''})
+            except Exception as exc:
+                logger.exception('Erro ao enviar mensagem manual: %s', exc)
+                return JsonResponse({'ok': False, 'error': str(exc)})
+
         elif action == 'charge_documentation_single':
             sent_by = request.user.get_full_name() or request.user.username
             submitted_charge_template = (request.POST.get('charge_template') or '').strip()
@@ -917,6 +986,10 @@ def conference_dashboard(request):
             payment.confirmed_by = request.user
             payment.confirmed_at = timezone.now()
             payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
+            _auto_notify(
+                WhatsAppNotificationType.FINANCIAL,
+                f'Comprovante conferido!\nTipo: {payment.get_payment_type_display()}\nMissionário: {payment.volunteer.full_name}',
+            )
             messages.success(request, 'Comprovante obrigatorio conferido.')
         elif action == 'unconfirm':
             payment.is_confirmed = False
@@ -936,6 +1009,10 @@ def conference_dashboard(request):
             donation.confirmed_by = request.user
             donation.confirmed_at = timezone.now()
             donation.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at'])
+            _auto_notify(
+                WhatsAppNotificationType.FINANCIAL,
+                f'Doação conferida!\nMissionário: {donation.volunteer.full_name}',
+            )
             messages.success(request, 'Comprovante de doacao conferido.')
         elif action == 'unconfirm':
             donation.is_confirmed = False
@@ -969,6 +1046,15 @@ def conference_dashboard(request):
             volunteer.save(update_fields=[field_name, 'documentation_reviewed_by', 'documentation_reviewed_at'])
 
             if action == 'confirm':
+                doc_labels = {
+                    'signed_registration': 'Formulário assinado',
+                    'insurance_policy': 'Apólice de seguro',
+                    'vaccination_card': 'Carteira de vacinação',
+                }
+                _auto_notify(
+                    WhatsAppNotificationType.DOCUMENTATION,
+                    f'Documento conferido!\nMissionário: {volunteer.full_name}\nDocumento: {doc_labels.get(document_type, document_type)}',
+                )
                 messages.success(request, 'Documento conferido.')
             elif action == 'unconfirm':
                 messages.success(request, 'Conferencia do documento removida.')

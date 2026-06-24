@@ -282,6 +282,28 @@ def send_template_to_phone(notification_type, phone_number: str, payload=None, s
     return ok, error_message, message, normalized_phone
 
 
+def send_plain_notification(notification_type: str, message: str, sent_by: str = 'sistema') -> None:
+    """Envia mensagem já formatada para todos os destinatários habilitados para o tipo."""
+    from .models import WhatsAppRecipientPreference
+    if not notifications_enabled():
+        return
+    recipients = (
+        WhatsAppRecipientPreference.objects
+        .select_related('user')
+        .filter(user__is_active=True)
+    )
+    for preference in recipients:
+        if not preference.enabled_for(notification_type):
+            continue
+        phone = normalize_phone_number(preference.phone_number or resolve_user_phone(preference.user))
+        if not phone:
+            continue
+        try:
+            send_message_to_phone(phone, message, sent_by=sent_by)
+        except Exception:
+            logger.warning('Falha na notificacao automatica para %s tipo %s', preference.user.username, notification_type)
+
+
 def ensure_default_templates():
     for notification_type in DEFAULT_TEMPLATE_MESSAGES:
         get_template_message(notification_type)
