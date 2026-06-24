@@ -190,7 +190,10 @@
                     {% for field in form %}
                         <div class="field {% if field.name == 'description' or field.name == 'receipt' %}wide{% endif %}" data-field="{{ field.name }}">
                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {% if field.name == 'category' %}
+                            {% if field.name == 'transaction_type' %}
+                                {{field}}
+                                <span id="tipo-badge" style="display:none;padding:6px 12px;border-radius:6px;font-weight:700;font-size:0.9rem;"></span>
+                            {% elif field.name == 'category' %}
                                 <select id="id_category" name="category" class="form-control" required>
                                     <option value="">&#8212; Selecione a categoria &#8212;</option>
                                 </select>
@@ -235,10 +238,26 @@
         /* ── Modal ── */
         const modal = document.getElementById('modal-lancamento');
 
+        const tipoBadge = document.getElementById('tipo-badge');
+
         function openModal(tipo) {
+            // Trava o tipo: esconde o select e mostra badge visual
             if (transactionTypeSelect) {
                 transactionTypeSelect.value = tipo;
+                transactionTypeSelect.style.display = 'none';
             }
+            if (tipoBadge) {
+                const isSaida = tipo === 'saida';
+                tipoBadge.textContent = isSaida ? '↓ Saída (Custo)' : '↑ Entrada';
+                tipoBadge.style.display = 'inline-block';
+                tipoBadge.style.background = isSaida ? '#fdf2f2' : '#f0f7f2';
+                tipoBadge.style.color      = isSaida ? '#c0392b'  : '#2f6844';
+                tipoBadge.style.border     = `1.5px solid ${isSaida ? '#c0392b' : '#2f6844'}`;
+            }
+            // Título do modal
+            document.getElementById('modal-lancamento-title').textContent =
+                tipo === 'saida' ? 'Novo Custo' : 'Nova Entrada';
+
             voltarParaLista();
             buildCategorySelect('');
             typeof modal.showModal === 'function' ? modal.showModal() : modal.setAttribute('open','open');
