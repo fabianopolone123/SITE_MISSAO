@@ -241,7 +241,7 @@
                                 {% for row in pending_documentation_volunteers %}
                                     <tr>
                                         <td>
-                                            <input type="checkbox" name="volunteer_ids" value="{{ row.volunteer.id }}" class="checkbox-control documentation-charge-checkbox" checked>
+                                            <input type="checkbox" name="volunteer_ids" value="{{ row.volunteer.id }}" class="checkbox-control documentation-charge-checkbox" data-phone="{{ row.phone }}" data-name="{{ row.volunteer.full_name }}" checked>
                                         </td>
                                         <td>
                                             <strong>{{ row.volunteer.full_name }}</strong><br>
@@ -446,42 +446,37 @@
                         }
                     }
 
-                    const body = new URLSearchParams();
-                    body.append('action', 'charge_documentation_single');
-                    body.append('volunteer_id', selected[index].value);
-                    body.append('charge_template', templateInput?.value || '');
+                    const volunteerPhone = selected[index].dataset.phone || '';
+                    const volunteerName = selected[index].dataset.name || selected[index].closest('tr')?.querySelector('strong')?.textContent || '-';
 
-                    try {
-                        const response = await fetch(chargeForm.action || window.location.href, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                                'X-CSRFToken': csrfInput?.value || '',
-                                'X-Requested-With': 'XMLHttpRequest',
-                            },
-                            body,
-                        });
-                        let result;
+                    if (!volunteerPhone) {
+                        appendChargeResult({ volunteer: volunteerName, ok: false, error_message: 'sem telefone válido', phone: '', message: '' });
+                    } else {
+                        const body = new URLSearchParams();
+                        body.append('action', 'charge_documentation_single');
+                        body.append('volunteer_id', selected[index].value);
+                        body.append('charge_template', templateInput?.value || '');
+
                         try {
-                            result = await response.json();
-                        } catch (_) {
-                            result = {
-                                volunteer: selected[index].closest('tr')?.querySelector('strong')?.textContent || '-',
-                                ok: false,
-                                error_message: `erro HTTP ${response.status}`,
-                                phone: '',
-                                message: '',
-                            };
+                            const response = await fetch(chargeForm.action || window.location.href, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-CSRFToken': csrfInput?.value || '',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body,
+                            });
+                            let result;
+                            try {
+                                result = await response.json();
+                            } catch (_) {
+                                result = { volunteer: volunteerName, ok: false, error_message: `erro HTTP ${response.status}`, phone: '', message: '' };
+                            }
+                            appendChargeResult(result);
+                        } catch (err) {
+                            appendChargeResult({ volunteer: volunteerName, ok: false, error_message: err.message || 'erro de rede', phone: '', message: '' });
                         }
-                        appendChargeResult(result);
-                    } catch (err) {
-                        appendChargeResult({
-                            volunteer: selected[index].closest('tr')?.querySelector('strong')?.textContent || '-',
-                            ok: false,
-                            error_message: err.message || 'erro de rede',
-                            phone: '',
-                            message: '',
-                        });
                     }
 
                     const completed = index + 1;
