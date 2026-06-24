@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import date
 
 from django.conf import settings
@@ -822,7 +823,9 @@ def whatsapp_dashboard(request):
                 .filter(id__in=selected_ids)
                 .order_by('full_name')
             )
-            for volunteer in selected_volunteers:
+            for index, volunteer in enumerate(selected_volunteers):
+                if index > 0 and charge_delay_seconds > 0:
+                    time.sleep(charge_delay_seconds)
                 result = send_documentation_charge(request, volunteer, charge_template_text, sent_by)
                 if not result['message']:
                     continue
