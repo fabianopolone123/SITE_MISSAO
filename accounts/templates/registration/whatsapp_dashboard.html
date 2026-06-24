@@ -69,6 +69,10 @@
                 <input type="hidden" name="action" value="send_test">
                 <button type="submit" class="secondary-button">Testar envio</button>
             </form>
+
+            <div style="margin-top: 10px;">
+                <button type="button" class="secondary-button" id="open-charge-documentation">Cobrar documenta&ccedil;&atilde;o</button>
+            </div>
         </section>
 
         <section class="admin-section">
@@ -124,7 +128,7 @@
                 </div>
 
                 <p class="field-hint">
-                    Placeholders dispon&iacute;veis: <code>{usuario}</code>, <code>{mensagem}</code>, <code>{data_hora}</code>, <code>{total_inscritos}</code>.
+                    Placeholders dispon&iacute;veis: <code>{usuario}</code>, <code>{mensagem}</code>, <code>{data_hora}</code>, <code>{total_inscritos}</code>, <code>{missionario}</code>, <code>{documentos_pendentes}</code>, <code>{link_documentacao}</code>.
                 </p>
                 <button type="submit">Salvar destinat&aacute;rios e templates</button>
             </form>
@@ -194,6 +198,103 @@
                 <button type="submit">Salvar configura&ccedil;&otilde;es</button>
             </form>
         </section>
+
+        <dialog class="detail-modal" id="charge-documentation-modal" aria-labelledby="charge-documentation-title">
+            <div class="modal-header">
+                <h2 id="charge-documentation-title">Cobrar documenta&ccedil;&atilde;o</h2>
+                <button type="button" class="secondary-button" data-modal-close>Fechar</button>
+            </div>
+            <div class="modal-content">
+                <form method="post" class="finance-form" id="charge-documentation-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="charge_documentation">
+
+                    <div class="charge-toolbar">
+                        <button type="button" class="secondary-button" id="select-all-documentation">Selecionar todos</button>
+                        <button type="button" class="secondary-button" id="clear-all-documentation">Desmarcar todos</button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Enviar</th>
+                                    <th>Mission&aacute;rio</th>
+                                    <th>Telefone</th>
+                                    <th>Pend&ecirc;ncias</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in pending_documentation_volunteers %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" name="volunteer_ids" value="{{ row.volunteer.id }}" class="checkbox-control documentation-charge-checkbox" checked>
+                                        </td>
+                                        <td>
+                                            <strong>{{ row.volunteer.full_name }}</strong><br>
+                                            <small>{{ row.volunteer.registration.user.username }}</small>
+                                        </td>
+                                        <td>
+                                            {% if row.phone %}
+                                                {{ row.phone }}
+                                            {% else %}
+                                                <span class="document-status pending">Sem telefone v&aacute;lido</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ row.pending_items|join:", " }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="4">Nenhum mission&aacute;rio com documenta&ccedil;&atilde;o pendente.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="progress-wrap" aria-hidden="true">
+                        <div class="progress-bar" id="charge-progress-bar"></div>
+                    </div>
+
+                    <button type="submit" id="charge-documentation-submit" {% if not pending_documentation_volunteers %}disabled{% endif %}>Enviar cobran&ccedil;a</button>
+                </form>
+
+                {% if charge_results %}
+                    <div class="charge-results">
+                        <h3>Resultado do envio</h3>
+                        <div class="progress-wrap" aria-hidden="true">
+                            <div class="progress-bar progress-bar-done"></div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Mission&aacute;rio</th>
+                                        <th>Telefone</th>
+                                        <th>Status</th>
+                                        <th>Mensagem enviada</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in charge_results %}
+                                        <tr>
+                                            <td>{{ item.volunteer.full_name }}</td>
+                                            <td>{{ item.phone|default:"-" }}</td>
+                                            <td>
+                                                {% if item.ok %}
+                                                    <span class="document-status confirmed">Enviado</span>
+                                                {% else %}
+                                                    <span class="document-status pending">Falhou: {{ item.error_message }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><pre class="message-preview">{{ item.message }}</pre></td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </dialog>
     </main>
 
     <style>
@@ -201,9 +302,72 @@
         .template-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
         .template-card { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfa; }
         .template-card textarea { min-height: 150px; }
+        .charge-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+        .progress-wrap { width: 100%; height: 12px; border-radius: 999px; background: #e8f0eb; overflow: hidden; margin: 14px 0; }
+        .progress-bar { width: 0; height: 100%; background: #2f6844; transition: width .35s ease; }
+        .progress-bar-done { width: 100%; }
+        .charge-results { margin-top: 20px; }
+        .message-preview { white-space: pre-wrap; margin: 0; font: inherit; color: inherit; max-width: 520px; }
         @media (max-width: 760px) {
             .template-grid { grid-template-columns: 1fr; }
         }
     </style>
+    <script>
+        const chargeModal = document.getElementById('charge-documentation-modal');
+        const openChargeButton = document.getElementById('open-charge-documentation');
+        const chargeForm = document.getElementById('charge-documentation-form');
+        const chargeProgressBar = document.getElementById('charge-progress-bar');
+        const chargeSubmit = document.getElementById('charge-documentation-submit');
+        const checkboxes = () => Array.from(document.querySelectorAll('.documentation-charge-checkbox'));
+
+        function openChargeModal() {
+            if (!chargeModal) return;
+            if (typeof chargeModal.showModal === 'function') {
+                chargeModal.showModal();
+            } else {
+                chargeModal.setAttribute('open', 'open');
+            }
+        }
+
+        if (openChargeButton) {
+            openChargeButton.addEventListener('click', openChargeModal);
+        }
+
+        document.querySelectorAll('[data-modal-close]').forEach((button) => {
+            button.addEventListener('click', () => {
+                if (chargeModal && typeof chargeModal.close === 'function') {
+                    chargeModal.close();
+                } else if (chargeModal) {
+                    chargeModal.removeAttribute('open');
+                }
+            });
+        });
+
+        const selectAllButton = document.getElementById('select-all-documentation');
+        const clearAllButton = document.getElementById('clear-all-documentation');
+        if (selectAllButton) {
+            selectAllButton.addEventListener('click', () => checkboxes().forEach((checkbox) => { checkbox.checked = true; }));
+        }
+        if (clearAllButton) {
+            clearAllButton.addEventListener('click', () => checkboxes().forEach((checkbox) => { checkbox.checked = false; }));
+        }
+
+        if (chargeForm) {
+            chargeForm.addEventListener('submit', () => {
+                const selectedCount = checkboxes().filter((checkbox) => checkbox.checked).length;
+                if (chargeProgressBar) {
+                    chargeProgressBar.style.width = selectedCount ? '18%' : '100%';
+                }
+                if (chargeSubmit) {
+                    chargeSubmit.disabled = true;
+                    chargeSubmit.textContent = 'Enviando...';
+                }
+            });
+        }
+
+        {% if open_charge_modal %}
+            openChargeModal();
+        {% endif %}
+    </script>
 </body>
 </html>

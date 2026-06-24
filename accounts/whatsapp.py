@@ -232,6 +232,9 @@ def template_context(sent_by: str = '', message: str = ''):
         'mensagem': message,
         'data_hora': now,
         'total_inscritos': Volunteer.objects.count(),
+        'missionario': '',
+        'documentos_pendentes': '',
+        'link_documentacao': '',
     }
 
 
@@ -259,6 +262,17 @@ def send_template_notification(notification_type, payload=None, sent_by: str = '
         results.append((preference.user, ok, error_message))
 
     return results, message
+
+
+def send_template_to_phone(notification_type, phone_number: str, payload=None, sent_by: str = ''):
+    template_text = get_template_message(notification_type)
+    message = render_message(template_text, payload or template_context(sent_by=sent_by))
+    normalized_phone = normalize_phone_number(phone_number)
+    if not normalized_phone:
+        return False, 'Telefone inválido ou ausente.', message, ''
+
+    ok, error_message = send_message_to_phone(normalized_phone, message, sent_by=sent_by)
+    return ok, error_message, message, normalized_phone
 
 
 def ensure_default_templates():

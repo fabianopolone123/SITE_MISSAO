@@ -663,6 +663,17 @@ def expense_registration_dashboard(request):
     return render(request, 'registration/expense_registration_dashboard.html', context)
 
 
+def volunteer_pending_documentation_items(volunteer):
+    items = []
+    if not volunteer.signed_registration_document:
+        items.append('ficha assinada')
+    if not volunteer.insurance_policy_document:
+        items.append('apólice de seguro')
+    if not volunteer.vaccination_card_document:
+        items.append('carteira de vacinação')
+    return items
+
+
 @user_passes_test(can_manage_whatsapp, login_url='login')
 def whatsapp_dashboard(request):
     config = WhatsAppConfig.get()
@@ -671,6 +682,9 @@ def whatsapp_dashboard(request):
     initial_message = config.default_message or 'Olá! Esta é uma notificação da Missão Andrews.'
     message_form = WhatsAppMessageForm(initial={'message': initial_message})
     selected_notification_type = request.POST.get('notification_type') or WhatsAppNotificationType.GENERAL
+    charge_results = []
+    charge_message_sent = ''
+    open_charge_modal = False
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -732,6 +746,55 @@ def whatsapp_dashboard(request):
                 messages.error(request, f'Falha ao enviar teste: {error_message}')
             return redirect('whatsapp_dashboard')
 
+        elif action == 'charge_documentation':
+            sent_by = request.user.get_full_name() or request.user.username
+            selected_ids = request.POST.getlist('volunteer_ids')
+            selected_volunteers = (
+                Volunteer.objects
+                .select_related('registration__user')
+                .filter(id__in=selected_ids)
+                .order_by('full_name')
+            )
+            documentation_url = request.build_absolute_uri('/minha-inscricao/documentacao/')
+            base_payload = whatsapp.template_context(
+                sent_by=sent_by,
+                message='Por favor, envie os documentos pendentes para concluir sua documentação.',
+            )
+
+            for volunteer in selected_volunteers:
+                pending_items = volunteer_pending_documentation_items(volunteer)
+                if not pending_items:
+                    continue
+                payload = {
+                    **base_payload,
+                    'missionario': volunteer.full_name,
+                    'documentos_pendentes': ', '.join(pending_items),
+                    'link_documentacao': documentation_url,
+                }
+                ok, error_message, message_text, normalized_phone = whatsapp.send_template_to_phone(
+                    WhatsAppNotificationType.DOCUMENTATION,
+                    volunteer.phone,
+                    payload=payload,
+                    sent_by=sent_by,
+                )
+                charge_message_sent = message_text
+                charge_results.append({
+                    'volunteer': volunteer,
+                    'ok': ok,
+                    'error_message': error_message,
+                    'phone': normalized_phone or volunteer.phone,
+                    'message': message_text,
+                })
+
+            sent_count = sum(1 for item in charge_results if item['ok'])
+            if sent_count:
+                messages.success(request, f'Cobrança de documentação enviada para {sent_count} missionário(s).')
+            elif charge_results:
+                messages.error(request, 'Nenhuma cobrança foi enviada. Confira os telefones e a configuração do WhatsApp.')
+            else:
+                messages.error(request, 'Nenhum missionário pendente foi selecionado.')
+            open_charge_modal = True
+
     rows = []
     for user in User.objects.filter(is_active=True).order_by('username'):
         preference, _ = WhatsAppRecipientPreference.objects.get_or_create(user=user)
@@ -749,6 +812,20 @@ def whatsapp_dashboard(request):
             'message': whatsapp.get_template_message(notification_type),
         })
 
+    pending_documentation_volunteers = []
+    for volunteer in (
+        Volunteer.objects
+        .select_related('registration__user')
+        .order_by('full_name')
+    ):
+        pending_items = volunteer_pending_documentation_items(volunteer)
+        if pending_items:
+            pending_documentation_volunteers.append({
+                'volunteer': volunteer,
+                'pending_items': pending_items,
+                'phone': whatsapp.normalize_phone_number(volunteer.phone),
+            })
+
     context = {
         'config_form': config_form,
         'message_form': message_form,
@@ -756,6 +833,10 @@ def whatsapp_dashboard(request):
         'selected_notification_type': selected_notification_type,
         'rows': rows,
         'templates': templates,
+        'pending_documentation_volunteers': pending_documentation_volunteers,
+        'charge_results': charge_results,
+        'charge_message_sent': charge_message_sent,
+        'open_charge_modal': open_charge_modal,
         'active_provider': whatsapp.active_provider(),
         'notifications_enabled': whatsapp.notifications_enabled(),
         'panel_permissions': get_panel_permissions(request.user),

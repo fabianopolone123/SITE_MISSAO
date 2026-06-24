@@ -902,6 +902,71 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(payload['phone'], '5516999998888')
         self.assertEqual(payload['message'], 'Mensagem: Aviso importante da missao')
 
+    def test_whatsapp_dashboard_shows_documentation_charge_button(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        _, _, volunteer = create_registration(username='pendente')
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('whatsapp_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Cobrar documenta')
+        self.assertContains(response, volunteer.full_name)
+        self.assertContains(response, 'carteira de vacina')
+
+    def test_whatsapp_dashboard_charges_pending_documentation_via_wapi(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        _, _, volunteer = create_registration(username='pendente')
+        volunteer.phone = '(16) 99999-8888'
+        volunteer.save(update_fields=['phone'])
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        WhatsAppConfig.objects.create(
+            notifications_enabled=True,
+            provider='wapi',
+            wapi_token='token-123',
+            wapi_instance='instance-01',
+            wapi_base_url='https://api.w-api.app/v1',
+        )
+        WhatsAppTemplate.objects.create(
+            notification_type=WhatsAppNotificationType.DOCUMENTATION,
+            message_text='Docs {missionario}: {documentos_pendentes}. {mensagem}',
+        )
+        self.client.force_login(user)
+
+        class ResponseMock:
+            status = 200
+
+            def getcode(self):
+                return 200
+
+            def read(self):
+                return json.dumps({'status': 'success', 'messageId': 'abc123'}).encode('utf-8')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        with patch('accounts.whatsapp.request.urlopen', return_value=ResponseMock()) as mocked_urlopen:
+            response = self.client.post(
+                reverse('whatsapp_dashboard'),
+                {
+                    'action': 'charge_documentation',
+                    'volunteer_ids': [str(volunteer.id)],
+                },
+            )
+
+        request_obj = mocked_urlopen.call_args.args[0]
+        payload = json.loads(request_obj.data.decode('utf-8'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload['phone'], '5516999998888')
+        self.assertIn(volunteer.full_name, payload['message'])
+        self.assertIn('carteira', payload['message'])
+        self.assertContains(response, 'Resultado do envio')
+        self.assertContains(response, 'Docs')
+
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()
         user.is_staff = True
