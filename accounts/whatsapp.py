@@ -30,6 +30,12 @@ DEFAULT_TEMPLATE_MESSAGES = {
         'Identificamos que ainda falta anexar a seguinte documentacao: {documentos_pendentes}.\n'
         'Acesse para enviar: {link_documentacao}'
     ),
+    'documentation_notification': (
+        'Documentação recebida - Missão Andrews\n'
+        'Data/Hora: {data_hora}\n'
+        'Missionário(a): {missionario}\n'
+        'Documento(s) enviado(s): {documentos_pendentes}'
+    ),
     'general': (
         'Aviso Missão Andrews\n'
         'Data/Hora: {data_hora}\n'

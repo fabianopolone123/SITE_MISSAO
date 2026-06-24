@@ -501,7 +501,7 @@ def volunteer_documentation_upload(request, volunteer_id):
         if uploaded_docs:
             docs_str = ', '.join(uploaded_docs)
             _auto_notify(
-                WhatsAppNotificationType.DOCUMENTATION,
+                WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
                 extra_payload={
                     'missionario': volunteer.full_name,
                     'documentos_pendentes': docs_str,
@@ -806,16 +806,22 @@ def whatsapp_dashboard(request):
                 preference.phone_number = request.POST.get(f'{prefix}_phone', '').strip()
                 preference.notify_registrations = request.POST.get(f'{prefix}_registrations') == 'on'
                 preference.notify_financial = request.POST.get(f'{prefix}_financial') == 'on'
-                preference.notify_documentation = request.POST.get(f'{prefix}_documentation') == 'on'
-                preference.notify_general = request.POST.get(f'{prefix}_general') == 'on'
-                preference.notify_test = request.POST.get(f'{prefix}_test') == 'on'
+                preference.notify_documentation_notification = request.POST.get(f'{prefix}_documentation_notification') == 'on'
                 preference.save()
 
-            for notification_type, _label in WhatsAppNotificationType.choices:
-                WhatsAppTemplate.objects.update_or_create(
-                    notification_type=notification_type,
-                    defaults={'message_text': request.POST.get(f'template_{notification_type}', '').strip()},
-                )
+            _editable_template_types = {
+                WhatsAppNotificationType.REGISTRATIONS,
+                WhatsAppNotificationType.FINANCIAL,
+                WhatsAppNotificationType.DOCUMENTATION,
+                WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
+            }
+            for notification_type in _editable_template_types:
+                template_text = request.POST.get(f'template_{notification_type}', '').strip()
+                if template_text:
+                    WhatsAppTemplate.objects.update_or_create(
+                        notification_type=notification_type,
+                        defaults={'message_text': template_text},
+                    )
 
             messages.success(request, 'Destinatários e templates salvos com sucesso.')
             return redirect('whatsapp_dashboard')
@@ -940,8 +946,16 @@ def whatsapp_dashboard(request):
             'effective_phone': whatsapp.normalize_phone_number(preference.phone_number or whatsapp.resolve_user_phone(user)),
         })
 
+    _editable_template_types = {
+        WhatsAppNotificationType.REGISTRATIONS,
+        WhatsAppNotificationType.FINANCIAL,
+        WhatsAppNotificationType.DOCUMENTATION,
+        WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
+    }
     templates = []
     for notification_type, label in WhatsAppNotificationType.choices:
+        if notification_type not in _editable_template_types:
+            continue
         templates.append({
             'type': notification_type,
             'label': label,
@@ -1060,7 +1074,7 @@ def conference_dashboard(request):
                     'vaccination_card': 'Carteira de vacinação',
                 }
                 _auto_notify(
-                    WhatsAppNotificationType.DOCUMENTATION,
+                    WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
                     extra_payload={
                         'missionario': volunteer.full_name,
                         'documentos_pendentes': doc_labels.get(document_type, document_type),

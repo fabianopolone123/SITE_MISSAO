@@ -107,11 +107,7 @@
             </div>
 
             <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="send_test">
-                    <button type="submit" class="secondary-button">Testar envio</button>
-                </form>
+                <button type="button" class="secondary-button" id="manual-test-btn">Testar envio</button>
                 <button type="button" class="secondary-button" id="open-charge-documentation">Cobrar documenta&ccedil;&atilde;o</button>
             </div>
         </section>
@@ -127,12 +123,10 @@
                         <thead>
                             <tr>
                                 <th>Usu&aacute;rio</th>
-                                <th>Telefone</th>
+                                <th>N&uacute;mero WhatsApp do destinat&aacute;rio</th>
                                 <th>Inscri&ccedil;&otilde;es</th>
                                 <th>Financeiro</th>
                                 <th>Documenta&ccedil;&atilde;o</th>
-                                <th>Geral</th>
-                                <th>Teste</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -148,12 +142,10 @@
                                     </td>
                                     <td><input type="checkbox" name="user_{{ row.user.id }}_registrations" class="checkbox-control" {% if row.preference.notify_registrations %}checked{% endif %}></td>
                                     <td><input type="checkbox" name="user_{{ row.user.id }}_financial" class="checkbox-control" {% if row.preference.notify_financial %}checked{% endif %}></td>
-                                    <td><input type="checkbox" name="user_{{ row.user.id }}_documentation" class="checkbox-control" {% if row.preference.notify_documentation %}checked{% endif %}></td>
-                                    <td><input type="checkbox" name="user_{{ row.user.id }}_general" class="checkbox-control" {% if row.preference.notify_general %}checked{% endif %}></td>
-                                    <td><input type="checkbox" name="user_{{ row.user.id }}_test" class="checkbox-control" {% if row.preference.notify_test %}checked{% endif %}></td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_documentation_notification" class="checkbox-control" {% if row.preference.notify_documentation_notification %}checked{% endif %}></td>
                                 </tr>
                             {% empty %}
-                                <tr><td colspan="7">Nenhum usu&aacute;rio ativo encontrado.</td></tr>
+                                <tr><td colspan="5">Nenhum usu&aacute;rio ativo encontrado.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -188,19 +180,6 @@
                             Ativar notifica&ccedil;&otilde;es de WhatsApp
                         </label>
                     </div>
-                    <div class="field">
-                        <label for="{{ config_form.provider.id_for_label }}">Provider</label>
-                        {{ config_form.provider }}
-                    </div>
-                    <div class="field wide">
-                        <label for="{{ config_form.group_jid.id_for_label }}">JID do grupo</label>
-                        {{ config_form.group_jid }}
-                        <p class="field-hint">Exemplo: 120363421981424263@g.us</p>
-                    </div>
-                    <div class="field wide">
-                        <label for="{{ config_form.default_message.id_for_label }}">Mensagem padr&atilde;o</label>
-                        {{ config_form.default_message }}
-                    </div>
                 </div>
 
                 <h3 class="subsection-title">W-API</h3>
@@ -217,18 +196,6 @@
                         <label for="{{ config_form.wapi_base_url.id_for_label }}">Base URL</label>
                         {{ config_form.wapi_base_url }}
                         <p class="field-hint">Deixe em branco para usar https://api.w-api.app/v1</p>
-                    </div>
-                </div>
-
-                <h3 class="subsection-title">Webhook personalizado</h3>
-                <div class="form-grid">
-                    <div class="field wide">
-                        <label for="{{ config_form.webhook_url.id_for_label }}">URL do Webhook</label>
-                        {{ config_form.webhook_url }}
-                    </div>
-                    <div class="field wide">
-                        <label for="{{ config_form.webhook_token.id_for_label }}">Token Bearer opcional</label>
-                        {{ config_form.webhook_token }}
                     </div>
                 </div>
 
@@ -397,63 +364,70 @@
             statusCell.innerHTML = `<span class="document-status ${cssClass}">${text}</span>`;
         }
 
-        if (manualSendBtn) {
-            manualSendBtn.addEventListener('click', async () => {
-                const selected = manualCheckboxes().filter(c => c.checked && !c.disabled);
-                const message = (manualMessageInput?.value || '').trim();
+        async function runManualSend(messageOverride) {
+            const selected = manualCheckboxes().filter(c => c.checked && !c.disabled);
+            const message = messageOverride || (manualMessageInput?.value || '').trim();
 
-                if (!message) { alert('Digite uma mensagem antes de enviar.'); return; }
-                if (!selected.length) { alert('Selecione ao menos um destinatário.'); return; }
+            if (!message) { alert('Digite uma mensagem antes de enviar.'); return; }
+            if (!selected.length) { alert('Selecione ao menos um destinatário.'); return; }
+            if (!confirm(`Deseja enviar a mensagem para ${selected.length} destinatário(s)?`)) return;
 
-                manualCancelled = false;
-                manualSendBtn.disabled = true;
-                manualSendBtn.textContent = 'Enviando...';
-                if (manualCancelBtn) { manualCancelBtn.style.display = ''; manualCancelBtn.disabled = false; manualCancelBtn.textContent = 'Cancelar'; }
-                if (manualProgressBar) manualProgressBar.style.width = '0%';
-                if (manualProgressStatus) manualProgressStatus.textContent = `0 de ${selected.length} enviados.`;
+            manualCancelled = false;
+            if (manualSendBtn) { manualSendBtn.disabled = true; manualSendBtn.textContent = 'Enviando...'; }
+            if (manualCancelBtn) { manualCancelBtn.style.display = ''; manualCancelBtn.disabled = false; manualCancelBtn.textContent = 'Cancelar'; }
+            if (manualProgressBar) manualProgressBar.style.width = '0%';
+            if (manualProgressStatus) manualProgressStatus.textContent = `0 de ${selected.length} enviados.`;
 
-                // Limpa status anteriores
-                manualCheckboxes().forEach(c => setManualRowStatus(c, '', ''));
+            manualCheckboxes().forEach(c => setManualRowStatus(c, '', ''));
 
-                const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+            const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
 
-                for (let i = 0; i < selected.length; i += 1) {
-                    if (manualCancelled) {
-                        if (manualProgressStatus) manualProgressStatus.textContent = `Cancelado após ${i} de ${selected.length} envio(s).`;
-                        break;
-                    }
-
-                    const phone = selected[i].dataset.phone || '';
-                    const name = selected[i].dataset.name || '-';
-                    setManualRowStatus(selected[i], '', 'Enviando...');
-
-                    try {
-                        const formData = new FormData();
-                        formData.append('csrfmiddlewaretoken', csrfToken);
-                        formData.append('action', 'send_message_single_to_phone');
-                        formData.append('phone', phone);
-                        formData.append('message', message);
-
-                        const response = await fetch('{% url "whatsapp_dashboard" %}', { method: 'POST', body: formData });
-                        let result;
-                        try { result = await response.json(); } catch (_) { result = { ok: false, error: `HTTP ${response.status}` }; }
-
-                        if (result.ok) {
-                            setManualRowStatus(selected[i], 'confirmed', 'Enviado');
-                        } else {
-                            setManualRowStatus(selected[i], 'pending', `Falhou: ${result.error || 'erro'}`);
-                        }
-                    } catch (err) {
-                        setManualRowStatus(selected[i], 'pending', `Erro: ${err.message || 'rede'}`);
-                    }
-
-                    if (manualProgressBar) manualProgressBar.style.width = `${Math.round(((i + 1) / selected.length) * 100)}%`;
-                    if (!manualCancelled && manualProgressStatus) manualProgressStatus.textContent = `${i + 1} de ${selected.length} enviados.`;
+            for (let i = 0; i < selected.length; i += 1) {
+                if (manualCancelled) {
+                    if (manualProgressStatus) manualProgressStatus.textContent = `Cancelado após ${i} de ${selected.length} envio(s).`;
+                    break;
                 }
 
-                manualSendBtn.disabled = false;
-                manualSendBtn.textContent = 'Enviar WhatsApp';
-                if (manualCancelBtn) manualCancelBtn.style.display = 'none';
+                const phone = selected[i].dataset.phone || '';
+                setManualRowStatus(selected[i], '', 'Enviando...');
+
+                try {
+                    const formData = new FormData();
+                    formData.append('csrfmiddlewaretoken', csrfToken);
+                    formData.append('action', 'send_message_single_to_phone');
+                    formData.append('phone', phone);
+                    formData.append('message', message);
+
+                    const response = await fetch('{% url "whatsapp_dashboard" %}', { method: 'POST', body: formData });
+                    let result;
+                    try { result = await response.json(); } catch (_) { result = { ok: false, error: `HTTP ${response.status}` }; }
+
+                    if (result.ok) {
+                        setManualRowStatus(selected[i], 'confirmed', 'Enviado');
+                    } else {
+                        setManualRowStatus(selected[i], 'pending', `Falhou: ${result.error || 'erro'}`);
+                    }
+                } catch (err) {
+                    setManualRowStatus(selected[i], 'pending', `Erro: ${err.message || 'rede'}`);
+                }
+
+                if (manualProgressBar) manualProgressBar.style.width = `${Math.round(((i + 1) / selected.length) * 100)}%`;
+                if (!manualCancelled && manualProgressStatus) manualProgressStatus.textContent = `${i + 1} de ${selected.length} enviados.`;
+            }
+
+            if (manualSendBtn) { manualSendBtn.disabled = false; manualSendBtn.textContent = 'Enviar WhatsApp'; }
+            if (manualCancelBtn) manualCancelBtn.style.display = 'none';
+        }
+
+        if (manualSendBtn) {
+            manualSendBtn.addEventListener('click', () => runManualSend());
+        }
+
+        const manualTestBtn = document.getElementById('manual-test-btn');
+        if (manualTestBtn) {
+            manualTestBtn.addEventListener('click', () => {
+                const now = new Date().toLocaleString('pt-BR');
+                runManualSend(`Teste de WhatsApp - Missão Andrews\nEnviado por: {{ request.user.get_full_name|default:request.user.username }}\nData/Hora: ${now}`);
             });
         }
 

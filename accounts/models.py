@@ -105,7 +105,8 @@ class WhatsAppConfig(models.Model):
 class WhatsAppNotificationType(models.TextChoices):
     REGISTRATIONS = 'registrations', 'Inscrições'
     FINANCIAL = 'financial', 'Financeiro'
-    DOCUMENTATION = 'documentation', 'Documentação'
+    DOCUMENTATION = 'documentation', 'Documentação (cobrança)'
+    DOCUMENTATION_NOTIFICATION = 'documentation_notification', 'Documentação (notificação)'
     GENERAL = 'general', 'Geral'
     TEST = 'test', 'Teste'
 
@@ -115,7 +116,8 @@ class WhatsAppRecipientPreference(models.Model):
     phone_number = models.CharField('Número WhatsApp', max_length=32, blank=True, default='')
     notify_registrations = models.BooleanField('Inscrições', default=False)
     notify_financial = models.BooleanField('Financeiro', default=False)
-    notify_documentation = models.BooleanField('Documentação', default=False)
+    notify_documentation = models.BooleanField('Documentação (cobrança)', default=False)
+    notify_documentation_notification = models.BooleanField('Documentação (notificação)', default=False)
     notify_general = models.BooleanField('Geral', default=False)
     notify_test = models.BooleanField('Teste', default=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -132,6 +134,7 @@ class WhatsAppRecipientPreference(models.Model):
             WhatsAppNotificationType.REGISTRATIONS: self.notify_registrations,
             WhatsAppNotificationType.FINANCIAL: self.notify_financial,
             WhatsAppNotificationType.DOCUMENTATION: self.notify_documentation,
+            WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION: self.notify_documentation_notification,
             WhatsAppNotificationType.GENERAL: self.notify_general,
             WhatsAppNotificationType.TEST: self.notify_test,
         }
