@@ -43,7 +43,8 @@
         </section>
 
         <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
-            <button type="button" class="primary-link-button compact-link-button" id="btn-novo-lancamento">+ Novo Lan&ccedil;amento</button>
+            <button type="button" class="primary-link-button compact-link-button" id="btn-novo-custo" style="background:#c0392b;">&#8595; Novo Custo</button>
+            <button type="button" class="primary-link-button compact-link-button" id="btn-nova-entrada" style="background:#2f6844;">&#8593; Nova Entrada</button>
         </div>
 
         {% if expense_by_category %}
@@ -233,9 +234,18 @@
 
         /* ── Modal ── */
         const modal = document.getElementById('modal-lancamento');
-        document.getElementById('btn-novo-lancamento').addEventListener('click', () => {
+
+        function openModal(tipo) {
+            if (transactionTypeSelect) {
+                transactionTypeSelect.value = tipo;
+            }
+            voltarParaLista();
+            buildCategorySelect('');
             typeof modal.showModal === 'function' ? modal.showModal() : modal.setAttribute('open','open');
-        });
+        }
+
+        document.getElementById('btn-novo-custo').addEventListener('click', () => openModal('saida'));
+        document.getElementById('btn-nova-entrada').addEventListener('click', () => openModal('entrada'));
         document.querySelectorAll('[data-modal-close]').forEach(btn => {
             btn.addEventListener('click', () => btn.closest('dialog').close());
         });
