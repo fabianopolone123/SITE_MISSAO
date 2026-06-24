@@ -408,11 +408,12 @@
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
 
-        const parentW = canvas.parentElement.clientWidth || 260;
-        const size    = Math.min(parentW - 40, 180);
-        const legH    = 52;
+        const parentW  = canvas.parentElement.clientWidth || 280;
+        const size     = Math.min(parentW - 24, 180);
+        const rowH     = 22;
+        const legH     = data.length * rowH + 12;
 
-        // Definir dimensões ANTES de qualquer desenho (mudar depois apaga tudo)
+        // Definir dimensões ANTES de qualquer desenho
         canvas.width  = size;
         canvas.height = size + legH;
 
@@ -444,22 +445,21 @@
         ctx.textBaseline = 'middle';
         ctx.fillStyle    = '#1d442c';
         ctx.font         = `bold ${Math.round(size * 0.13)}px Arial`;
-        ctx.fillText(data[0].count, cx, cy - size * 0.05);
+        ctx.fillText(data[0].count, cx, cy - size * 0.06);
         ctx.font      = `${Math.round(size * 0.08)}px Arial`;
         ctx.fillStyle = '#647067';
         ctx.fillText('com restrição', cx, cy + size * 0.1);
 
-        // Legenda abaixo (desenhada depois, mas canvas.height já está certo)
-        const ly = size + 14;
+        // Legenda vertical abaixo do donut
         data.forEach((d, i) => {
-            const lx = i === 0 ? 8 : size * 0.52;
+            const ly = size + 10 + i * rowH;
             ctx.fillStyle = colors[i % colors.length];
-            ctx.fillRect(lx, ly, 12, 12);
+            ctx.fillRect(8, ly + 4, 13, 13);
             ctx.fillStyle    = '#27322d';
-            ctx.font         = '12px Arial';
+            ctx.font         = '13px Arial';
             ctx.textAlign    = 'left';
             ctx.textBaseline = 'top';
-            ctx.fillText(`${d.label} (${d.count})`, lx + 16, ly + 1);
+            ctx.fillText(`${d.label}  (${d.count})`, 28, ly + 4);
         });
 
         return canvas;
