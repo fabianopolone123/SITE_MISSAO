@@ -270,42 +270,38 @@
                     <button type="submit" id="charge-documentation-submit" {% if not pending_documentation_volunteers %}disabled{% endif %}>Enviar cobran&ccedil;a</button>
                 </form>
 
-                {% if charge_results %}
-                    <div class="charge-results">
-                        <h3>Resultado do envio</h3>
-                        <div class="progress-wrap" aria-hidden="true">
-                            <div class="progress-bar progress-bar-done"></div>
-                        </div>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
+                <div class="charge-results" id="charge-results-panel" {% if not charge_results %}style="display:none;"{% endif %}>
+                    <h3>Resultado do envio</h3>
+                    <p class="field-hint" id="charge-progress-status"></p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mission&aacute;rio</th>
+                                    <th>Telefone</th>
+                                    <th>Status</th>
+                                    <th>Mensagem enviada</th>
+                                </tr>
+                            </thead>
+                            <tbody id="charge-results-body">
+                                {% for item in charge_results %}
                                     <tr>
-                                        <th>Mission&aacute;rio</th>
-                                        <th>Telefone</th>
-                                        <th>Status</th>
-                                        <th>Mensagem enviada</th>
+                                        <td>{{ item.volunteer.full_name }}</td>
+                                        <td>{{ item.phone|default:"-" }}</td>
+                                        <td>
+                                            {% if item.ok %}
+                                                <span class="document-status confirmed">Enviado</span>
+                                            {% else %}
+                                                <span class="document-status pending">Falhou: {{ item.error_message }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td><pre class="message-preview">{{ item.message }}</pre></td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in charge_results %}
-                                        <tr>
-                                            <td>{{ item.volunteer.full_name }}</td>
-                                            <td>{{ item.phone|default:"-" }}</td>
-                                            <td>
-                                                {% if item.ok %}
-                                                    <span class="document-status confirmed">Enviado</span>
-                                                {% else %}
-                                                    <span class="document-status pending">Falhou: {{ item.error_message }}</span>
-                                                {% endif %}
-                                            </td>
-                                            <td><pre class="message-preview">{{ item.message }}</pre></td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                {% endif %}
+                </div>
             </div>
         </dialog>
     </main>
@@ -332,7 +328,11 @@
         const chargeForm = document.getElementById('charge-documentation-form');
         const chargeProgressBar = document.getElementById('charge-progress-bar');
         const chargeSubmit = document.getElementById('charge-documentation-submit');
+        const chargeResultsPanel = document.getElementById('charge-results-panel');
+        const chargeResultsBody = document.getElementById('charge-results-body');
+        const chargeProgressStatus = document.getElementById('charge-progress-status');
         const checkboxes = () => Array.from(document.querySelectorAll('.documentation-charge-checkbox'));
+        const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
         function openChargeModal() {
             if (!chargeModal) return;
@@ -366,15 +366,93 @@
             clearAllButton.addEventListener('click', () => checkboxes().forEach((checkbox) => { checkbox.checked = false; }));
         }
 
+        function appendChargeResult(result) {
+            if (!chargeResultsBody) return;
+            const row = document.createElement('tr');
+            const volunteerCell = document.createElement('td');
+            const phoneCell = document.createElement('td');
+            const statusCell = document.createElement('td');
+            const messageCell = document.createElement('td');
+            const status = document.createElement('span');
+            const message = document.createElement('pre');
+
+            volunteerCell.textContent = result.volunteer || '-';
+            phoneCell.textContent = result.phone || '-';
+            status.className = result.ok ? 'document-status confirmed' : 'document-status pending';
+            status.textContent = result.ok ? 'Enviado' : `Falhou: ${result.error_message || 'erro no envio'}`;
+            message.className = 'message-preview';
+            message.textContent = result.message || '';
+
+            statusCell.appendChild(status);
+            messageCell.appendChild(message);
+            row.appendChild(volunteerCell);
+            row.appendChild(phoneCell);
+            row.appendChild(statusCell);
+            row.appendChild(messageCell);
+            chargeResultsBody.appendChild(row);
+        }
+
         if (chargeForm) {
-            chargeForm.addEventListener('submit', () => {
-                const selectedCount = checkboxes().filter((checkbox) => checkbox.checked).length;
-                if (chargeProgressBar) {
-                    chargeProgressBar.style.width = selectedCount ? '18%' : '100%';
-                }
+            chargeForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const selected = checkboxes().filter((checkbox) => checkbox.checked);
+                const delayInput = document.getElementById('charge_delay_seconds');
+                const templateInput = document.getElementById('charge_template');
+                const csrfInput = chargeForm.querySelector('input[name="csrfmiddlewaretoken"]');
+                const delaySeconds = Math.max(0, Number.parseFloat((delayInput?.value || '0').replace(',', '.')) || 0);
+
+                if (chargeResultsPanel) chargeResultsPanel.style.display = 'block';
+                if (chargeResultsBody) chargeResultsBody.innerHTML = '';
+                if (chargeProgressBar) chargeProgressBar.style.width = selected.length ? '0%' : '100%';
+                if (chargeProgressStatus) chargeProgressStatus.textContent = selected.length ? `0 de ${selected.length} enviados.` : 'Nenhum missionário selecionado.';
+                if (!selected.length) return;
+
                 if (chargeSubmit) {
                     chargeSubmit.disabled = true;
                     chargeSubmit.textContent = 'Enviando...';
+                }
+
+                for (let index = 0; index < selected.length; index += 1) {
+                    if (index > 0 && delaySeconds) {
+                        if (chargeProgressStatus) chargeProgressStatus.textContent = `Aguardando ${delaySeconds} segundo(s) para o próximo envio...`;
+                        await wait(delaySeconds * 1000);
+                    }
+
+                    const body = new URLSearchParams();
+                    body.append('action', 'charge_documentation_single');
+                    body.append('volunteer_id', selected[index].value);
+                    body.append('charge_template', templateInput?.value || '');
+
+                    try {
+                        const response = await fetch(chargeForm.action || window.location.href, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRFToken': csrfInput?.value || '',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body,
+                        });
+                        const result = await response.json();
+                        appendChargeResult(result);
+                    } catch (error) {
+                        appendChargeResult({
+                            volunteer: selected[index].closest('tr')?.querySelector('strong')?.textContent || '-',
+                            ok: false,
+                            error_message: 'erro interno ao enviar',
+                            phone: '-',
+                            message: '',
+                        });
+                    }
+
+                    const completed = index + 1;
+                    if (chargeProgressBar) chargeProgressBar.style.width = `${Math.round((completed / selected.length) * 100)}%`;
+                    if (chargeProgressStatus) chargeProgressStatus.textContent = `${completed} de ${selected.length} enviados.`;
+                }
+
+                if (chargeSubmit) {
+                    chargeSubmit.disabled = false;
+                    chargeSubmit.textContent = 'Enviar cobrança';
                 }
             });
         }

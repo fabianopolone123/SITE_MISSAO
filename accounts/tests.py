@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -990,15 +990,11 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'Resultado do envio')
         self.assertContains(response, 'Ola pendente Silva')
 
-    @override_settings(WHATSAPP_DOCUMENTATION_SEND_DELAY_SECONDS=1)
-    def test_whatsapp_dashboard_waits_between_documentation_charges(self):
+    def test_whatsapp_dashboard_charges_single_documentation_request(self):
         user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
-        _, _, first_volunteer = create_registration(username='pendente1')
-        _, _, second_volunteer = create_registration(username='pendente2')
-        first_volunteer.phone = '(16) 99999-8888'
-        second_volunteer.phone = '(16) 98888-7777'
-        first_volunteer.save(update_fields=['phone'])
-        second_volunteer.save(update_fields=['phone'])
+        _, _, volunteer = create_registration(username='pendente1')
+        volunteer.phone = '(16) 99999-8888'
+        volunteer.save(update_fields=['phone'])
         PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
         WhatsAppConfig.objects.create(
             notifications_enabled=True,
@@ -1028,23 +1024,23 @@ class VolunteerDashboardTests(TestCase):
             def __exit__(self, *args):
                 return False
 
-        with (
-            patch('accounts.whatsapp.request.urlopen', return_value=ResponseMock()) as mocked_urlopen,
-            patch('accounts.views.time.sleep') as mocked_sleep,
-        ):
+        with patch('accounts.whatsapp.request.urlopen', return_value=ResponseMock()) as mocked_urlopen:
             response = self.client.post(
                 reverse('whatsapp_dashboard'),
                 {
-                    'action': 'charge_documentation',
-                    'volunteer_ids': [str(first_volunteer.id), str(second_volunteer.id)],
+                    'action': 'charge_documentation_single',
+                    'volunteer_id': str(volunteer.id),
                     'charge_template': 'Docs {missionario}: {documentos_pendentes}',
-                    'charge_delay_seconds': '4',
                 },
+                HTTP_X_REQUESTED_WITH='XMLHttpRequest',
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(mocked_urlopen.call_count, 2)
-        mocked_sleep.assert_called_once_with(4.0)
+        self.assertEqual(mocked_urlopen.call_count, 1)
+        data = response.json()
+        self.assertTrue(data['ok'])
+        self.assertEqual(data['phone'], '5516999998888')
+        self.assertIn(volunteer.full_name, data['message'])
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()

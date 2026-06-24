@@ -1,5 +1,4 @@
 import json
-import time
 from datetime import date
 
 from django.conf import settings
@@ -11,7 +10,7 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.forms import formset_factory, modelformset_factory
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
@@ -676,6 +675,40 @@ def volunteer_pending_documentation_items(volunteer):
     return items
 
 
+def send_documentation_charge(request, volunteer, charge_template_text, sent_by):
+    pending_items = volunteer_pending_documentation_items(volunteer)
+    if not pending_items:
+        return {
+            'volunteer': volunteer.full_name,
+            'ok': False,
+            'error_message': 'Missionário sem documentação pendente.',
+            'phone': whatsapp.normalize_phone_number(volunteer.phone) or volunteer.phone,
+            'message': '',
+        }
+
+    payload = {
+        **whatsapp.template_context(sent_by=sent_by),
+        'missionario': volunteer.full_name,
+        'documentos_pendentes': ', '.join(pending_items),
+        'link_documentacao': request.build_absolute_uri('/minha-inscricao/documentacao/'),
+    }
+    message_text = whatsapp.render_message(charge_template_text, payload)
+    normalized_phone = whatsapp.normalize_phone_number(volunteer.phone)
+    if normalized_phone:
+        ok, error_message = whatsapp.send_message_to_phone(normalized_phone, message_text, sent_by=sent_by)
+    else:
+        ok = False
+        error_message = 'Telefone inválido ou ausente.'
+
+    return {
+        'volunteer': volunteer.full_name,
+        'ok': ok,
+        'error_message': error_message,
+        'phone': normalized_phone or volunteer.phone,
+        'message': message_text,
+    }
+
+
 @user_passes_test(can_manage_whatsapp, login_url='login')
 def whatsapp_dashboard(request):
     config = WhatsAppConfig.get()
@@ -751,6 +784,22 @@ def whatsapp_dashboard(request):
                 messages.error(request, f'Falha ao enviar teste: {error_message}')
             return redirect('whatsapp_dashboard')
 
+        elif action == 'charge_documentation_single':
+            sent_by = request.user.get_full_name() or request.user.username
+            submitted_charge_template = (request.POST.get('charge_template') or '').strip()
+            if submitted_charge_template:
+                charge_template_text = submitted_charge_template
+
+            WhatsAppTemplate.objects.update_or_create(
+                notification_type=WhatsAppNotificationType.DOCUMENTATION,
+                defaults={'message_text': charge_template_text},
+            )
+            volunteer = get_object_or_404(
+                Volunteer.objects.select_related('registration__user'),
+                pk=request.POST.get('volunteer_id'),
+            )
+            return JsonResponse(send_documentation_charge(request, volunteer, charge_template_text, sent_by))
+
         elif action == 'charge_documentation':
             sent_by = request.user.get_full_name() or request.user.username
             selected_ids = request.POST.getlist('volunteer_ids')
@@ -773,40 +822,18 @@ def whatsapp_dashboard(request):
                 .filter(id__in=selected_ids)
                 .order_by('full_name')
             )
-            documentation_url = request.build_absolute_uri('/minha-inscricao/documentacao/')
-            base_payload = whatsapp.template_context(sent_by=sent_by)
-            volunteers_to_charge = []
-
             for volunteer in selected_volunteers:
-                pending_items = volunteer_pending_documentation_items(volunteer)
-                if not pending_items:
+                result = send_documentation_charge(request, volunteer, charge_template_text, sent_by)
+                if not result['message']:
                     continue
-                volunteers_to_charge.append((volunteer, pending_items))
-
-            for index, (volunteer, pending_items) in enumerate(volunteers_to_charge):
-                payload = {
-                    **base_payload,
-                    'missionario': volunteer.full_name,
-                    'documentos_pendentes': ', '.join(pending_items),
-                    'link_documentacao': documentation_url,
-                }
-                message_text = whatsapp.render_message(charge_template_text, payload)
-                normalized_phone = whatsapp.normalize_phone_number(volunteer.phone)
-                if normalized_phone:
-                    ok, error_message = whatsapp.send_message_to_phone(normalized_phone, message_text, sent_by=sent_by)
-                else:
-                    ok = False
-                    error_message = 'Telefone inválido ou ausente.'
-                charge_message_sent = message_text
+                charge_message_sent = result['message']
                 charge_results.append({
                     'volunteer': volunteer,
-                    'ok': ok,
-                    'error_message': error_message,
-                    'phone': normalized_phone or volunteer.phone,
-                    'message': message_text,
+                    'ok': result['ok'],
+                    'error_message': result['error_message'],
+                    'phone': result['phone'],
+                    'message': result['message'],
                 })
-                if charge_delay_seconds and index < len(volunteers_to_charge) - 1:
-                    time.sleep(charge_delay_seconds)
 
             sent_count = sum(1 for item in charge_results if item['ok'])
             if sent_count:
