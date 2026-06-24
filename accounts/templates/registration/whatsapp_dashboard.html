@@ -49,6 +49,14 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="send_message">
                 <div class="field">
+                    <label for="id_notification_type">Tipo de notifica&ccedil;&atilde;o</label>
+                    <select id="id_notification_type" name="notification_type" class="form-control">
+                        {% for value, label in notification_types %}
+                            <option value="{{ value }}" {% if selected_notification_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
                     <label for="{{ message_form.message.id_for_label }}">{{ message_form.message.label }}</label>
                     {{ message_form.message }}
                     {% if message_form.message.errors %}<div class="form-error">{{ message_form.message.errors }}</div>{% endif %}
@@ -60,6 +68,65 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="send_test">
                 <button type="submit" class="secondary-button">Testar envio</button>
+            </form>
+        </section>
+
+        <section class="admin-section">
+            <h2>Destinat&aacute;rios e templates</h2>
+            <form method="post" class="finance-form" autocomplete="off" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_recipients_templates">
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Usu&aacute;rio</th>
+                                <th>Telefone</th>
+                                <th>Inscri&ccedil;&otilde;es</th>
+                                <th>Financeiro</th>
+                                <th>Documenta&ccedil;&atilde;o</th>
+                                <th>Geral</th>
+                                <th>Teste</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ row.user.username }}</strong><br>
+                                        <small>{{ row.user.email|default:"-" }}</small>
+                                        {% if row.effective_phone %}<br><small>Atual: {{ row.effective_phone }}</small>{% endif %}
+                                    </td>
+                                    <td>
+                                        <input type="text" name="user_{{ row.user.id }}_phone" value="{{ row.preference.phone_number }}" placeholder="5511999999999">
+                                    </td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_registrations" class="checkbox-control" {% if row.preference.notify_registrations %}checked{% endif %}></td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_financial" class="checkbox-control" {% if row.preference.notify_financial %}checked{% endif %}></td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_documentation" class="checkbox-control" {% if row.preference.notify_documentation %}checked{% endif %}></td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_general" class="checkbox-control" {% if row.preference.notify_general %}checked{% endif %}></td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_test" class="checkbox-control" {% if row.preference.notify_test %}checked{% endif %}></td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="7">Nenhum usu&aacute;rio ativo encontrado.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="template-grid">
+                    {% for template in templates %}
+                        <div class="template-card">
+                            <label for="template_{{ template.type }}">{{ template.label }}</label>
+                            <textarea id="template_{{ template.type }}" name="template_{{ template.type }}" class="form-control" rows="6">{{ template.message }}</textarea>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <p class="field-hint">
+                    Placeholders dispon&iacute;veis: <code>{usuario}</code>, <code>{mensagem}</code>, <code>{data_hora}</code>, <code>{total_inscritos}</code>.
+                </p>
+                <button type="submit">Salvar destinat&aacute;rios e templates</button>
             </form>
         </section>
 
@@ -131,6 +198,12 @@
 
     <style>
         .form-error { color: #b42318; font-size: 0.82rem; margin-top: 3px; }
+        .template-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+        .template-card { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfa; }
+        .template-card textarea { min-height: 150px; }
+        @media (max-width: 760px) {
+            .template-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </body>
 </html>

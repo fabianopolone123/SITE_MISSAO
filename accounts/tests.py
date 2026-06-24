@@ -8,7 +8,18 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import FinancialTransaction, MissionaryDonationReceipt, MissionaryPayment, PanelPermission, Registration, Volunteer, WhatsAppConfig
+from .models import (
+    FinancialTransaction,
+    MissionaryDonationReceipt,
+    MissionaryPayment,
+    PanelPermission,
+    Registration,
+    Volunteer,
+    WhatsAppConfig,
+    WhatsAppNotificationType,
+    WhatsAppRecipientPreference,
+    WhatsAppTemplate,
+)
 
 
 def create_registration(username='voluntario', password='senha-forte-123'):
@@ -807,16 +818,55 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(config.provider, 'wapi')
         self.assertEqual(config.group_jid, '120363421981424263@g.us')
 
+    def test_whatsapp_dashboard_saves_recipients_and_templates(self):
+        admin = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        target = User.objects.create_user(username='destino', password='senha-forte-123')
+        PanelPermission.objects.create(user=admin, can_manage_whatsapp=True)
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse('whatsapp_dashboard'),
+            {
+                'action': 'save_recipients_templates',
+                f'user_{target.id}_phone': '(16) 99999-8888',
+                f'user_{target.id}_registrations': 'on',
+                f'user_{target.id}_general': 'on',
+                'template_registrations': 'Inscricoes: {mensagem}',
+                'template_financial': 'Financeiro: {mensagem}',
+                'template_documentation': 'Documentacao: {mensagem}',
+                'template_general': 'Geral: {mensagem}',
+                'template_test': 'Teste: {usuario}',
+            },
+        )
+
+        preference = WhatsAppRecipientPreference.objects.get(user=target)
+        template = WhatsAppTemplate.objects.get(notification_type=WhatsAppNotificationType.GENERAL)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(preference.phone_number, '(16) 99999-8888')
+        self.assertTrue(preference.notify_registrations)
+        self.assertTrue(preference.notify_general)
+        self.assertFalse(preference.notify_financial)
+        self.assertEqual(template.message_text, 'Geral: {mensagem}')
+
     def test_whatsapp_dashboard_sends_manual_message_via_wapi(self):
         user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        target = User.objects.create_user(username='destino', password='senha-forte-123')
         PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
         WhatsAppConfig.objects.create(
             notifications_enabled=True,
             provider='wapi',
-            group_jid='120363421981424263@g.us',
             wapi_token='token-123',
             wapi_instance='instance-01',
             wapi_base_url='https://api.w-api.app/v1',
+        )
+        WhatsAppRecipientPreference.objects.create(
+            user=target,
+            phone_number='(16) 99999-8888',
+            notify_general=True,
+        )
+        WhatsAppTemplate.objects.create(
+            notification_type=WhatsAppNotificationType.GENERAL,
+            message_text='Mensagem: {mensagem}',
         )
         self.client.force_login(user)
 
@@ -840,6 +890,7 @@ class VolunteerDashboardTests(TestCase):
                 reverse('whatsapp_dashboard'),
                 {
                     'action': 'send_message',
+                    'notification_type': WhatsAppNotificationType.GENERAL,
                     'message': 'Aviso importante da missao',
                 },
             )
@@ -848,8 +899,8 @@ class VolunteerDashboardTests(TestCase):
         payload = json.loads(request_obj.data.decode('utf-8'))
         self.assertEqual(response.status_code, 302)
         self.assertIn('message/send-text?instanceId=instance-01', request_obj.full_url)
-        self.assertEqual(payload['phone'], '120363421981424263@g.us')
-        self.assertEqual(payload['message'], 'Aviso importante da missao')
+        self.assertEqual(payload['phone'], '5516999998888')
+        self.assertEqual(payload['message'], 'Mensagem: Aviso importante da missao')
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()

@@ -102,6 +102,60 @@ class WhatsAppConfig(models.Model):
         return 'Configuração WhatsApp'
 
 
+class WhatsAppNotificationType(models.TextChoices):
+    REGISTRATIONS = 'registrations', 'Inscrições'
+    FINANCIAL = 'financial', 'Financeiro'
+    DOCUMENTATION = 'documentation', 'Documentação'
+    GENERAL = 'general', 'Geral'
+    TEST = 'test', 'Teste'
+
+
+class WhatsAppRecipientPreference(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='whatsapp_recipient_preference')
+    phone_number = models.CharField('Número WhatsApp', max_length=32, blank=True, default='')
+    notify_registrations = models.BooleanField('Inscrições', default=False)
+    notify_financial = models.BooleanField('Financeiro', default=False)
+    notify_documentation = models.BooleanField('Documentação', default=False)
+    notify_general = models.BooleanField('Geral', default=False)
+    notify_test = models.BooleanField('Teste', default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Destinatário WhatsApp'
+        verbose_name_plural = 'Destinatários WhatsApp'
+
+    def __str__(self):
+        return f'{self.user.username} ({self.phone_number or "sem número"})'
+
+    def enabled_for(self, notification_type):
+        mapping = {
+            WhatsAppNotificationType.REGISTRATIONS: self.notify_registrations,
+            WhatsAppNotificationType.FINANCIAL: self.notify_financial,
+            WhatsAppNotificationType.DOCUMENTATION: self.notify_documentation,
+            WhatsAppNotificationType.GENERAL: self.notify_general,
+            WhatsAppNotificationType.TEST: self.notify_test,
+        }
+        return mapping.get(notification_type, False)
+
+
+class WhatsAppTemplate(models.Model):
+    notification_type = models.CharField(
+        'Tipo de notificação',
+        max_length=32,
+        choices=WhatsAppNotificationType.choices,
+        unique=True,
+    )
+    message_text = models.TextField('Mensagem')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Template WhatsApp'
+        verbose_name_plural = 'Templates WhatsApp'
+
+    def __str__(self):
+        return self.get_notification_type_display()
+
+
 class Registration(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     force_password_change = models.BooleanField(default=False)

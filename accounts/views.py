@@ -39,6 +39,9 @@ from .models import (
     Registration,
     Volunteer,
     WhatsAppConfig,
+    WhatsAppNotificationType,
+    WhatsAppRecipientPreference,
+    WhatsAppTemplate,
 )
 from .pdf import build_prestacao_contas_pdf, build_registration_pdf
 from . import whatsapp
@@ -663,9 +666,11 @@ def expense_registration_dashboard(request):
 @user_passes_test(can_manage_whatsapp, login_url='login')
 def whatsapp_dashboard(request):
     config = WhatsAppConfig.get()
+    whatsapp.ensure_default_templates()
     config_form = WhatsAppConfigForm(instance=config)
     initial_message = config.default_message or 'Olá! Esta é uma notificação da Missão Andrews.'
     message_form = WhatsAppMessageForm(initial={'message': initial_message})
+    selected_notification_type = request.POST.get('notification_type') or WhatsAppNotificationType.GENERAL
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -678,28 +683,79 @@ def whatsapp_dashboard(request):
                 return redirect('whatsapp_dashboard')
             message_form = WhatsAppMessageForm(initial={'message': request.POST.get('default_message') or initial_message})
 
+        elif action == 'save_recipients_templates':
+            for user in User.objects.filter(is_active=True):
+                preference, _ = WhatsAppRecipientPreference.objects.get_or_create(user=user)
+                prefix = f'user_{user.id}'
+                preference.phone_number = request.POST.get(f'{prefix}_phone', '').strip()
+                preference.notify_registrations = request.POST.get(f'{prefix}_registrations') == 'on'
+                preference.notify_financial = request.POST.get(f'{prefix}_financial') == 'on'
+                preference.notify_documentation = request.POST.get(f'{prefix}_documentation') == 'on'
+                preference.notify_general = request.POST.get(f'{prefix}_general') == 'on'
+                preference.notify_test = request.POST.get(f'{prefix}_test') == 'on'
+                preference.save()
+
+            for notification_type, _label in WhatsAppNotificationType.choices:
+                WhatsAppTemplate.objects.update_or_create(
+                    notification_type=notification_type,
+                    defaults={'message_text': request.POST.get(f'template_{notification_type}', '').strip()},
+                )
+
+            messages.success(request, 'Destinatários e templates salvos com sucesso.')
+            return redirect('whatsapp_dashboard')
+
         elif action == 'send_message':
             message_form = WhatsAppMessageForm(request.POST)
             if message_form.is_valid():
                 sent_by = request.user.get_full_name() or request.user.username
-                ok, error_message = whatsapp.send_message(message_form.cleaned_data['message'], sent_by=sent_by)
-                if ok:
+                payload = whatsapp.template_context(sent_by=sent_by, message=message_form.cleaned_data['message'])
+                results, _message = whatsapp.send_template_notification(selected_notification_type, payload=payload, sent_by=sent_by)
+                sent_count = sum(1 for _user, ok, _error_message in results if ok)
+                failed_count = sum(1 for _user, ok, _error_message in results if not ok)
+                error_message = 'Nenhum destinatário marcado para este tipo de notificação.'
+                if failed_count:
+                    error_message = '; '.join(f'{user.username}: {message}' for user, _ok, message in results[:4])
+                if sent_count:
                     messages.success(request, 'Notificação enviada com sucesso para o WhatsApp.')
                     return redirect('whatsapp_dashboard')
                 messages.error(request, f'Falha ao enviar notificação: {error_message}')
 
         elif action == 'send_test':
             sent_by = request.user.get_full_name() or request.user.username
-            ok, error_message = whatsapp.send_test_message(sent_by=sent_by)
-            if ok:
+            payload = whatsapp.template_context(sent_by=sent_by, message='Teste de configuração do WhatsApp.')
+            results, _message = whatsapp.send_template_notification(WhatsAppNotificationType.TEST, payload=payload, sent_by=sent_by)
+            sent_count = sum(1 for _user, ok, _error_message in results if ok)
+            error_message = 'Nenhum destinatário marcado em Teste.'
+            if sent_count:
                 messages.success(request, 'Mensagem de teste enviada com sucesso para o WhatsApp.')
             else:
                 messages.error(request, f'Falha ao enviar teste: {error_message}')
             return redirect('whatsapp_dashboard')
 
+    rows = []
+    for user in User.objects.filter(is_active=True).order_by('username'):
+        preference, _ = WhatsAppRecipientPreference.objects.get_or_create(user=user)
+        rows.append({
+            'user': user,
+            'preference': preference,
+            'effective_phone': whatsapp.normalize_phone_number(preference.phone_number or whatsapp.resolve_user_phone(user)),
+        })
+
+    templates = []
+    for notification_type, label in WhatsAppNotificationType.choices:
+        templates.append({
+            'type': notification_type,
+            'label': label,
+            'message': whatsapp.get_template_message(notification_type),
+        })
+
     context = {
         'config_form': config_form,
         'message_form': message_form,
+        'notification_types': WhatsAppNotificationType.choices,
+        'selected_notification_type': selected_notification_type,
+        'rows': rows,
+        'templates': templates,
         'active_provider': whatsapp.active_provider(),
         'notifications_enabled': whatsapp.notifications_enabled(),
         'panel_permissions': get_panel_permissions(request.user),

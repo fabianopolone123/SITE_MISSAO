@@ -2,15 +2,45 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from urllib import error, request
 
 from django.conf import settings
+from django.utils import timezone
 
 
 logger = logging.getLogger(__name__)
 
 WAPI_SUCCESS_STATUSES = {'success', 'sent', 'ok', 'queued'}
 DEFAULT_WAPI_BASE_URL = 'https://api.w-api.app/v1'
+DEFAULT_TEMPLATE_MESSAGES = {
+    'registrations': (
+        'Nova atualização de inscrições - Missão Andrews\n'
+        'Data/Hora: {data_hora}\n'
+        'Total de inscritos: {total_inscritos}\n'
+        'Mensagem: {mensagem}'
+    ),
+    'financial': (
+        'Atualização financeira - Missão Andrews\n'
+        'Data/Hora: {data_hora}\n'
+        'Mensagem: {mensagem}'
+    ),
+    'documentation': (
+        'Atualização de documentação - Missão Andrews\n'
+        'Data/Hora: {data_hora}\n'
+        'Mensagem: {mensagem}'
+    ),
+    'general': (
+        'Aviso Missão Andrews\n'
+        'Data/Hora: {data_hora}\n'
+        '{mensagem}'
+    ),
+    'test': (
+        'Teste de WhatsApp - Missão Andrews\n'
+        'Enviado por: {usuario}\n'
+        'Data/Hora: {data_hora}'
+    ),
+}
 
 
 def _clean(value: str) -> str:
@@ -61,9 +91,45 @@ def active_provider() -> str:
 def notifications_enabled() -> bool:
     return bool(
         _get_bool('notifications_enabled', 'WHATSAPP_NOTIFICATIONS_ENABLED', False)
-        and _get('group_jid', 'WHATSAPP_GROUP_JID')
         and active_provider()
     )
+
+
+def normalize_phone_number(raw_phone):
+    if not raw_phone:
+        return ''
+    digits = re.sub(r'\D', '', raw_phone)
+    if not digits:
+        return ''
+    if digits.startswith('00'):
+        digits = digits[2:]
+    if digits.startswith('55'):
+        local = digits[2:]
+    else:
+        local = digits
+
+    local = local.lstrip('0')
+    if len(local) > 11:
+        local = local[-11:]
+    if len(local) == 10:
+        local = f'{local[:2]}9{local[2:]}'
+    if len(local) not in (10, 11):
+        return ''
+    return f'55{local}'
+
+
+def resolve_user_phone(user):
+    preference = getattr(user, 'whatsapp_recipient_preference', None)
+    if preference and preference.phone_number:
+        return preference.phone_number
+
+    registration = getattr(user, 'registration', None)
+    if registration is not None:
+        volunteer = registration.volunteers.order_by('created_at').first()
+        if volunteer is not None:
+            return volunteer.phone
+
+    return ''
 
 
 def _normalize_timeout(timeout: float | tuple[float, float] | int) -> float | int:
@@ -88,23 +154,30 @@ def _post_json(url: str, payload: dict, headers: dict[str, str], timeout: float 
 
 
 def send_message(message: str, sent_by: str = '') -> tuple[bool, str]:
+    if not _get('group_jid', 'WHATSAPP_GROUP_JID'):
+        return False, 'JID do grupo nao configurado.'
+    return send_message_to_phone(_get('group_jid', 'WHATSAPP_GROUP_JID'), message, sent_by=sent_by)
+
+
+def send_message_to_phone(phone_number: str, message: str, sent_by: str = '') -> tuple[bool, str]:
     provider = active_provider()
     message = _clean(message)
+    phone_number = _clean(phone_number)
 
     if not message:
         return False, 'Informe a mensagem.'
     if not provider:
         return False, 'Nenhum provider configurado (W-API ou Webhook).'
-    if not _get('group_jid', 'WHATSAPP_GROUP_JID'):
-        return False, 'JID do grupo nao configurado.'
+    if not phone_number:
+        return False, 'Número WhatsApp não configurado.'
     if not notifications_enabled():
         return False, 'Notificacoes de WhatsApp estao desativadas.'
 
     try:
         if provider == 'wapi':
-            return _send_wapi(message)
+            return _send_wapi(phone_number, message)
         if provider == 'webhook':
-            return _send_webhook(message, sent_by=sent_by)
+            return _send_webhook(phone_number, message, sent_by=sent_by)
     except (error.HTTPError, error.URLError, TimeoutError, ValueError) as exc:
         logger.warning('Falha ao enviar notificacao WhatsApp via %s: %s', provider, exc)
         return False, str(exc)
@@ -120,7 +193,80 @@ def send_test_message(sent_by: str = '') -> tuple[bool, str]:
     )
 
 
-def _send_wapi(message: str) -> tuple[bool, str]:
+def render_message(template, payload):
+    class SafePayload(dict):
+        def __missing__(self, key):
+            return ''
+
+    base = (template or '').strip()
+    safe_payload = SafePayload({
+        key: '' if value is None else value
+        for key, value in (payload or {}).items()
+    })
+    try:
+        return base.format_map(safe_payload)
+    except Exception:
+        return base
+
+
+def get_template_message(notification_type):
+    from .models import WhatsAppTemplate
+
+    default_message = DEFAULT_TEMPLATE_MESSAGES.get(notification_type, DEFAULT_TEMPLATE_MESSAGES['general'])
+    template, _ = WhatsAppTemplate.objects.get_or_create(
+        notification_type=notification_type,
+        defaults={'message_text': default_message},
+    )
+    if not (template.message_text or '').strip():
+        template.message_text = default_message
+        template.save(update_fields=['message_text', 'updated_at'])
+    return template.message_text
+
+
+def template_context(sent_by: str = '', message: str = ''):
+    from .models import Volunteer
+
+    now = timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')
+    return {
+        'usuario': _clean(sent_by) or 'sistema',
+        'mensagem': message,
+        'data_hora': now,
+        'total_inscritos': Volunteer.objects.count(),
+    }
+
+
+def send_template_notification(notification_type, payload=None, sent_by: str = ''):
+    from .models import WhatsAppRecipientPreference
+
+    template_text = get_template_message(notification_type)
+    message = render_message(template_text, payload or template_context(sent_by=sent_by))
+    recipients = (
+        WhatsAppRecipientPreference.objects
+        .select_related('user')
+        .filter(user__is_active=True)
+        .order_by('user__username')
+    )
+    results = []
+
+    for preference in recipients:
+        if not preference.enabled_for(notification_type):
+            continue
+        phone_number = normalize_phone_number(preference.phone_number or resolve_user_phone(preference.user))
+        if not phone_number:
+            results.append((preference.user, False, 'Telefone inválido ou ausente.'))
+            continue
+        ok, error_message = send_message_to_phone(phone_number, message, sent_by=sent_by)
+        results.append((preference.user, ok, error_message))
+
+    return results, message
+
+
+def ensure_default_templates():
+    for notification_type in DEFAULT_TEMPLATE_MESSAGES:
+        get_template_message(notification_type)
+
+
+def _send_wapi(phone_number: str, message: str) -> tuple[bool, str]:
     base_url = (
         _get('wapi_base_url', 'WAPI_BASE_URL', DEFAULT_WAPI_BASE_URL).rstrip('/')
         or DEFAULT_WAPI_BASE_URL
@@ -130,7 +276,7 @@ def _send_wapi(message: str) -> tuple[bool, str]:
     url = f'{base_url}/message/send-text?instanceId={instance}'
     payload = {
         'token': token,
-        'phone': _get('group_jid', 'WHATSAPP_GROUP_JID'),
+        'phone': phone_number,
         'message': message,
     }
     headers = {
@@ -155,14 +301,14 @@ def _send_wapi(message: str) -> tuple[bool, str]:
     return False, 'W-API retornou uma resposta inesperada.'
 
 
-def _send_webhook(message: str, sent_by: str = '') -> tuple[bool, str]:
+def _send_webhook(phone_number: str, message: str, sent_by: str = '') -> tuple[bool, str]:
     headers = {'Content-Type': 'application/json'}
     token = _get('webhook_token', 'WHATSAPP_WEBHOOK_TOKEN')
     if token:
         headers['Authorization'] = f'Bearer {token}'
     payload = {
         'event': 'manual_notification',
-        'group_jid': _get('group_jid', 'WHATSAPP_GROUP_JID'),
+        'phone': phone_number,
         'message': message,
         'sent_by': sent_by,
     }
