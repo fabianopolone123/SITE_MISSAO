@@ -452,20 +452,16 @@
                     if (!volunteerPhone) {
                         appendChargeResult({ volunteer: volunteerName, ok: false, error_message: 'sem telefone válido', phone: '', message: '' });
                     } else {
-                        const body = new URLSearchParams();
-                        body.append('action', 'charge_documentation_single');
-                        body.append('volunteer_id', selected[index].value);
-                        body.append('charge_template', templateInput?.value || '');
+                        const formData = new FormData();
+                        formData.append('csrfmiddlewaretoken', csrfInput?.value || '');
+                        formData.append('action', 'charge_documentation_single');
+                        formData.append('volunteer_id', selected[index].value);
+                        formData.append('charge_template', templateInput?.value || '');
 
                         try {
-                            const response = await fetch(chargeForm.action || window.location.href, {
+                            const response = await fetch('{% url "whatsapp_dashboard" %}', {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                    'X-CSRFToken': csrfInput?.value || '',
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                },
-                                body,
+                                body: formData,
                             });
                             let result;
                             try {
