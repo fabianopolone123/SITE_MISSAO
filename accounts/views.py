@@ -424,7 +424,14 @@ def volunteer_documentation_upload(request, volunteer_id):
         if 'insurance_policy_document' in request.FILES:
             volunteer.insurance_policy_document_confirmed = False
 
-        if 'signed_registration_document' in request.FILES or 'insurance_policy_document' in request.FILES:
+        if 'vaccination_card_document' in request.FILES:
+            volunteer.vaccination_card_document_confirmed = False
+
+        if (
+            'signed_registration_document' in request.FILES
+            or 'insurance_policy_document' in request.FILES
+            or 'vaccination_card_document' in request.FILES
+        ):
             volunteer.documentation_reviewed_by = None
             volunteer.documentation_reviewed_at = None
 
@@ -688,10 +695,12 @@ def conference_dashboard(request):
         field_by_type = {
             'signed_registration': 'signed_registration_document_confirmed',
             'insurance_policy': 'insurance_policy_document_confirmed',
+            'vaccination_card': 'vaccination_card_document_confirmed',
         }
         file_by_type = {
             'signed_registration': volunteer.signed_registration_document,
             'insurance_policy': volunteer.insurance_policy_document,
+            'vaccination_card': volunteer.vaccination_card_document,
         }
         field_name = field_by_type.get(document_type)
 
@@ -716,6 +725,7 @@ def conference_dashboard(request):
         .filter(
             Q(signed_registration_document__gt='')
             | Q(insurance_policy_document__gt='')
+            | Q(vaccination_card_document__gt='')
             | Q(flight_ticket_document__gt='')
             | Q(flight_date__isnull=False)
             | Q(flight_time__isnull=False)
@@ -764,6 +774,7 @@ def conference_dashboard(request):
         'document_pending_count': document_volunteers.filter(
             Q(signed_registration_document__gt='', signed_registration_document_confirmed=False)
             | Q(insurance_policy_document__gt='', insurance_policy_document_confirmed=False)
+            | Q(vaccination_card_document__gt='', vaccination_card_document_confirmed=False)
         ).count(),
         'payment_count': missionary_payments.count(),
         'payment_pending_count': missionary_payments.filter(is_confirmed=False).count(),

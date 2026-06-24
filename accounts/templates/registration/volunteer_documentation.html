@@ -45,7 +45,7 @@
                 <div class="section-heading">
                     <div>
                         <h2>Documenta&ccedil;&atilde;o</h2>
-                        <p class="section-note">Baixe a ficha, assine pelo gov.br e envie a ficha assinada junto com a ap&oacute;lice de seguro.</p>
+                        <p class="section-note">Baixe a ficha, assine pelo gov.br e envie a ficha assinada junto com a ap&oacute;lice de seguro e a carteira de vacina&ccedil;&atilde;o.</p>
                     </div>
                 </div>
 
@@ -103,6 +103,17 @@
                                         </dd>
                                     </div>
                                     <div>
+                                        <dt>Carteira de vacina&ccedil;&atilde;o</dt>
+                                        <dd>
+                                            {% if volunteer.vaccination_card_document %}
+                                                <a href="{{ volunteer.vaccination_card_document.url }}" target="_blank" rel="noopener">Arquivo enviado</a>
+                                                {% if volunteer.vaccination_card_document_confirmed %}<span class="document-status ok">OK</span>{% else %}<span class="document-status pending">Aguardando OK</span>{% endif %}
+                                            {% else %}
+                                                Pendente
+                                            {% endif %}
+                                        </dd>
+                                    </div>
+                                    <div>
                                         <dt>Passagem a&eacute;rea</dt>
                                         <dd>
                                             {% if volunteer.flight_ticket_document %}
@@ -136,6 +147,10 @@
                                         <div class="field">
                                             <label for="id_insurance_policy_document_{{ volunteer.id }}">Ap&oacute;lice de seguro assinada</label>
                                             <input type="file" name="insurance_policy_document" id="id_insurance_policy_document_{{ volunteer.id }}" accept=".pdf,application/pdf">
+                                        </div>
+                                        <div class="field">
+                                            <label for="id_vaccination_card_document_{{ volunteer.id }}">Carteira de vacina&ccedil;&atilde;o</label>
+                                            <input type="file" name="vaccination_card_document" id="id_vaccination_card_document_{{ volunteer.id }}" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
                                         </div>
                                         <div class="field">
                                             <label for="id_flight_ticket_document_{{ volunteer.id }}">Passagem a&eacute;rea</label>

@@ -105,11 +105,19 @@ class VolunteerForm(forms.ModelForm):
 class VolunteerDocumentationForm(forms.ModelForm):
     class Meta:
         model = Volunteer
-        fields = ['signed_registration_document', 'insurance_policy_document', 'flight_ticket_document', 'flight_date', 'flight_time']
+        fields = [
+            'signed_registration_document',
+            'insurance_policy_document',
+            'vaccination_card_document',
+            'flight_ticket_document',
+            'flight_date',
+            'flight_time',
+        ]
         labels = {
             'signed_registration_document': 'Ficha de inscrição assinada pelo gov.br',
             'insurance_policy_document': 'Apólice de seguro assinada',
             'flight_ticket_document': 'Passagem aérea',
+            'vaccination_card_document': 'Carteira de vacinação',
             'flight_date': 'Data do voo',
             'flight_time': 'Hora do voo',
         }
@@ -131,6 +139,11 @@ class VolunteerDocumentationForm(forms.ModelForm):
             file = cleaned_data.get(field_name)
             if file and Path(file.name).suffix.lower() != '.pdf':
                 self.add_error(field_name, 'Envie um arquivo PDF.')
+
+        vaccination_card = cleaned_data.get('vaccination_card_document')
+        allowed_vaccination_suffixes = {'.pdf', '.jpg', '.jpeg', '.png'}
+        if vaccination_card and Path(vaccination_card.name).suffix.lower() not in allowed_vaccination_suffixes:
+            self.add_error('vaccination_card_document', 'Envie a carteira de vacinação em PDF, JPG ou PNG.')
 
         flight_ticket = cleaned_data.get('flight_ticket_document')
         allowed_ticket_suffixes = {'.pdf', '.jpg', '.jpeg', '.png'}

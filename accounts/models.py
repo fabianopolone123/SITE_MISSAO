@@ -179,6 +179,11 @@ class Volunteer(models.Model):
         upload_to='documentos/apolices/',
         blank=True,
     )
+    vaccination_card_document = models.FileField(
+        'Carteira de vacinação',
+        upload_to='documentos/carteiras_vacinacao/',
+        blank=True,
+    )
     flight_ticket_document = models.FileField(
         'Passagem aérea',
         upload_to='documentos/passagens/',
@@ -188,6 +193,7 @@ class Volunteer(models.Model):
     flight_time = models.TimeField('Hora do voo', null=True, blank=True)
     signed_registration_document_confirmed = models.BooleanField('Ficha assinada conferida', default=False)
     insurance_policy_document_confirmed = models.BooleanField('Apolice de seguro conferida', default=False)
+    vaccination_card_document_confirmed = models.BooleanField('Carteira de vacinação conferida', default=False)
     documentation_reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -214,12 +220,20 @@ class Volunteer(models.Model):
         return bool(self.insurance_policy_document)
 
     @property
+    def has_vaccination_card_document(self):
+        return bool(self.vaccination_card_document)
+
+    @property
     def has_flight_ticket_document(self):
         return bool(self.flight_ticket_document)
 
     @property
     def documentation_complete(self):
-        return self.has_signed_registration_document and self.has_insurance_policy_document
+        return (
+            self.has_signed_registration_document
+            and self.has_insurance_policy_document
+            and self.has_vaccination_card_document
+        )
 
     @property
     def documentation_review_complete(self):
@@ -228,6 +242,8 @@ class Volunteer(models.Model):
             and self.signed_registration_document_confirmed
             and self.has_insurance_policy_document
             and self.insurance_policy_document_confirmed
+            and self.has_vaccination_card_document
+            and self.vaccination_card_document_confirmed
         )
 
     @property

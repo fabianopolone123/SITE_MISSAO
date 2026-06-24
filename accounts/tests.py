@@ -356,6 +356,7 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'Documenta&ccedil;&atilde;o pendente')
         self.assertContains(response, reverse('volunteer_registration_pdf', args=[volunteer.id]))
         self.assertContains(response, reverse('volunteer_documentation_upload', args=[volunteer.id]))
+        self.assertContains(response, 'name="vaccination_card_document"')
         self.assertContains(response, 'name="flight_ticket_document"')
         self.assertContains(response, 'name="flight_date"')
         self.assertContains(response, 'name="flight_time"')
@@ -378,7 +379,12 @@ class VolunteerDashboardTests(TestCase):
             b'%PDF-1.4 ficha assinada',
             content_type='application/pdf',
         )
-        volunteer.save(update_fields=['signed_registration_document'])
+        volunteer.vaccination_card_document = SimpleUploadedFile(
+            'vacina.pdf',
+            b'%PDF-1.4 carteira vacinacao',
+            content_type='application/pdf',
+        )
+        volunteer.save(update_fields=['signed_registration_document', 'vaccination_card_document'])
         MissionaryDonationReceipt.objects.create(
             volunteer=volunteer,
             description='Doacao extra',
@@ -396,6 +402,7 @@ class VolunteerDashboardTests(TestCase):
         self.assertContains(response, 'Confer&ecirc;ncia')
         self.assertContains(response, volunteer.full_name)
         self.assertContains(response, 'Ver arquivo')
+        self.assertContains(response, 'Carteira de vacina')
         self.assertContains(response, 'Ver comprovante')
 
     def test_conference_dashboard_lists_flight_ticket_information(self):
@@ -444,6 +451,32 @@ class VolunteerDashboardTests(TestCase):
         volunteer.refresh_from_db()
         self.assertEqual(response.status_code, 302)
         self.assertTrue(volunteer.signed_registration_document_confirmed)
+        self.assertEqual(volunteer.documentation_reviewed_by, reviewer)
+
+    def test_conference_dashboard_can_confirm_vaccination_card(self):
+        reviewer, _, _ = create_registration(username='revisor')
+        PanelPermission.objects.create(user=reviewer, can_review_submissions=True)
+        _, _, volunteer = create_registration(username='missionario')
+        volunteer.vaccination_card_document = SimpleUploadedFile(
+            'vacina.pdf',
+            b'%PDF-1.4 carteira vacinacao',
+            content_type='application/pdf',
+        )
+        volunteer.save(update_fields=['vaccination_card_document'])
+        self.client.force_login(reviewer)
+
+        response = self.client.post(
+            reverse('conference_dashboard'),
+            {
+                'volunteer_id': volunteer.id,
+                'document_type': 'vaccination_card',
+                'action': 'confirm',
+            },
+        )
+
+        volunteer.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(volunteer.vaccination_card_document_confirmed)
         self.assertEqual(volunteer.documentation_reviewed_by, reviewer)
 
     def test_conference_dashboard_can_confirm_optional_donation_receipt(self):
@@ -759,6 +792,11 @@ class VolunteerDashboardTests(TestCase):
                     b'%PDF-1.4 apolice assinada',
                     content_type='application/pdf',
                 ),
+                'vaccination_card_document': SimpleUploadedFile(
+                    'vacina.pdf',
+                    b'%PDF-1.4 carteira vacinacao',
+                    content_type='application/pdf',
+                ),
                 'flight_ticket_document': SimpleUploadedFile(
                     'passagem.pdf',
                     b'%PDF-1.4 passagem',
@@ -772,6 +810,7 @@ class VolunteerDashboardTests(TestCase):
         volunteer.refresh_from_db()
         self.assertEqual(response.status_code, 302)
         self.assertTrue(volunteer.documentation_complete)
+        self.assertTrue(volunteer.vaccination_card_document)
         self.assertTrue(volunteer.flight_ticket_document)
         self.assertEqual(volunteer.flight_date, date(2026, 7, 3))
         self.assertEqual(volunteer.flight_time.strftime('%H:%M'), '12:30')

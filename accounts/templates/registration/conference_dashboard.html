@@ -131,6 +131,28 @@
                                         </div>
                                     {% endif %}
 
+                                    {% if group.volunteer.vaccination_card_document %}
+                                        <div class="conference-file">
+                                            <div>
+                                                <strong>Carteira de vacina&ccedil;&atilde;o</strong>
+                                                <p class="section-note">{% if group.volunteer.vaccination_card_document_confirmed %}Conferida{% else %}Aguardando confer&ecirc;ncia{% endif %}</p>
+                                            </div>
+                                            <div class="conference-actions">
+                                                <a class="primary-link-button secondary-button compact-link-button" href="{{ group.volunteer.vaccination_card_document.url }}" target="_blank" rel="noopener">Ver arquivo</a>
+                                                <form method="post" class="permission-form">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="volunteer_id" value="{{ group.volunteer.id }}">
+                                                    <input type="hidden" name="document_type" value="vaccination_card">
+                                                    {% if group.volunteer.vaccination_card_document_confirmed %}
+                                                        <button type="submit" name="action" value="unconfirm" class="table-button secondary-button">Remover OK</button>
+                                                    {% else %}
+                                                        <button type="submit" name="action" value="confirm" class="table-button">Marcar OK</button>
+                                                    {% endif %}
+                                                </form>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
                                     {% if group.volunteer.flight_ticket_document or group.volunteer.flight_date or group.volunteer.flight_time %}
                                         <div class="conference-file">
                                             <div>
@@ -150,7 +172,7 @@
                                         </div>
                                     {% endif %}
 
-                                    {% if not group.volunteer.signed_registration_document and not group.volunteer.insurance_policy_document and not group.volunteer.flight_ticket_document and not group.volunteer.flight_date and not group.volunteer.flight_time %}
+                                    {% if not group.volunteer.signed_registration_document and not group.volunteer.insurance_policy_document and not group.volunteer.vaccination_card_document and not group.volunteer.flight_ticket_document and not group.volunteer.flight_date and not group.volunteer.flight_time %}
                                         <p class="section-note">Nenhum documento enviado.</p>
                                     {% endif %}
                                 </section>

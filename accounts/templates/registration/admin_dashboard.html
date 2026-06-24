@@ -281,6 +281,16 @@
                         </dd>
                     </div>
                     <div>
+                        <dt>Carteira de vacina&ccedil;&atilde;o</dt>
+                        <dd>
+                            {% if volunteer.vaccination_card_document %}
+                                <a href="{{ volunteer.vaccination_card_document.url }}" target="_blank" rel="noopener">Abrir arquivo</a>
+                            {% else %}
+                                Pendente
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
                         <dt>Status da documenta&ccedil;&atilde;o</dt>
                         <dd>{{ volunteer.documentation_status_label }}</dd>
                     </div>
