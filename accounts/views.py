@@ -52,9 +52,13 @@ from . import whatsapp
 logger = logging.getLogger(__name__)
 
 
-def _auto_notify(notification_type, message):
+def _auto_notify(notification_type, message, extra_payload=None):
     try:
-        whatsapp.send_plain_notification(notification_type, message)
+        payload = {
+            **whatsapp.template_context(sent_by='sistema', message=message),
+            **(extra_payload or {}),
+        }
+        whatsapp.send_template_notification(notification_type, payload=payload, sent_by='sistema')
     except Exception:
         logger.exception('Erro na notificacao automatica WhatsApp tipo %s', notification_type)
 
@@ -495,9 +499,14 @@ def volunteer_documentation_upload(request, volunteer_id):
         if 'vaccination_card_document' in request.FILES:
             uploaded_docs.append('Carteira de vacinação')
         if uploaded_docs:
+            docs_str = ', '.join(uploaded_docs)
             _auto_notify(
                 WhatsAppNotificationType.DOCUMENTATION,
-                f'Documento enviado!\nMissionário: {volunteer.full_name}\nDocumento(s): {", ".join(uploaded_docs)}',
+                f'Documento(s) enviado(s): {docs_str}',
+                extra_payload={
+                    'missionario': volunteer.full_name,
+                    'documentos_pendentes': docs_str,
+                },
             )
         messages.success(request, f'Documentação de {volunteer.full_name} atualizada.')
     else:
@@ -1053,7 +1062,11 @@ def conference_dashboard(request):
                 }
                 _auto_notify(
                     WhatsAppNotificationType.DOCUMENTATION,
-                    f'Documento conferido!\nMissionário: {volunteer.full_name}\nDocumento: {doc_labels.get(document_type, document_type)}',
+                    f'Documento conferido: {doc_labels.get(document_type, document_type)}',
+                    extra_payload={
+                        'missionario': volunteer.full_name,
+                        'documentos_pendentes': doc_labels.get(document_type, document_type),
+                    },
                 )
                 messages.success(request, 'Documento conferido.')
             elif action == 'unconfirm':
