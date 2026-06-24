@@ -684,6 +684,9 @@ def whatsapp_dashboard(request):
     initial_message = config.default_message or 'Olá! Esta é uma notificação da Missão Andrews.'
     message_form = WhatsAppMessageForm(initial={'message': initial_message})
     selected_notification_type = request.POST.get('notification_type') or WhatsAppNotificationType.GENERAL
+    default_charge_delay_seconds = max(0.0, float(getattr(settings, 'WHATSAPP_DOCUMENTATION_SEND_DELAY_SECONDS', 2) or 0))
+    charge_template_text = whatsapp.get_template_message(WhatsAppNotificationType.DOCUMENTATION)
+    charge_delay_seconds = default_charge_delay_seconds
     charge_results = []
     charge_message_sent = ''
     open_charge_modal = False
@@ -751,6 +754,19 @@ def whatsapp_dashboard(request):
         elif action == 'charge_documentation':
             sent_by = request.user.get_full_name() or request.user.username
             selected_ids = request.POST.getlist('volunteer_ids')
+            submitted_charge_template = (request.POST.get('charge_template') or '').strip()
+            if submitted_charge_template:
+                charge_template_text = submitted_charge_template
+            try:
+                charge_delay_seconds = max(0.0, float((request.POST.get('charge_delay_seconds') or '').replace(',', '.')))
+            except ValueError:
+                charge_delay_seconds = default_charge_delay_seconds
+                messages.error(request, 'Pausa inválida. Foi usada a pausa padrão.')
+
+            WhatsAppTemplate.objects.update_or_create(
+                notification_type=WhatsAppNotificationType.DOCUMENTATION,
+                defaults={'message_text': charge_template_text},
+            )
             selected_volunteers = (
                 Volunteer.objects
                 .select_related('registration__user')
@@ -770,8 +786,6 @@ def whatsapp_dashboard(request):
                     continue
                 volunteers_to_charge.append((volunteer, pending_items))
 
-            send_delay = max(0.0, float(getattr(settings, 'WHATSAPP_DOCUMENTATION_SEND_DELAY_SECONDS', 2) or 0))
-
             for index, (volunteer, pending_items) in enumerate(volunteers_to_charge):
                 payload = {
                     **base_payload,
@@ -779,12 +793,13 @@ def whatsapp_dashboard(request):
                     'documentos_pendentes': ', '.join(pending_items),
                     'link_documentacao': documentation_url,
                 }
-                ok, error_message, message_text, normalized_phone = whatsapp.send_template_to_phone(
-                    WhatsAppNotificationType.DOCUMENTATION,
-                    volunteer.phone,
-                    payload=payload,
-                    sent_by=sent_by,
-                )
+                message_text = whatsapp.render_message(charge_template_text, payload)
+                normalized_phone = whatsapp.normalize_phone_number(volunteer.phone)
+                if normalized_phone:
+                    ok, error_message = whatsapp.send_message_to_phone(normalized_phone, message_text, sent_by=sent_by)
+                else:
+                    ok = False
+                    error_message = 'Telefone inválido ou ausente.'
                 charge_message_sent = message_text
                 charge_results.append({
                     'volunteer': volunteer,
@@ -793,8 +808,8 @@ def whatsapp_dashboard(request):
                     'phone': normalized_phone or volunteer.phone,
                     'message': message_text,
                 })
-                if send_delay and index < len(volunteers_to_charge) - 1:
-                    time.sleep(send_delay)
+                if charge_delay_seconds and index < len(volunteers_to_charge) - 1:
+                    time.sleep(charge_delay_seconds)
 
             sent_count = sum(1 for item in charge_results if item['ok'])
             if sent_count:
@@ -844,6 +859,8 @@ def whatsapp_dashboard(request):
         'rows': rows,
         'templates': templates,
         'pending_documentation_volunteers': pending_documentation_volunteers,
+        'charge_template_text': charge_template_text,
+        'charge_delay_seconds': charge_delay_seconds,
         'charge_results': charge_results,
         'charge_message_sent': charge_message_sent,
         'open_charge_modal': open_charge_modal,

@@ -929,6 +929,8 @@ class VolunteerDashboardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Cobrar documenta')
+        self.assertContains(response, 'Template da mensagem')
+        self.assertContains(response, 'Pausa entre envios')
         self.assertContains(response, volunteer.full_name)
         self.assertContains(response, 'carteira de vacina')
 
@@ -972,6 +974,8 @@ class VolunteerDashboardTests(TestCase):
                 {
                     'action': 'charge_documentation',
                     'volunteer_ids': [str(volunteer.id)],
+                    'charge_template': 'Ola {missionario}, falta anexar: {documentos_pendentes}. Link: {link_documentacao}',
+                    'charge_delay_seconds': '0',
                 },
             )
 
@@ -979,10 +983,12 @@ class VolunteerDashboardTests(TestCase):
         payload = json.loads(request_obj.data.decode('utf-8'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(payload['phone'], '5516999998888')
+        self.assertIn('Ola pendente Silva', payload['message'])
         self.assertIn(volunteer.full_name, payload['message'])
         self.assertIn('carteira', payload['message'])
+        self.assertIn('/minha-inscricao/documentacao/', payload['message'])
         self.assertContains(response, 'Resultado do envio')
-        self.assertContains(response, 'Docs')
+        self.assertContains(response, 'Ola pendente Silva')
 
     @override_settings(WHATSAPP_DOCUMENTATION_SEND_DELAY_SECONDS=1)
     def test_whatsapp_dashboard_waits_between_documentation_charges(self):
@@ -1031,12 +1037,14 @@ class VolunteerDashboardTests(TestCase):
                 {
                     'action': 'charge_documentation',
                     'volunteer_ids': [str(first_volunteer.id), str(second_volunteer.id)],
+                    'charge_template': 'Docs {missionario}: {documentos_pendentes}',
+                    'charge_delay_seconds': '4',
                 },
             )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(mocked_urlopen.call_count, 2)
-        mocked_sleep.assert_called_once_with(1.0)
+        mocked_sleep.assert_called_once_with(4.0)
 
     def test_admin_user_can_switch_back_to_admin_panel_from_missionary_profile(self):
         user, _, _ = create_registration()
