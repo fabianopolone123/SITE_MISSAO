@@ -310,12 +310,10 @@ class WhatsAppConfigForm(forms.ModelForm):
             'notifications_enabled',
             'wapi_token',
             'wapi_instance',
-            'wapi_base_url',
         ]
         widgets = {
             'wapi_token': forms.TextInput(attrs={'placeholder': 'Token da W-API'}),
             'wapi_instance': forms.TextInput(attrs={'placeholder': 'Instance ID da W-API'}),
-            'wapi_base_url': forms.TextInput(attrs={'placeholder': 'https://api.w-api.app/v1'}),
         }
 
     def __init__(self, *args, **kwargs):

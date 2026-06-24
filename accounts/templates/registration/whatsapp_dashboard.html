@@ -192,11 +192,6 @@
                         <label for="{{ config_form.wapi_instance.id_for_label }}">Instance ID</label>
                         {{ config_form.wapi_instance }}
                     </div>
-                    <div class="field wide">
-                        <label for="{{ config_form.wapi_base_url.id_for_label }}">Base URL</label>
-                        {{ config_form.wapi_base_url }}
-                        <p class="field-hint">Deixe em branco para usar https://api.w-api.app/v1</p>
-                    </div>
                 </div>
 
                 {% if config_form.errors %}
