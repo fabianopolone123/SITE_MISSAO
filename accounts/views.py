@@ -1,6 +1,5 @@
 import json
 import logging
-import time
 from datetime import date
 
 from django.conf import settings
@@ -741,12 +740,14 @@ def volunteer_pending_documentation_items(volunteer):
 
 def send_documentation_charge(request, volunteer, charge_template_text, sent_by):
     pending_items = volunteer_pending_documentation_items(volunteer)
+    resolved_phone = whatsapp.resolve_user_phone(volunteer.registration.user)
+    normalized_phone = whatsapp.normalize_phone_number(resolved_phone)
     if not pending_items:
         return {
             'volunteer': volunteer.full_name,
             'ok': False,
             'error_message': 'Missionário sem documentação pendente.',
-            'phone': whatsapp.normalize_phone_number(volunteer.phone) or volunteer.phone,
+            'phone': normalized_phone or resolved_phone,
             'message': '',
         }
 
@@ -757,7 +758,6 @@ def send_documentation_charge(request, volunteer, charge_template_text, sent_by)
         'link_documentacao': request.build_absolute_uri('/minha-inscricao/documentacao/'),
     }
     message_text = whatsapp.render_message(charge_template_text, payload)
-    normalized_phone = whatsapp.normalize_phone_number(volunteer.phone)
     if normalized_phone:
         ok, error_message = whatsapp.send_message_to_phone(normalized_phone, message_text, sent_by=sent_by)
     else:
@@ -768,7 +768,7 @@ def send_documentation_charge(request, volunteer, charge_template_text, sent_by)
         'volunteer': volunteer.full_name,
         'ok': ok,
         'error_message': error_message,
-        'phone': normalized_phone or volunteer.phone,
+        'phone': normalized_phone or resolved_phone,
         'message': message_text,
     }
 
@@ -806,7 +806,10 @@ def whatsapp_dashboard(request):
                 preference.phone_number = request.POST.get(f'{prefix}_phone', '').strip()
                 preference.notify_registrations = request.POST.get(f'{prefix}_registrations') == 'on'
                 preference.notify_financial = request.POST.get(f'{prefix}_financial') == 'on'
+                preference.notify_documentation = request.POST.get(f'{prefix}_documentation') == 'on'
                 preference.notify_documentation_notification = request.POST.get(f'{prefix}_documentation_notification') == 'on'
+                preference.notify_general = request.POST.get(f'{prefix}_general') == 'on'
+                preference.notify_test = request.POST.get(f'{prefix}_test') == 'on'
                 preference.save()
 
             _editable_template_types = {
@@ -814,6 +817,8 @@ def whatsapp_dashboard(request):
                 WhatsAppNotificationType.FINANCIAL,
                 WhatsAppNotificationType.DOCUMENTATION,
                 WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
+                WhatsAppNotificationType.GENERAL,
+                WhatsAppNotificationType.TEST,
             }
             for notification_type in _editable_template_types:
                 template_text = request.POST.get(f'template_{notification_type}', '').strip()
@@ -857,6 +862,8 @@ def whatsapp_dashboard(request):
         elif action == 'send_message_single_to_phone':
             phone = (request.POST.get('phone') or '').strip()
             message_text = (request.POST.get('message') or '').strip()
+            notification_type = (request.POST.get('notification_type') or '').strip()
+            recipient_name = (request.POST.get('recipient_name') or '').strip()
             sent_by = request.user.get_full_name() or request.user.username
             try:
                 if not phone or not message_text:
@@ -864,7 +871,17 @@ def whatsapp_dashboard(request):
                 normalized = whatsapp.normalize_phone_number(phone)
                 if not normalized:
                     return JsonResponse({'ok': False, 'error': 'Telefone inválido.'})
-                rendered = whatsapp.render_message(message_text, whatsapp.template_context(sent_by=sent_by))
+                payload = whatsapp.template_context(sent_by=sent_by, message=message_text)
+                if recipient_name:
+                    payload['usuario'] = recipient_name
+                available_types = {choice for choice, _label in WhatsAppNotificationType.choices}
+                if notification_type in available_types:
+                    rendered = whatsapp.render_message(
+                        whatsapp.get_template_message(notification_type),
+                        payload,
+                    )
+                else:
+                    rendered = whatsapp.render_message(message_text, payload)
                 ok, error = whatsapp.send_message_to_phone(normalized, rendered, sent_by=sent_by)
                 return JsonResponse({'ok': ok, 'error': error or ''})
             except Exception as exc:
@@ -913,9 +930,7 @@ def whatsapp_dashboard(request):
                 .filter(id__in=selected_ids)
                 .order_by('full_name')
             )
-            for index, volunteer in enumerate(selected_volunteers):
-                if index > 0 and charge_delay_seconds > 0:
-                    time.sleep(charge_delay_seconds)
+            for volunteer in selected_volunteers:
                 result = send_documentation_charge(request, volunteer, charge_template_text, sent_by)
                 if not result['message']:
                     continue
@@ -951,6 +966,8 @@ def whatsapp_dashboard(request):
         WhatsAppNotificationType.FINANCIAL,
         WhatsAppNotificationType.DOCUMENTATION,
         WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
+        WhatsAppNotificationType.GENERAL,
+        WhatsAppNotificationType.TEST,
     }
     templates = []
     for notification_type, label in WhatsAppNotificationType.choices:
@@ -973,7 +990,9 @@ def whatsapp_dashboard(request):
             pending_documentation_volunteers.append({
                 'volunteer': volunteer,
                 'pending_items': pending_items,
-                'phone': whatsapp.normalize_phone_number(volunteer.phone),
+                'phone': whatsapp.normalize_phone_number(
+                    whatsapp.resolve_user_phone(volunteer.registration.user)
+                ),
             })
 
     context = {

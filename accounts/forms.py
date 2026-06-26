@@ -308,12 +308,24 @@ class WhatsAppConfigForm(forms.ModelForm):
         model = WhatsAppConfig
         fields = [
             'notifications_enabled',
+            'provider',
+            'group_jid',
+            'default_message',
             'wapi_token',
             'wapi_instance',
+            'wapi_base_url',
+            'webhook_url',
+            'webhook_token',
         ]
         widgets = {
+            'provider': forms.Select(),
+            'group_jid': forms.TextInput(attrs={'placeholder': '120363421981424263@g.us'}),
+            'default_message': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Mensagem padrao para envios manuais.'}),
             'wapi_token': forms.TextInput(attrs={'placeholder': 'Token da W-API'}),
             'wapi_instance': forms.TextInput(attrs={'placeholder': 'Instance ID da W-API'}),
+            'wapi_base_url': forms.TextInput(attrs={'placeholder': 'https://api.w-api.app/v1'}),
+            'webhook_url': forms.TextInput(attrs={'placeholder': 'https://seu-endpoint/webhook'}),
+            'webhook_token': forms.TextInput(attrs={'placeholder': 'Bearer token opcional'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -322,6 +334,22 @@ class WhatsAppConfigForm(forms.ModelForm):
             field.widget.attrs.setdefault('class', 'form-control')
 
         self.fields['notifications_enabled'].widget.attrs['class'] = 'checkbox-control'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        provider = (cleaned_data.get('provider') or '').strip()
+
+        if provider == WhatsAppConfig.Provider.WAPI:
+            if not (cleaned_data.get('wapi_token') or '').strip():
+                self.add_error('wapi_token', 'Informe o token da W-API.')
+            if not (cleaned_data.get('wapi_instance') or '').strip():
+                self.add_error('wapi_instance', 'Informe a instância da W-API.')
+
+        if provider == WhatsAppConfig.Provider.WEBHOOK:
+            if not (cleaned_data.get('webhook_url') or '').strip():
+                self.add_error('webhook_url', 'Informe a URL do webhook.')
+
+        return cleaned_data
 
 
 class WhatsAppMessageForm(forms.Form):

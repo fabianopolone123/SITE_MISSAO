@@ -818,6 +818,33 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(config.provider, 'wapi')
         self.assertEqual(config.group_jid, '120363421981424263@g.us')
 
+    def test_whatsapp_dashboard_rejects_invalid_provider_configuration(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse('whatsapp_dashboard'),
+            {
+                'action': 'save_config',
+                'notifications_enabled': 'on',
+                'provider': 'wapi',
+                'group_jid': '',
+                'default_message': 'Aviso da missao',
+                'wapi_token': '',
+                'wapi_instance': '',
+                'wapi_base_url': 'https://api.w-api.app/v1',
+                'webhook_url': '',
+                'webhook_token': '',
+            },
+        )
+
+        config = WhatsAppConfig.get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(config.provider, '')
+        self.assertContains(response, 'Informe o token da W-API.')
+        self.assertContains(response, 'Informe a instância da W-API.')
+
     def test_whatsapp_dashboard_saves_recipients_and_templates(self):
         admin = User.objects.create_user(username='whatsapp', password='senha-forte-123')
         target = User.objects.create_user(username='destino', password='senha-forte-123')
@@ -919,6 +946,56 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(payload['phone'], '5516999998888')
         self.assertEqual(payload['message'], 'Mensagem: Aviso importante da missao')
 
+    def test_whatsapp_dashboard_sends_single_manual_message_using_selected_template(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        WhatsAppConfig.objects.create(
+            notifications_enabled=True,
+            provider='wapi',
+            wapi_token='token-123',
+            wapi_instance='instance-01',
+            wapi_base_url='https://api.w-api.app/v1',
+        )
+        WhatsAppTemplate.objects.create(
+            notification_type=WhatsAppNotificationType.GENERAL,
+            message_text='Geral para {usuario}: {mensagem}',
+        )
+        self.client.force_login(user)
+
+        class ResponseMock:
+            status = 200
+
+            def getcode(self):
+                return 200
+
+            def read(self):
+                return json.dumps({'status': 'success', 'messageId': 'abc123'}).encode('utf-8')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        with patch('accounts.whatsapp.request.urlopen', return_value=ResponseMock()) as mocked_urlopen:
+            response = self.client.post(
+                reverse('whatsapp_dashboard'),
+                {
+                    'action': 'send_message_single_to_phone',
+                    'phone': '(16) 99999-8888',
+                    'recipient_name': 'Destino Teste',
+                    'notification_type': WhatsAppNotificationType.GENERAL,
+                    'message': 'Aviso importante da missao',
+                },
+                HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            )
+
+        request_obj = mocked_urlopen.call_args.args[0]
+        payload = json.loads(request_obj.data.decode('utf-8'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload['phone'], '5516999998888')
+        self.assertEqual(payload['message'], 'Geral para Destino Teste: Aviso importante da missao')
+
     def test_whatsapp_dashboard_shows_documentation_charge_button(self):
         user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
         _, _, volunteer = create_registration(username='pendente')
@@ -989,6 +1066,62 @@ class VolunteerDashboardTests(TestCase):
         self.assertIn('/minha-inscricao/documentacao/', payload['message'])
         self.assertContains(response, 'Resultado do envio')
         self.assertContains(response, 'Ola pendente Silva')
+
+    def test_whatsapp_dashboard_charges_documentation_using_recipient_preference_phone(self):
+        user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
+        volunteer_user, _, volunteer = create_registration(username='pendentepref')
+        volunteer.phone = ''
+        volunteer.save(update_fields=['phone'])
+        PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
+        WhatsAppConfig.objects.create(
+            notifications_enabled=True,
+            provider='wapi',
+            wapi_token='token-123',
+            wapi_instance='instance-01',
+            wapi_base_url='https://api.w-api.app/v1',
+        )
+        WhatsAppRecipientPreference.objects.create(
+            user=volunteer_user,
+            phone_number='(16) 99999-7777',
+        )
+        WhatsAppTemplate.objects.create(
+            notification_type=WhatsAppNotificationType.DOCUMENTATION,
+            message_text='Docs {missionario}: {documentos_pendentes}',
+        )
+        self.client.force_login(user)
+
+        class ResponseMock:
+            status = 200
+
+            def getcode(self):
+                return 200
+
+            def read(self):
+                return json.dumps({'status': 'success', 'messageId': 'abc123'}).encode('utf-8')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        with patch('accounts.whatsapp.request.urlopen', return_value=ResponseMock()) as mocked_urlopen:
+            response = self.client.post(
+                reverse('whatsapp_dashboard'),
+                {
+                    'action': 'charge_documentation_single',
+                    'volunteer_id': str(volunteer.id),
+                    'charge_template': 'Docs {missionario}: {documentos_pendentes}',
+                },
+                HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            )
+
+        request_obj = mocked_urlopen.call_args.args[0]
+        payload = json.loads(request_obj.data.decode('utf-8'))
+        data = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload['phone'], '5516999997777')
+        self.assertEqual(data['phone'], '5516999997777')
 
     def test_whatsapp_dashboard_charges_single_documentation_request(self):
         user = User.objects.create_user(username='whatsapp', password='senha-forte-123')

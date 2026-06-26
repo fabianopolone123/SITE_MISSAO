@@ -92,8 +92,10 @@ def _webhook_configured() -> bool:
 
 def active_provider() -> str:
     configured = _get('provider', 'WHATSAPP_PROVIDER').lower()
-    if configured in {'wapi', 'webhook'}:
-        return configured
+    if configured == 'wapi':
+        return 'wapi' if _wapi_configured() else ''
+    if configured == 'webhook':
+        return 'webhook' if _webhook_configured() else ''
     if _wapi_configured():
         return 'wapi'
     if _webhook_configured():
@@ -124,9 +126,7 @@ def normalize_phone_number(raw_phone):
     local = local.lstrip('0')
     if len(local) > 11:
         local = local[-11:]
-    if len(local) == 10:
-        local = f'{local[:2]}9{local[2:]}'
-    if len(local) not in (10, 11):
+    if len(local) != 11:
         return ''
     return f'55{local}'
 

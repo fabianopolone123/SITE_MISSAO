@@ -88,6 +88,7 @@ class WhatsAppRecipientPreferenceAdmin(admin.ModelAdmin):
         'notify_registrations',
         'notify_financial',
         'notify_documentation',
+        'notify_documentation_notification',
         'notify_general',
         'notify_test',
         'updated_at',

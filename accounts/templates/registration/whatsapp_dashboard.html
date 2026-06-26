@@ -47,6 +47,17 @@
             <h2>Enviar notifica&ccedil;&atilde;o manual</h2>
 
             <div class="field">
+                <label for="manual-notification-type">Tipo da notifica&ccedil;&atilde;o</label>
+                <select id="manual-notification-type" class="form-control">
+                    {% for notification_type, label in notification_types %}
+                        {% if notification_type != 'documentation' and notification_type != 'documentation_notification' %}
+                            <option value="{{ notification_type }}" {% if notification_type == selected_notification_type %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
                 <label for="manual-message">Mensagem</label>
                 <textarea id="manual-message" class="form-control" rows="5" placeholder="Digite a mensagem..."></textarea>
                 <p class="field-hint">Placeholders dispon&iacute;veis: <code>{data_hora}</code>, <code>{usuario}</code></p>
@@ -56,6 +67,7 @@
                 <button type="button" class="secondary-button" id="open-manual-recipients">Selecionar destinat&aacute;rios</button>
                 <span class="field-hint" id="manual-selected-count" style="align-self:center;">Nenhum selecionado</span>
             </div>
+            <p class="field-hint">O envio manual aplica uma pausa autom&aacute;tica de 5 segundos entre destinat&aacute;rios.</p>
 
             <div class="progress-wrap" aria-hidden="true" style="margin-top: 12px;">
                 <div class="progress-bar" id="manual-progress-bar"></div>
@@ -138,7 +150,10 @@
                                 <th>N&uacute;mero WhatsApp do destinat&aacute;rio</th>
                                 <th>Inscri&ccedil;&otilde;es</th>
                                 <th>Financeiro</th>
+                                <th>Doc. cobran&ccedil;a</th>
                                 <th>Documenta&ccedil;&atilde;o</th>
+                                <th>Geral</th>
+                                <th>Teste</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -154,10 +169,13 @@
                                     </td>
                                     <td><input type="checkbox" name="user_{{ row.user.id }}_registrations" class="checkbox-control" {% if row.preference.notify_registrations %}checked{% endif %}></td>
                                     <td><input type="checkbox" name="user_{{ row.user.id }}_financial" class="checkbox-control" {% if row.preference.notify_financial %}checked{% endif %}></td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_documentation" class="checkbox-control" {% if row.preference.notify_documentation %}checked{% endif %}></td>
                                     <td><input type="checkbox" name="user_{{ row.user.id }}_documentation_notification" class="checkbox-control" {% if row.preference.notify_documentation_notification %}checked{% endif %}></td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_general" class="checkbox-control" {% if row.preference.notify_general %}checked{% endif %}></td>
+                                    <td><input type="checkbox" name="user_{{ row.user.id }}_test" class="checkbox-control" {% if row.preference.notify_test %}checked{% endif %}></td>
                                 </tr>
                             {% empty %}
-                                <tr><td colspan="5">Nenhum usu&aacute;rio ativo encontrado.</td></tr>
+                                <tr><td colspan="8">Nenhum usu&aacute;rio ativo encontrado.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -197,12 +215,48 @@
                 <h3 class="subsection-title">W-API</h3>
                 <div class="form-grid">
                     <div class="field">
+                        <label for="{{ config_form.provider.id_for_label }}">Provider</label>
+                        {{ config_form.provider }}
+                        {{ config_form.provider.errors }}
+                    </div>
+                    <div class="field">
+                        <label for="{{ config_form.group_jid.id_for_label }}">JID do grupo</label>
+                        {{ config_form.group_jid }}
+                        {{ config_form.group_jid.errors }}
+                    </div>
+                    <div class="field wide">
+                        <label for="{{ config_form.default_message.id_for_label }}">Mensagem padr&atilde;o</label>
+                        {{ config_form.default_message }}
+                        {{ config_form.default_message.errors }}
+                    </div>
+                    <div class="field">
                         <label for="{{ config_form.wapi_token.id_for_label }}">Token</label>
                         {{ config_form.wapi_token }}
+                        {{ config_form.wapi_token.errors }}
                     </div>
                     <div class="field">
                         <label for="{{ config_form.wapi_instance.id_for_label }}">Instance ID</label>
                         {{ config_form.wapi_instance }}
+                        {{ config_form.wapi_instance.errors }}
+                    </div>
+                    <div class="field wide">
+                        <label for="{{ config_form.wapi_base_url.id_for_label }}">W-API Base URL</label>
+                        {{ config_form.wapi_base_url }}
+                        {{ config_form.wapi_base_url.errors }}
+                    </div>
+                </div>
+
+                <h3 class="subsection-title">Webhook</h3>
+                <div class="form-grid">
+                    <div class="field wide">
+                        <label for="{{ config_form.webhook_url.id_for_label }}">Webhook URL</label>
+                        {{ config_form.webhook_url }}
+                        {{ config_form.webhook_url.errors }}
+                    </div>
+                    <div class="field wide">
+                        <label for="{{ config_form.webhook_token.id_for_label }}">Webhook Token</label>
+                        {{ config_form.webhook_token }}
+                        {{ config_form.webhook_token.errors }}
                     </div>
                 </div>
 
@@ -347,6 +401,7 @@
         const manualCancelBtn = document.getElementById('manual-cancel-btn');
         const manualProgressBar = document.getElementById('manual-progress-bar');
         const manualProgressStatus = document.getElementById('manual-progress-status');
+        const manualNotificationType = document.getElementById('manual-notification-type');
         const manualMessageInput = document.getElementById('manual-message');
         const manualSelectedCount = document.getElementById('manual-selected-count');
         const manualCheckboxes = () => Array.from(document.querySelectorAll('.manual-notify-checkbox'));
@@ -355,6 +410,7 @@
         const manualRecipientsModal = document.getElementById('manual-recipients-modal');
         const openManualRecipientsBtn = document.getElementById('open-manual-recipients');
         const closeManualRecipientsBtn = document.getElementById('manual-recipients-close');
+        const manualSendDelaySeconds = 5;
         let manualCancelled = false;
 
         function updateManualCount() {
@@ -397,9 +453,18 @@
             statusCell.innerHTML = `<span class="document-status ${cssClass}">${text}</span>`;
         }
 
-        async function runManualSend(messageOverride) {
+        async function waitForManualDelay(seconds) {
+            const deadline = Date.now() + (seconds * 1000);
+
+            while (!manualCancelled && Date.now() < deadline) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+        }
+
+        async function runManualSend(messageOverride, notificationTypeOverride) {
             const selected = manualCheckboxes().filter(c => c.checked && !c.disabled);
             const message = messageOverride || (manualMessageInput?.value || '').trim();
+            const notificationType = notificationTypeOverride || manualNotificationType?.value || 'general';
 
             if (!message) { alert('Digite uma mensagem antes de enviar.'); return; }
             if (!selected.length) { alert('Selecione ao menos um destinatário.'); return; }
@@ -422,6 +487,7 @@
                 }
 
                 const phone = selected[i].dataset.phone || '';
+                const recipientName = selected[i].dataset.name || '';
                 setManualRowStatus(selected[i], '', 'Enviando...');
 
                 try {
@@ -430,6 +496,8 @@
                     formData.append('action', 'send_message_single_to_phone');
                     formData.append('phone', phone);
                     formData.append('message', message);
+                    formData.append('notification_type', notificationType);
+                    formData.append('recipient_name', recipientName);
 
                     const response = await fetch('{% url "whatsapp_dashboard" %}', { method: 'POST', body: formData });
                     let result;
@@ -446,6 +514,12 @@
 
                 if (manualProgressBar) manualProgressBar.style.width = `${Math.round(((i + 1) / selected.length) * 100)}%`;
                 if (!manualCancelled && manualProgressStatus) manualProgressStatus.textContent = `${i + 1} de ${selected.length} enviados.`;
+
+                if (!manualCancelled && i + 1 < selected.length) {
+                    if (manualProgressStatus) manualProgressStatus.textContent = `Aguardando ${manualSendDelaySeconds}s para o próximo envio...`;
+                    await waitForManualDelay(manualSendDelaySeconds);
+                    if (manualCancelled && manualProgressStatus) manualProgressStatus.textContent = `Cancelado apÃ³s ${i + 1} de ${selected.length} envio(s).`;
+                }
             }
 
             if (manualSendBtn) { manualSendBtn.disabled = false; manualSendBtn.textContent = 'Enviar WhatsApp'; }
@@ -465,6 +539,22 @@
         }
 
         // ── Cobrança de documentação ─────────────────────────────────────────
+        if (manualTestBtn) {
+            manualTestBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                runManualSend('Teste de configuraÃ§Ã£o do WhatsApp.', 'test');
+            }, true);
+        }
+
+        if (manualTestBtn) {
+            manualTestBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                runManualSend('Teste de configuração do WhatsApp.', 'test');
+            }, true);
+        }
+
         const chargeModal = document.getElementById('charge-documentation-modal');
         const openChargeButton = document.getElementById('open-charge-documentation');
         const chargeForm = document.getElementById('charge-documentation-form');
