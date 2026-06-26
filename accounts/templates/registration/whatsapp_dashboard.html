@@ -47,17 +47,6 @@
             <h2>Enviar notifica&ccedil;&atilde;o manual</h2>
 
             <div class="field">
-                <label for="manual-notification-type">Tipo da notifica&ccedil;&atilde;o</label>
-                <select id="manual-notification-type" class="form-control">
-                    {% for notification_type, label in notification_types %}
-                        {% if notification_type != 'documentation' and notification_type != 'documentation_notification' %}
-                            <option value="{{ notification_type }}" {% if notification_type == selected_notification_type %}selected{% endif %}>{{ label }}</option>
-                        {% endif %}
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="field">
                 <label for="manual-message">Mensagem</label>
                 <textarea id="manual-message" class="form-control" rows="5" placeholder="Digite a mensagem..."></textarea>
                 <p class="field-hint">Placeholders dispon&iacute;veis: <code>{data_hora}</code>, <code>{usuario}</code></p>
@@ -401,7 +390,6 @@
         const manualCancelBtn = document.getElementById('manual-cancel-btn');
         const manualProgressBar = document.getElementById('manual-progress-bar');
         const manualProgressStatus = document.getElementById('manual-progress-status');
-        const manualNotificationType = document.getElementById('manual-notification-type');
         const manualMessageInput = document.getElementById('manual-message');
         const manualSelectedCount = document.getElementById('manual-selected-count');
         const manualCheckboxes = () => Array.from(document.querySelectorAll('.manual-notify-checkbox'));
@@ -464,7 +452,7 @@
         async function runManualSend(messageOverride, notificationTypeOverride) {
             const selected = manualCheckboxes().filter(c => c.checked && !c.disabled);
             const message = messageOverride || (manualMessageInput?.value || '').trim();
-            const notificationType = notificationTypeOverride || manualNotificationType?.value || 'general';
+            const notificationType = notificationTypeOverride || 'general';
 
             if (!message) { alert('Digite uma mensagem antes de enviar.'); return; }
             if (!selected.length) { alert('Selecione ao menos um destinatário.'); return; }
@@ -531,27 +519,12 @@
         }
 
         const manualTestBtn = document.getElementById('manual-test-btn');
-        if (manualTestBtn) {
-            manualTestBtn.addEventListener('click', () => {
-                const now = new Date().toLocaleString('pt-BR');
-                runManualSend(`Teste de WhatsApp - Missão Andrews\nEnviado por: {{ request.user.get_full_name|default:request.user.username }}\nData/Hora: ${now}`);
-            });
-        }
-
-        // ── Cobrança de documentação ─────────────────────────────────────────
+        // Cobranca de documentacao
         if (manualTestBtn) {
             manualTestBtn.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopImmediatePropagation();
-                runManualSend('Teste de configuraÃ§Ã£o do WhatsApp.', 'test');
-            }, true);
-        }
-
-        if (manualTestBtn) {
-            manualTestBtn.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                runManualSend('Teste de configuração do WhatsApp.', 'test');
+                runManualSend('Teste de configuracao do WhatsApp.', 'test');
             }, true);
         }
 
@@ -727,3 +700,5 @@
     </script>
 </body>
 </html>
+
+
