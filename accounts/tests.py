@@ -946,7 +946,7 @@ class VolunteerDashboardTests(TestCase):
         self.assertEqual(payload['phone'], '5516999998888')
         self.assertEqual(payload['message'], 'Mensagem: Aviso importante da missao')
 
-    def test_whatsapp_dashboard_sends_single_manual_message_using_selected_template(self):
+    def test_whatsapp_dashboard_sends_single_manual_message_exactly_as_typed(self):
         user = User.objects.create_user(username='whatsapp', password='senha-forte-123')
         PanelPermission.objects.create(user=user, can_manage_whatsapp=True)
         WhatsAppConfig.objects.create(
@@ -955,10 +955,6 @@ class VolunteerDashboardTests(TestCase):
             wapi_token='token-123',
             wapi_instance='instance-01',
             wapi_base_url='https://api.w-api.app/v1',
-        )
-        WhatsAppTemplate.objects.create(
-            notification_type=WhatsAppNotificationType.GENERAL,
-            message_text='Geral para {usuario}: {mensagem}',
         )
         self.client.force_login(user)
 
@@ -984,8 +980,7 @@ class VolunteerDashboardTests(TestCase):
                     'action': 'send_message_single_to_phone',
                     'phone': '(16) 99999-8888',
                     'recipient_name': 'Destino Teste',
-                    'notification_type': WhatsAppNotificationType.GENERAL,
-                    'message': 'Aviso importante da missao',
+                    'message': 'Aviso para {usuario}',
                 },
                 HTTP_X_REQUESTED_WITH='XMLHttpRequest',
             )
@@ -994,7 +989,7 @@ class VolunteerDashboardTests(TestCase):
         payload = json.loads(request_obj.data.decode('utf-8'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(payload['phone'], '5516999998888')
-        self.assertEqual(payload['message'], 'Geral para Destino Teste: Aviso importante da missao')
+        self.assertEqual(payload['message'], 'Aviso para Destino Teste')
 
     def test_whatsapp_dashboard_shows_documentation_charge_button(self):
         user = User.objects.create_user(username='whatsapp', password='senha-forte-123')

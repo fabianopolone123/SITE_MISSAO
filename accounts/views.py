@@ -874,8 +874,7 @@ def whatsapp_dashboard(request):
                 payload = whatsapp.template_context(sent_by=sent_by, message=message_text)
                 if recipient_name:
                     payload['usuario'] = recipient_name
-                available_types = {choice for choice, _label in WhatsAppNotificationType.choices}
-                if notification_type in available_types:
+                if notification_type == WhatsAppNotificationType.TEST:
                     rendered = whatsapp.render_message(
                         whatsapp.get_template_message(notification_type),
                         payload,
