@@ -26,8 +26,6 @@ from .forms import (
     SignUpForm,
     VolunteerDocumentationForm,
     VolunteerForm,
-    WhatsAppConfigForm,
-    WhatsAppMessageForm,
 )
 from .models import (
     EXPENSE_CATEGORIES,
@@ -40,26 +38,10 @@ from .models import (
     PanelPermission,
     Registration,
     Volunteer,
-    WhatsAppConfig,
-    WhatsAppNotificationType,
-    WhatsAppRecipientPreference,
-    WhatsAppTemplate,
 )
 from .pdf import build_prestacao_contas_pdf, build_registration_pdf
-from . import whatsapp
 
 logger = logging.getLogger(__name__)
-
-
-def _auto_notify(notification_type, extra_payload=None):
-    try:
-        payload = {
-            **whatsapp.template_context(sent_by='sistema'),
-            **(extra_payload or {}),
-        }
-        whatsapp.send_template_notification(notification_type, payload=payload, sent_by='sistema')
-    except Exception:
-        logger.exception('Erro na notificacao automatica WhatsApp tipo %s', notification_type)
 
 
 PANEL_PERMISSION_FIELDS = {
@@ -67,7 +49,6 @@ PANEL_PERMISSION_FIELDS = {
     'reports': 'can_view_reports',
     'financial': 'can_manage_financial',
     'expense_registration': 'can_register_expenses',
-    'whatsapp': 'can_manage_whatsapp',
     'permissions': 'can_manage_permissions',
     'conference': 'can_review_submissions',
 }
@@ -93,7 +74,6 @@ def get_panel_permissions(user):
         'can_view_reports': False,
         'can_manage_financial': False,
         'can_register_expenses': False,
-        'can_manage_whatsapp': False,
         'can_manage_permissions': False,
         'can_review_submissions': False,
     }
@@ -138,10 +118,6 @@ def can_register_expenses(user):
     return has_panel_permission(user, 'expense_registration')
 
 
-def can_manage_whatsapp(user):
-    return has_panel_permission(user, 'whatsapp')
-
-
 def can_manage_permissions(user):
     return has_panel_permission(user, 'permissions')
 
@@ -165,8 +141,6 @@ def first_available_panel_url(user):
         return 'financial_dashboard'
     if has_panel_permission(user, 'expense_registration'):
         return 'expense_registration_dashboard'
-    if has_panel_permission(user, 'whatsapp'):
-        return 'whatsapp_dashboard'
     if has_panel_permission(user, 'permissions'):
         return 'permissions_dashboard'
     if has_panel_permission(user, 'conference'):
@@ -225,10 +199,6 @@ def signup(request):
                 volunteer.save()
                 saved_volunteers.append(volunteer.full_name)
 
-            _auto_notify(
-                WhatsAppNotificationType.REGISTRATIONS,
-                extra_payload={'missionario': ', '.join(saved_volunteers)},
-            )
             login(request, user)
             return redirect('signup_success')
     else:
@@ -273,10 +243,6 @@ def volunteer_dashboard(request):
                         volunteer.save()
                         new_names.append(volunteer.full_name)
 
-                _auto_notify(
-                    WhatsAppNotificationType.REGISTRATIONS,
-                    extra_payload={'missionario': ', '.join(new_names)},
-                )
                 messages.success(request, 'Perfil missionário criado com sucesso.')
                 return redirect('volunteer_dashboard')
         else:
@@ -312,10 +278,6 @@ def volunteer_dashboard(request):
                 messages.error(request, 'Não foi possível atualizar um cadastro de outro usuário.')
             else:
                 formset.save()
-                _auto_notify(
-                    WhatsAppNotificationType.REGISTRATIONS,
-                    extra_payload={'missionario': request.user.get_full_name() or request.user.username},
-                )
                 messages.success(request, 'Dados atualizados com sucesso.')
                 return redirect('volunteer_dashboard')
     else:
@@ -403,10 +365,6 @@ def volunteer_payment_upload(request, payment_id):
         payment.confirmed_by = None
         payment.confirmed_at = None
         payment.save()
-        _auto_notify(
-            WhatsAppNotificationType.FINANCIAL,
-            extra_payload={'mensagem': f'Comprovante de {payment.get_payment_type_display()} enviado por {payment.volunteer.full_name}. Aguarda conferência.'},
-        )
         messages.success(request, f'Comprovante de {payment.get_payment_type_display()} enviado.')
     else:
         messages.error(request, f'Não foi possível enviar o comprovante de {payment.get_payment_type_display()}.')
@@ -432,10 +390,6 @@ def volunteer_donation_receipt_upload(request, volunteer_id):
         donation_receipt = form.save(commit=False)
         donation_receipt.volunteer = volunteer
         donation_receipt.save()
-        _auto_notify(
-            WhatsAppNotificationType.FINANCIAL,
-            extra_payload={'mensagem': f'Comprovante de doação enviado por {donation_receipt.volunteer.full_name}. Aguarda conferência.'},
-        )
         messages.success(request, 'Comprovante de doação enviado.')
     else:
         messages.error(request, 'Não foi possível enviar o comprovante de doação.')
@@ -497,15 +451,6 @@ def volunteer_documentation_upload(request, volunteer_id):
             uploaded_docs.append('Apólice de seguro')
         if 'vaccination_card_document' in request.FILES:
             uploaded_docs.append('Carteira de vacinação')
-        if uploaded_docs:
-            docs_str = ', '.join(uploaded_docs)
-            _auto_notify(
-                WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
-                extra_payload={
-                    'missionario': volunteer.full_name,
-                    'documentos_pendentes': docs_str,
-                },
-            )
         messages.success(request, f'Documentação de {volunteer.full_name} atualizada.')
     else:
         messages.error(request, f'Não foi possível atualizar a documentação de {volunteer.full_name}.')
@@ -556,10 +501,6 @@ def financial_dashboard(request):
             financial_transaction = form.save(commit=False)
             financial_transaction.created_by = request.user
             financial_transaction.save()
-            _auto_notify(
-                WhatsAppNotificationType.FINANCIAL,
-                extra_payload={'mensagem': f'{financial_transaction.get_transaction_type_display()}: {financial_transaction.category} - R$ {financial_transaction.amount}'},
-            )
             messages.success(request, 'Lançamento financeiro cadastrado com sucesso.')
             return redirect('financial_dashboard')
     else:
@@ -700,11 +641,6 @@ def expense_registration_dashboard(request):
             expense.transaction_type = 'saida'
             expense.created_by = request.user
             expense.save()
-            action_label = 'atualizada' if transaction_id else 'registrada'
-            _auto_notify(
-                WhatsAppNotificationType.FINANCIAL,
-                extra_payload={'mensagem': f'Despesa {action_label}: {expense.category} - R$ {expense.amount} (por {request.user.get_full_name() or request.user.username})'},
-            )
             messages.success(request, 'Despesa registrada com sucesso.' if not transaction_id else 'Despesa atualizada com sucesso.')
             return redirect('expense_registration_dashboard')
     else:
@@ -727,294 +663,6 @@ def expense_registration_dashboard(request):
     return render(request, 'registration/expense_registration_dashboard.html', context)
 
 
-def volunteer_pending_documentation_items(volunteer):
-    items = []
-    if not volunteer.signed_registration_document:
-        items.append('ficha assinada')
-    if not volunteer.insurance_policy_document:
-        items.append('apólice de seguro')
-    if not volunteer.vaccination_card_document:
-        items.append('carteira de vacinação')
-    return items
-
-
-def send_documentation_charge(request, volunteer, charge_template_text, sent_by):
-    pending_items = volunteer_pending_documentation_items(volunteer)
-    resolved_phone = whatsapp.resolve_user_phone(volunteer.registration.user)
-    normalized_phone = whatsapp.normalize_phone_number(resolved_phone)
-    if not pending_items:
-        return {
-            'volunteer': volunteer.full_name,
-            'ok': False,
-            'error_message': 'Missionário sem documentação pendente.',
-            'phone': normalized_phone or resolved_phone,
-            'message': '',
-        }
-
-    payload = {
-        **whatsapp.template_context(sent_by=sent_by),
-        'missionario': volunteer.full_name,
-        'documentos_pendentes': ', '.join(pending_items),
-        'link_documentacao': request.build_absolute_uri('/minha-inscricao/documentacao/'),
-    }
-    message_text = whatsapp.render_message(charge_template_text, payload)
-    if normalized_phone:
-        ok, error_message = whatsapp.send_message_to_phone(normalized_phone, message_text, sent_by=sent_by)
-    else:
-        ok = False
-        error_message = 'Telefone inválido ou ausente.'
-
-    return {
-        'volunteer': volunteer.full_name,
-        'ok': ok,
-        'error_message': error_message,
-        'phone': normalized_phone or resolved_phone,
-        'message': message_text,
-    }
-
-
-@user_passes_test(can_manage_whatsapp, login_url='login')
-def whatsapp_dashboard(request):
-    config = WhatsAppConfig.get()
-    whatsapp.ensure_default_templates()
-    config_form = WhatsAppConfigForm(instance=config)
-    initial_message = config.default_message or 'Olá! Esta é uma notificação da Missão Andrews.'
-    message_form = WhatsAppMessageForm(initial={'message': initial_message})
-    selected_notification_type = request.POST.get('notification_type') or WhatsAppNotificationType.GENERAL
-    default_charge_delay_seconds = max(0.0, float(getattr(settings, 'WHATSAPP_DOCUMENTATION_SEND_DELAY_SECONDS', 2) or 0))
-    charge_template_text = whatsapp.get_template_message(WhatsAppNotificationType.DOCUMENTATION)
-    charge_delay_seconds = default_charge_delay_seconds
-    charge_results = []
-    charge_message_sent = ''
-    open_charge_modal = False
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-
-        if action == 'save_config':
-            config_form = WhatsAppConfigForm(request.POST, instance=config)
-            if config_form.is_valid():
-                config_form.save()
-                messages.success(request, 'Configurações de WhatsApp salvas com sucesso.')
-                return redirect('whatsapp_dashboard')
-            message_form = WhatsAppMessageForm(initial={'message': request.POST.get('default_message') or initial_message})
-
-        elif action == 'save_recipients_templates':
-            for user in User.objects.filter(is_active=True):
-                preference, _ = WhatsAppRecipientPreference.objects.get_or_create(user=user)
-                prefix = f'user_{user.id}'
-                preference.phone_number = request.POST.get(f'{prefix}_phone', '').strip()
-                preference.notify_registrations = request.POST.get(f'{prefix}_registrations') == 'on'
-                preference.notify_financial = request.POST.get(f'{prefix}_financial') == 'on'
-                preference.notify_documentation = request.POST.get(f'{prefix}_documentation') == 'on'
-                preference.notify_documentation_notification = request.POST.get(f'{prefix}_documentation_notification') == 'on'
-                preference.notify_general = request.POST.get(f'{prefix}_general') == 'on'
-                preference.notify_test = request.POST.get(f'{prefix}_test') == 'on'
-                preference.save()
-
-            _editable_template_types = {
-                WhatsAppNotificationType.REGISTRATIONS,
-                WhatsAppNotificationType.FINANCIAL,
-                WhatsAppNotificationType.DOCUMENTATION,
-                WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
-                WhatsAppNotificationType.GENERAL,
-                WhatsAppNotificationType.TEST,
-            }
-            for notification_type in _editable_template_types:
-                template_text = request.POST.get(f'template_{notification_type}', '').strip()
-                if template_text:
-                    WhatsAppTemplate.objects.update_or_create(
-                        notification_type=notification_type,
-                        defaults={'message_text': template_text},
-                    )
-
-            messages.success(request, 'Destinatários e templates salvos com sucesso.')
-            return redirect('whatsapp_dashboard')
-
-        elif action == 'send_message':
-            message_form = WhatsAppMessageForm(request.POST)
-            if message_form.is_valid():
-                sent_by = request.user.get_full_name() or request.user.username
-                payload = whatsapp.template_context(sent_by=sent_by, message=message_form.cleaned_data['message'])
-                results, _message = whatsapp.send_template_notification(selected_notification_type, payload=payload, sent_by=sent_by)
-                sent_count = sum(1 for _user, ok, _error_message in results if ok)
-                failed_count = sum(1 for _user, ok, _error_message in results if not ok)
-                error_message = 'Nenhum destinatário marcado para este tipo de notificação.'
-                if failed_count:
-                    error_message = '; '.join(f'{user.username}: {message}' for user, _ok, message in results[:4])
-                if sent_count:
-                    messages.success(request, 'Notificação enviada com sucesso para o WhatsApp.')
-                    return redirect('whatsapp_dashboard')
-                messages.error(request, f'Falha ao enviar notificação: {error_message}')
-
-        elif action == 'send_test':
-            sent_by = request.user.get_full_name() or request.user.username
-            payload = whatsapp.template_context(sent_by=sent_by, message='Teste de configuração do WhatsApp.')
-            results, _message = whatsapp.send_template_notification(WhatsAppNotificationType.TEST, payload=payload, sent_by=sent_by)
-            sent_count = sum(1 for _user, ok, _error_message in results if ok)
-            error_message = 'Nenhum destinatário marcado em Teste.'
-            if sent_count:
-                messages.success(request, 'Mensagem de teste enviada com sucesso para o WhatsApp.')
-            else:
-                messages.error(request, f'Falha ao enviar teste: {error_message}')
-            return redirect('whatsapp_dashboard')
-
-        elif action == 'send_message_single_to_phone':
-            phone = (request.POST.get('phone') or '').strip()
-            message_text = (request.POST.get('message') or '').strip()
-            notification_type = (request.POST.get('notification_type') or '').strip()
-            recipient_name = (request.POST.get('recipient_name') or '').strip()
-            sent_by = request.user.get_full_name() or request.user.username
-            try:
-                if not phone or not message_text:
-                    return JsonResponse({'ok': False, 'error': 'Dados inválidos.'})
-                normalized = whatsapp.normalize_phone_number(phone)
-                if not normalized:
-                    return JsonResponse({'ok': False, 'error': 'Telefone inválido.'})
-                payload = whatsapp.template_context(sent_by=sent_by, message=message_text)
-                if recipient_name:
-                    payload['usuario'] = recipient_name
-                if notification_type == WhatsAppNotificationType.TEST:
-                    rendered = whatsapp.render_message(
-                        whatsapp.get_template_message(notification_type),
-                        payload,
-                    )
-                else:
-                    rendered = whatsapp.render_message(message_text, payload)
-                ok, error = whatsapp.send_message_to_phone(normalized, rendered, sent_by=sent_by)
-                return JsonResponse({'ok': ok, 'error': error or ''})
-            except Exception as exc:
-                logger.exception('Erro ao enviar mensagem manual: %s', exc)
-                return JsonResponse({'ok': False, 'error': str(exc)})
-
-        elif action == 'charge_documentation_single':
-            sent_by = request.user.get_full_name() or request.user.username
-            submitted_charge_template = (request.POST.get('charge_template') or '').strip()
-            if submitted_charge_template:
-                charge_template_text = submitted_charge_template
-
-            WhatsAppTemplate.objects.update_or_create(
-                notification_type=WhatsAppNotificationType.DOCUMENTATION,
-                defaults={'message_text': charge_template_text},
-            )
-            try:
-                volunteer = get_object_or_404(
-                    Volunteer.objects.select_related('registration__user'),
-                    pk=request.POST.get('volunteer_id'),
-                )
-                return JsonResponse(send_documentation_charge(request, volunteer, charge_template_text, sent_by))
-            except Exception as exc:
-                logger.exception('Erro ao enviar cobranca de documentacao individual: %s', exc)
-                return JsonResponse({'volunteer': '-', 'ok': False, 'error_message': str(exc), 'phone': '', 'message': ''}, status=200)
-
-        elif action == 'charge_documentation':
-            sent_by = request.user.get_full_name() or request.user.username
-            selected_ids = request.POST.getlist('volunteer_ids')
-            submitted_charge_template = (request.POST.get('charge_template') or '').strip()
-            if submitted_charge_template:
-                charge_template_text = submitted_charge_template
-            try:
-                charge_delay_seconds = max(0.0, float((request.POST.get('charge_delay_seconds') or '').replace(',', '.')))
-            except ValueError:
-                charge_delay_seconds = default_charge_delay_seconds
-                messages.error(request, 'Pausa inválida. Foi usada a pausa padrão.')
-
-            WhatsAppTemplate.objects.update_or_create(
-                notification_type=WhatsAppNotificationType.DOCUMENTATION,
-                defaults={'message_text': charge_template_text},
-            )
-            selected_volunteers = (
-                Volunteer.objects
-                .select_related('registration__user')
-                .filter(id__in=selected_ids)
-                .order_by('full_name')
-            )
-            for volunteer in selected_volunteers:
-                result = send_documentation_charge(request, volunteer, charge_template_text, sent_by)
-                if not result['message']:
-                    continue
-                charge_message_sent = result['message']
-                charge_results.append({
-                    'volunteer': volunteer,
-                    'ok': result['ok'],
-                    'error_message': result['error_message'],
-                    'phone': result['phone'],
-                    'message': result['message'],
-                })
-
-            sent_count = sum(1 for item in charge_results if item['ok'])
-            if sent_count:
-                messages.success(request, f'Cobrança de documentação enviada para {sent_count} missionário(s).')
-            elif charge_results:
-                messages.error(request, 'Nenhuma cobrança foi enviada. Confira os telefones e a configuração do WhatsApp.')
-            else:
-                messages.error(request, 'Nenhum missionário pendente foi selecionado.')
-            open_charge_modal = True
-
-    rows = []
-    for user in User.objects.filter(is_active=True).order_by('username'):
-        preference, _ = WhatsAppRecipientPreference.objects.get_or_create(user=user)
-        rows.append({
-            'user': user,
-            'preference': preference,
-            'effective_phone': whatsapp.normalize_phone_number(preference.phone_number or whatsapp.resolve_user_phone(user)),
-        })
-
-    _editable_template_types = {
-        WhatsAppNotificationType.REGISTRATIONS,
-        WhatsAppNotificationType.FINANCIAL,
-        WhatsAppNotificationType.DOCUMENTATION,
-        WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
-        WhatsAppNotificationType.GENERAL,
-        WhatsAppNotificationType.TEST,
-    }
-    templates = []
-    for notification_type, label in WhatsAppNotificationType.choices:
-        if notification_type not in _editable_template_types:
-            continue
-        templates.append({
-            'type': notification_type,
-            'label': label,
-            'message': whatsapp.get_template_message(notification_type),
-        })
-
-    pending_documentation_volunteers = []
-    for volunteer in (
-        Volunteer.objects
-        .select_related('registration__user')
-        .order_by('full_name')
-    ):
-        pending_items = volunteer_pending_documentation_items(volunteer)
-        if pending_items:
-            pending_documentation_volunteers.append({
-                'volunteer': volunteer,
-                'pending_items': pending_items,
-                'phone': whatsapp.normalize_phone_number(
-                    whatsapp.resolve_user_phone(volunteer.registration.user)
-                ),
-            })
-
-    context = {
-        'config_form': config_form,
-        'message_form': message_form,
-        'notification_types': WhatsAppNotificationType.choices,
-        'selected_notification_type': selected_notification_type,
-        'rows': rows,
-        'templates': templates,
-        'pending_documentation_volunteers': pending_documentation_volunteers,
-        'charge_template_text': charge_template_text,
-        'charge_delay_seconds': charge_delay_seconds,
-        'charge_results': charge_results,
-        'charge_message_sent': charge_message_sent,
-        'open_charge_modal': open_charge_modal,
-        'active_provider': whatsapp.active_provider(),
-        'notifications_enabled': whatsapp.notifications_enabled(),
-        'panel_permissions': get_panel_permissions(request.user),
-        'active_menu': 'whatsapp',
-    }
-    return render(request, 'registration/whatsapp_dashboard.html', context)
-
-
 @user_passes_test(can_review_submissions, login_url='login')
 def conference_dashboard(request):
     if request.method == 'POST' and request.POST.get('missionary_payment_id'):
@@ -1026,10 +674,6 @@ def conference_dashboard(request):
             payment.confirmed_by = request.user
             payment.confirmed_at = timezone.now()
             payment.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at', 'updated_at'])
-            _auto_notify(
-                WhatsAppNotificationType.FINANCIAL,
-                extra_payload={'mensagem': f'Comprovante de {payment.get_payment_type_display()} de {payment.volunteer.full_name} conferido.'},
-            )
             messages.success(request, 'Comprovante obrigatorio conferido.')
         elif action == 'unconfirm':
             payment.is_confirmed = False
@@ -1049,10 +693,6 @@ def conference_dashboard(request):
             donation.confirmed_by = request.user
             donation.confirmed_at = timezone.now()
             donation.save(update_fields=['is_confirmed', 'confirmed_by', 'confirmed_at'])
-            _auto_notify(
-                WhatsAppNotificationType.FINANCIAL,
-                extra_payload={'mensagem': f'Doação de {donation.volunteer.full_name} conferida.'},
-            )
             messages.success(request, 'Comprovante de doacao conferido.')
         elif action == 'unconfirm':
             donation.is_confirmed = False
@@ -1086,18 +726,6 @@ def conference_dashboard(request):
             volunteer.save(update_fields=[field_name, 'documentation_reviewed_by', 'documentation_reviewed_at'])
 
             if action == 'confirm':
-                doc_labels = {
-                    'signed_registration': 'Formulário assinado',
-                    'insurance_policy': 'Apólice de seguro',
-                    'vaccination_card': 'Carteira de vacinação',
-                }
-                _auto_notify(
-                    WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION,
-                    extra_payload={
-                        'missionario': volunteer.full_name,
-                        'documentos_pendentes': doc_labels.get(document_type, document_type),
-                    },
-                )
                 messages.success(request, 'Documento conferido.')
             elif action == 'unconfirm':
                 messages.success(request, 'Conferencia do documento removida.')

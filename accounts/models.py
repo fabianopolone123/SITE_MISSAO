@@ -55,7 +55,6 @@ class PanelPermission(models.Model):
     can_view_reports = models.BooleanField('Ver relatórios', default=False)
     can_manage_financial = models.BooleanField('Acessar financeiro', default=False)
     can_register_expenses = models.BooleanField('Registrar despesas', default=False)
-    can_manage_whatsapp = models.BooleanField('Gerenciar WhatsApp', default=False)
     can_manage_permissions = models.BooleanField('Gerenciar permissões', default=False)
     can_review_submissions = models.BooleanField('Conferir documentos e comprovantes', default=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -66,97 +65,6 @@ class PanelPermission(models.Model):
 
     def __str__(self):
         return f'Permissões de {self.user.username}'
-
-
-class WhatsAppConfig(models.Model):
-    class Provider(models.TextChoices):
-        AUTO = '', 'Automático'
-        WAPI = 'wapi', 'W-API (w-api.app)'
-        WEBHOOK = 'webhook', 'Webhook personalizado'
-
-    notifications_enabled = models.BooleanField('Notificações ativadas', default=False)
-    provider = models.CharField('Provider', max_length=10, choices=Provider.choices, blank=True, default='')
-    group_jid = models.CharField('JID do grupo', max_length=100, blank=True, default='')
-    default_message = models.TextField('Mensagem padrão', blank=True, default='')
-    wapi_token = models.CharField('W-API Token', max_length=300, blank=True, default='')
-    wapi_instance = models.CharField('W-API Instance ID', max_length=200, blank=True, default='')
-    wapi_base_url = models.CharField('W-API Base URL', max_length=300, blank=True, default='')
-    webhook_url = models.CharField('Webhook URL', max_length=500, blank=True, default='')
-    webhook_token = models.CharField('Webhook Token (Bearer)', max_length=300, blank=True, default='')
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Configuração WhatsApp'
-        verbose_name_plural = 'Configuração WhatsApp'
-
-    def save(self, *args, **kwargs):
-        self.pk = 1
-        super().save(*args, **kwargs)
-
-    @classmethod
-    def get(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
-
-    def __str__(self):
-        return 'Configuração WhatsApp'
-
-
-class WhatsAppNotificationType(models.TextChoices):
-    REGISTRATIONS = 'registrations', 'Inscrições'
-    FINANCIAL = 'financial', 'Financeiro'
-    DOCUMENTATION = 'documentation', 'Documentação (cobrança)'
-    DOCUMENTATION_NOTIFICATION = 'documentation_notification', 'Documentação (notificação)'
-    GENERAL = 'general', 'Geral'
-    TEST = 'test', 'Teste'
-
-
-class WhatsAppRecipientPreference(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='whatsapp_recipient_preference')
-    phone_number = models.CharField('Número WhatsApp', max_length=32, blank=True, default='')
-    notify_registrations = models.BooleanField('Inscrições', default=False)
-    notify_financial = models.BooleanField('Financeiro', default=False)
-    notify_documentation = models.BooleanField('Documentação (cobrança)', default=False)
-    notify_documentation_notification = models.BooleanField('Documentação (notificação)', default=False)
-    notify_general = models.BooleanField('Geral', default=False)
-    notify_test = models.BooleanField('Teste', default=False)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Destinatário WhatsApp'
-        verbose_name_plural = 'Destinatários WhatsApp'
-
-    def __str__(self):
-        return f'{self.user.username} ({self.phone_number or "sem número"})'
-
-    def enabled_for(self, notification_type):
-        mapping = {
-            WhatsAppNotificationType.REGISTRATIONS: self.notify_registrations,
-            WhatsAppNotificationType.FINANCIAL: self.notify_financial,
-            WhatsAppNotificationType.DOCUMENTATION: self.notify_documentation,
-            WhatsAppNotificationType.DOCUMENTATION_NOTIFICATION: self.notify_documentation_notification,
-            WhatsAppNotificationType.GENERAL: self.notify_general,
-            WhatsAppNotificationType.TEST: self.notify_test,
-        }
-        return mapping.get(notification_type, False)
-
-
-class WhatsAppTemplate(models.Model):
-    notification_type = models.CharField(
-        'Tipo de notificação',
-        max_length=32,
-        choices=WhatsAppNotificationType.choices,
-        unique=True,
-    )
-    message_text = models.TextField('Mensagem')
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Template WhatsApp'
-        verbose_name_plural = 'Templates WhatsApp'
-
-    def __str__(self):
-        return self.get_notification_type_display()
 
 
 class Registration(models.Model):

@@ -11,9 +11,6 @@
     {% if panel_permissions.can_register_expenses %}
         <a class="menu-item {% if active_menu == 'expense_registration' %}active{% endif %}" href="{% url 'expense_registration_dashboard' %}">Registro de despesa</a>
     {% endif %}
-    {% if panel_permissions.can_manage_whatsapp %}
-        <a class="menu-item {% if active_menu == 'whatsapp' %}active{% endif %}" href="{% url 'whatsapp_dashboard' %}">WhatsApp</a>
-    {% endif %}
     {% if panel_permissions.can_review_submissions %}
         <a class="menu-item {% if active_menu == 'conference' %}active{% endif %}" href="{% url 'conference_dashboard' %}">Confer&ecirc;ncia</a>
     {% endif %}

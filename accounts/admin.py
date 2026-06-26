@@ -7,9 +7,6 @@ from .models import (
     PanelPermission,
     Registration,
     Volunteer,
-    WhatsAppConfig,
-    WhatsAppRecipientPreference,
-    WhatsAppTemplate,
 )
 
 
@@ -53,7 +50,6 @@ class PanelPermissionAdmin(admin.ModelAdmin):
         'can_view_reports',
         'can_manage_financial',
         'can_register_expenses',
-        'can_manage_whatsapp',
         'can_manage_permissions',
         'can_review_submissions',
         'updated_at',
@@ -75,28 +71,3 @@ class MissionaryDonationReceiptAdmin(admin.ModelAdmin):
     search_fields = ('volunteer__full_name', 'volunteer__cpf', 'volunteer__email', 'description')
 
 
-@admin.register(WhatsAppConfig)
-class WhatsAppConfigAdmin(admin.ModelAdmin):
-    list_display = ('notifications_enabled', 'provider', 'group_jid', 'updated_at')
-
-
-@admin.register(WhatsAppRecipientPreference)
-class WhatsAppRecipientPreferenceAdmin(admin.ModelAdmin):
-    list_display = (
-        'user',
-        'phone_number',
-        'notify_registrations',
-        'notify_financial',
-        'notify_documentation',
-        'notify_documentation_notification',
-        'notify_general',
-        'notify_test',
-        'updated_at',
-    )
-    search_fields = ('user__username', 'user__email', 'phone_number')
-
-
-@admin.register(WhatsAppTemplate)
-class WhatsAppTemplateAdmin(admin.ModelAdmin):
-    list_display = ('notification_type', 'updated_at')
-    search_fields = ('notification_type', 'message_text')
