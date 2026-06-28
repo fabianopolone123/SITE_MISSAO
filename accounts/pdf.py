@@ -399,6 +399,7 @@ def build_registration_pdf(volunteer):
                 checkbox('Educação', volunteer.work_education),
                 checkbox('Apoio geral', volunteer.work_general_help),
                 checkbox('Evangelismo', volunteer.work_evangelism),
+                checkbox('Equipe de apoio', volunteer.work_support_team),
                 checkbox('Outra', volunteer.work_other),
             ]),
             styles['FormBody'],

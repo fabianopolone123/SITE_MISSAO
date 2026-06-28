@@ -475,6 +475,7 @@ def admin_dashboard(request):
         'education_count': volunteers.filter(work_education=True).count(),
         'general_help_count': volunteers.filter(work_general_help=True).count(),
         'evangelism_count': volunteers.filter(work_evangelism=True).count(),
+        'support_team_count': volunteers.filter(work_support_team=True).count(),
         'registrations': registrations.annotate(total_volunteers=Count('volunteers')),
         'volunteers': volunteers,
         'gender_summary': volunteers.values('gender').annotate(total=Count('id')).order_by('gender'),
@@ -1076,6 +1077,7 @@ def reports_dashboard(request):
         {'label': 'Educação', 'field': 'work_education', 'volunteers': []},
         {'label': 'Apoio geral', 'field': 'work_general_help', 'volunteers': []},
         {'label': 'Evangelismo', 'field': 'work_evangelism', 'volunteers': []},
+        {'label': 'Equipe de apoio', 'field': 'work_support_team', 'volunteers': []},
         {'label': 'Outra', 'field': 'work_other', 'volunteers': []},
     ]
 

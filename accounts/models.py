@@ -116,6 +116,7 @@ class Volunteer(models.Model):
     work_education = models.BooleanField('Educação', default=False)
     work_general_help = models.BooleanField('Apoio geral', default=False)
     work_evangelism = models.BooleanField('Evangelismo', default=False)
+    work_support_team = models.BooleanField('Equipe de apoio', default=False)
     work_other = models.BooleanField('Outra', default=False)
     work_other_description = models.CharField('Outra área de atuação', max_length=160, blank=True)
     education = models.CharField('Qual a sua formação ou experiência principal?', max_length=180, blank=True)
@@ -210,6 +211,33 @@ class Volunteer(models.Model):
 
     def __str__(self):
         return self.full_name
+
+    @property
+    def work_area_labels(self):
+        labels = []
+
+        if self.work_health:
+            labels.append('Saúde')
+        if self.work_education:
+            labels.append('Educação')
+        if self.work_general_help:
+            labels.append('Apoio geral')
+        if self.work_evangelism:
+            labels.append('Evangelismo')
+        if self.work_support_team:
+            labels.append('Equipe de apoio')
+        if self.work_other:
+            labels.append(
+                f'Outra: {self.work_other_description}'
+                if self.work_other_description
+                else 'Outra'
+            )
+
+        return labels
+
+    @property
+    def work_areas_display(self):
+        return ', '.join(self.work_area_labels) or '-'
 
     @property
     def has_signed_registration_document(self):

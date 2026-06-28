@@ -94,6 +94,7 @@ class VolunteerForm(forms.ModelForm):
             'work_education',
             'work_general_help',
             'work_evangelism',
+            'work_support_team',
             'work_other',
         ]:
             self.fields[field_name].widget.attrs['class'] = 'checkbox-control'
