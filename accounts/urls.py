@@ -24,6 +24,8 @@ path('painel/prestacao-contas/', views.prestacao_contas, name='prestacao_contas'
     path('painel/conferencia/', views.conference_dashboard, name='conference_dashboard'),
     path('painel/permissoes/', views.permissions_dashboard, name='permissions_dashboard'),
     path('painel/relatorios/', views.reports_dashboard, name='reports_dashboard'),
+    path('painel/relatorios/pdf/fichas-medicas/', views.reports_medical_pdf, name='reports_medical_pdf'),
+    path('painel/relatorios/pdf/passagens-barco/', views.reports_boat_passenger_pdf, name='reports_boat_passenger_pdf'),
     path('painel/inscricao/<int:registration_id>/redefinir-senha/', views.admin_reset_password, name='admin_reset_password'),
     path('trocar-senha/', views.change_password, name='change_password'),
 ]

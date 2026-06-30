@@ -443,3 +443,131 @@ def build_registration_pdf(volunteer):
     document.build(story)
     buffer.seek(0)
     return buffer.getvalue()
+
+
+def build_volunteer_medical_report_pdf(volunteers):
+    buffer = BytesIO()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.2 * cm,
+        bottomMargin=1.2 * cm,
+        title='Ficha medica e informacoes pessoais - Missao Andrews',
+        pageCompression=0,
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='HeaderTitle', parent=styles['Title'], fontSize=16, leading=18, textColor=GREEN_DARK, alignment=1))
+    styles.add(ParagraphStyle(name='HeaderText', parent=styles['BodyText'], fontSize=9, leading=11, textColor=TEXT, alignment=1))
+    styles.add(ParagraphStyle(name='HeaderMotto', parent=styles['BodyText'], fontSize=10, leading=12, textColor=ORANGE, alignment=1))
+    styles.add(ParagraphStyle(name='FormTitle', parent=styles['Heading1'], fontSize=15, leading=18, textColor=GREEN_DARK, alignment=1, spaceAfter=12))
+    styles.add(ParagraphStyle(name='VolunteerTitle', parent=styles['Heading2'], fontSize=13, leading=15, textColor=GREEN_DARK, spaceAfter=8))
+    styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Heading2'], fontSize=11, leading=13, textColor=colors.white, backColor=GREEN, borderPadding=5, spaceBefore=10, spaceAfter=8))
+    styles.add(ParagraphStyle(name='FormBody', parent=styles['BodyText'], fontSize=9, leading=12, textColor=TEXT, spaceAfter=4))
+
+    story = [
+        first_page_header(styles),
+        Spacer(1, 12),
+        Paragraph('FICHA MEDICA E INFORMACOES PESSOAIS', styles['FormTitle']),
+    ]
+
+    volunteer_list = list(volunteers)
+    for index, volunteer in enumerate(volunteer_list):
+        story.extend([
+            section_title('MISSIONARIO', styles),
+            Paragraph(text(volunteer.full_name), styles['VolunteerTitle']),
+            field_line('CPF', volunteer.cpf, styles),
+            field_line('Documento de identidade', volunteer.identity_document, styles),
+            field_line('Data de nascimento', volunteer.birth_date.strftime('%d/%m/%Y'), styles),
+            field_line('Genero', volunteer.get_gender_display(), styles),
+            field_line('Telefone', volunteer.phone, styles),
+            field_line('E-mail', volunteer.email, styles),
+            field_line('Endereco completo', volunteer.full_address, styles),
+            field_line('Responsavel (se menor)', volunteer.guardian_name, styles),
+            field_line('Telefone do responsavel', volunteer.guardian_phone, styles),
+            section_title('Contato de emergencia', styles),
+            field_line('Nome', volunteer.emergency_contact_name, styles),
+            field_line('Parentesco', volunteer.emergency_contact_relationship, styles),
+            field_line('Telefone', volunteer.emergency_contact_phone, styles),
+            section_title('Informacoes medicas', styles),
+            field_line('Possui alergia?', display_choice(volunteer.has_allergies), styles),
+            field_line('Alergias', volunteer.allergies, styles),
+            field_line('Usa medicamento continuo?', display_choice(volunteer.has_continuous_medication), styles),
+            field_line('Medicamentos em uso', volunteer.medication_in_use, styles),
+            field_line('Condicoes medicas relevantes', volunteer.special_notes, styles),
+            field_line('Restricao alimentar?', display_choice(volunteer.has_food_restriction), styles),
+            field_line('Restricoes alimentares', volunteer.food_restrictions, styles),
+            section_title('Logistica e atuacao', styles),
+            field_line('Data do voo', volunteer.flight_date.strftime('%d/%m/%Y') if volunteer.flight_date else '', styles),
+            field_line('Hora do voo', volunteer.flight_time.strftime('%H:%M') if volunteer.flight_time else '', styles),
+            field_line('Areas de atuacao', volunteer.work_areas_display, styles),
+            field_line('Formacao principal', volunteer.education, styles),
+            field_line('Outras habilidades', volunteer.other_skills, styles),
+        ])
+        if index < len(volunteer_list) - 1:
+            story.append(PageBreak())
+
+    document.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def build_boat_passenger_list_pdf(volunteers):
+    volunteer_list = list(volunteers)
+    buffer = BytesIO()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.2 * cm,
+        bottomMargin=1.2 * cm,
+        title='Lista para passagens do barco - Missao Andrews',
+        pageCompression=0,
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='HeaderTitle', parent=styles['Title'], fontSize=16, leading=18, textColor=GREEN_DARK, alignment=1))
+    styles.add(ParagraphStyle(name='HeaderText', parent=styles['BodyText'], fontSize=9, leading=11, textColor=TEXT, alignment=1))
+    styles.add(ParagraphStyle(name='HeaderMotto', parent=styles['BodyText'], fontSize=10, leading=12, textColor=ORANGE, alignment=1))
+    styles.add(ParagraphStyle(name='FormTitle', parent=styles['Heading1'], fontSize=15, leading=18, textColor=GREEN_DARK, alignment=1, spaceAfter=12))
+    styles.add(ParagraphStyle(name='FormBody', parent=styles['BodyText'], fontSize=9, leading=12, textColor=TEXT, spaceAfter=4))
+    styles.add(ParagraphStyle(name='TableHeader', parent=styles['BodyText'], fontSize=9, leading=11, textColor=colors.white, alignment=1))
+    styles.add(ParagraphStyle(name='TableCell', parent=styles['BodyText'], fontSize=9, leading=12, textColor=TEXT))
+
+    rows = [[
+        Paragraph('NOME COMPLETO', styles['TableHeader']),
+        Paragraph('CPF', styles['TableHeader']),
+    ]]
+    for volunteer in volunteer_list:
+        rows.append([
+            Paragraph(text(volunteer.full_name), styles['TableCell']),
+            Paragraph(text(volunteer.cpf), styles['TableCell']),
+        ])
+
+    table = Table(rows, colWidths=[12.5 * cm, 5 * cm], repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), GREEN),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, GREEN_SOFT]),
+        ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+        ('INNERGRID', (0, 0), (-1, -1), 0.4, LINE),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+
+    story = [
+        first_page_header(styles),
+        Spacer(1, 12),
+        Paragraph('LISTA PARA COMPRA DAS PASSAGENS DO BARCO', styles['FormTitle']),
+        Paragraph(f'Total de missionarios: {len(volunteer_list)}', styles['FormBody']),
+        table,
+    ]
+
+    document.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()

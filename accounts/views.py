@@ -39,7 +39,12 @@ from .models import (
     Registration,
     Volunteer,
 )
-from .pdf import build_prestacao_contas_pdf, build_registration_pdf
+from .pdf import (
+    build_boat_passenger_list_pdf,
+    build_prestacao_contas_pdf,
+    build_registration_pdf,
+    build_volunteer_medical_report_pdf,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -410,6 +415,28 @@ def volunteer_registration_pdf(request, volunteer_id):
     filename = f'ficha-inscricao-{slugify(volunteer.full_name)}.pdf'
     response = HttpResponse(build_registration_pdf(volunteer), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@user_passes_test(can_view_reports, login_url='login')
+def reports_medical_pdf(request):
+    volunteers = Volunteer.objects.select_related('registration__user').order_by('full_name')
+    response = HttpResponse(
+        build_volunteer_medical_report_pdf(volunteers),
+        content_type='application/pdf',
+    )
+    response['Content-Disposition'] = 'attachment; filename="fichas-medicas-e-informacoes-pessoais.pdf"'
+    return response
+
+
+@user_passes_test(can_view_reports, login_url='login')
+def reports_boat_passenger_pdf(request):
+    volunteers = Volunteer.objects.order_by('full_name')
+    response = HttpResponse(
+        build_boat_passenger_list_pdf(volunteers),
+        content_type='application/pdf',
+    )
+    response['Content-Disposition'] = 'attachment; filename="lista-passagens-barco.pdf"'
     return response
 
 

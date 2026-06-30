@@ -85,6 +85,8 @@
             text-decoration: none; transition: background .15s;
         }
         .pdf-btn:hover { background: #1d442c; }
+        .report-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px 0; }
+        .report-actions .pdf-btn { padding: 9px 16px; font-size: 0.85rem; }
 
         .empty-note { color: #647067; font-size: 0.9rem; padding: 16px 0; }
 
@@ -126,6 +128,11 @@
         </header>
 
         {% include "registration/partials/admin_menu.html" %}
+
+        <div class="report-actions">
+            <a class="pdf-btn" href="{% url 'reports_medical_pdf' %}">&#8675; Ficha m&eacute;dica e pessoal</a>
+            <a class="pdf-btn" href="{% url 'reports_boat_passenger_pdf' %}">&#8675; CPF e nome para passagens</a>
+        </div>
 
         {% if has_financial_access %}
         <!-- ═══ PRESTAÇÃO DE CONTAS ═══ -->
