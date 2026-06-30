@@ -35,6 +35,8 @@
         .hero-card--green .val { color: #2f6844; }
         .hero-card--red { border-color: #c0392b; background: #fdf2f2; }
         .hero-card--red .val { color: #c0392b; }
+        .hero-card--blue { border-color: #2563eb; background: #eff6ff; }
+        .hero-card--blue .val { color: #2563eb; }
 
         /* ── Sub cards ── */
         .sub-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
@@ -151,7 +153,7 @@
                     <div class="lbl">Sa&iacute;das totais</div>
                     <div class="val">R$&nbsp;{{ total_expenses_brl }}</div>
                 </div>
-                <div class="hero-card {% if balance >= 0 %}hero-card--green{% else %}hero-card--red{% endif %}">
+                <div class="hero-card hero-card--blue">
                     <div class="lbl">Saldo</div>
                     <div class="val">R$&nbsp;{{ balance_brl }}</div>
                 </div>

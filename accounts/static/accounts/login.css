@@ -674,6 +674,18 @@ button:focus,
     border-top: 4px solid var(--orange);
 }
 
+.report-card--green {
+    border-top-color: var(--green);
+}
+
+.report-card--red {
+    border-top-color: #c0392b;
+}
+
+.report-card--blue {
+    border-top-color: #2563eb;
+}
+
 .report-card span {
     color: var(--muted);
     font-size: 0.9rem;
@@ -682,6 +694,18 @@ button:focus,
 .report-card strong {
     font-size: 2rem;
     color: var(--green-dark);
+}
+
+.report-card--green strong {
+    color: var(--green-dark);
+}
+
+.report-card--red strong {
+    color: #c0392b;
+}
+
+.report-card--blue strong {
+    color: #2563eb;
 }
 
 .admin-section {

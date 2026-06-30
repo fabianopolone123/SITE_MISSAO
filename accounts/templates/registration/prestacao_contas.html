@@ -37,6 +37,8 @@
         .pc-hero-card--positive .pc-value { color: #2f6844; }
         .pc-hero-card--negative { border-color: #c0392b; background: #fdf2f2; }
         .pc-hero-card--negative .pc-value { color: #c0392b; }
+        .pc-hero-card--balance { border-color: #2563eb; background: #eff6ff; }
+        .pc-hero-card--balance .pc-value { color: #2563eb; }
 
         .pc-sub-grid {
             display: grid;
@@ -166,7 +168,7 @@
                 <div class="pc-label">Sa&iacute;das totais</div>
                 <div class="pc-value">R$ {{ total_expenses_brl }}</div>
             </div>
-            <div class="pc-hero-card {% if balance >= 0 %}pc-hero-card--positive{% else %}pc-hero-card--negative{% endif %}">
+            <div class="pc-hero-card pc-hero-card--balance">
                 <div class="pc-label">Saldo</div>
                 <div class="pc-value">R$ {{ balance_brl }}</div>
             </div>

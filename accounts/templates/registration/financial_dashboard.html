@@ -33,9 +33,9 @@
         {% endif %}
 
         <section class="report-grid">
-            <article class="report-card"><span>Entradas totais</span><strong>R$ {{ total_income_brl }}</strong></article>
-            <article class="report-card"><span>Sa&iacute;das totais</span><strong>R$ {{ total_expenses_brl }}</strong></article>
-            <article class="report-card {% if balance < 0 %}report-card--danger{% endif %}"><span>Saldo</span><strong>R$ {{ balance_brl }}</strong></article>
+            <article class="report-card report-card--green"><span>Entradas totais</span><strong>R$ {{ total_income_brl }}</strong></article>
+            <article class="report-card report-card--red"><span>Sa&iacute;das totais</span><strong>R$ {{ total_expenses_brl }}</strong></article>
+            <article class="report-card report-card--blue"><span>Saldo</span><strong>R$ {{ balance_brl }}</strong></article>
             <article class="report-card"><span>Inscri&ccedil;&otilde;es</span><strong>R$ {{ participation_total_brl }}</strong></article>
             <article class="report-card"><span>Cestas</span><strong>R$ {{ baskets_total_brl }}</strong></article>
             <article class="report-card"><span>Doa&ccedil;&otilde;es</span><strong>R$ {{ donations_total_brl }}</strong></article>
