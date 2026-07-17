@@ -640,34 +640,32 @@ def financial_dashboard(request):
 
 @user_passes_test(can_register_expenses, login_url='login')
 def expense_registration_dashboard(request):
+    is_admin = request.user.is_superuser
     editing_transaction = None
     edit_id = request.GET.get('editar')
 
+    def get_editable_expense(pk):
+        lookup = {'pk': pk, 'transaction_type': 'saida'}
+        if not is_admin:
+            lookup['created_by'] = request.user
+        return get_object_or_404(FinancialTransaction, **lookup)
+
     if edit_id:
-        editing_transaction = get_object_or_404(
-            FinancialTransaction,
-            pk=edit_id,
-            created_by=request.user,
-            transaction_type='saida',
-        )
+        editing_transaction = get_editable_expense(edit_id)
 
     if request.method == 'POST':
         transaction_id = request.POST.get('transaction_id')
 
         if transaction_id:
-            editing_transaction = get_object_or_404(
-                FinancialTransaction,
-                pk=transaction_id,
-                created_by=request.user,
-                transaction_type='saida',
-            )
+            editing_transaction = get_editable_expense(transaction_id)
 
         form = ExpenseRegistrationForm(request.POST, request.FILES, instance=editing_transaction)
 
         if form.is_valid():
             expense = form.save(commit=False)
             expense.transaction_type = 'saida'
-            expense.created_by = request.user
+            if not transaction_id:
+                expense.created_by = request.user
             expense.save()
             messages.success(request, 'Despesa registrada com sucesso.' if not transaction_id else 'Despesa atualizada com sucesso.')
             return redirect('expense_registration_dashboard')
@@ -676,14 +674,18 @@ def expense_registration_dashboard(request):
 
     transactions = (
         FinancialTransaction.objects
-        .filter(created_by=request.user, transaction_type='saida')
+        .filter(transaction_type='saida')
+        .select_related('created_by')
         .order_by('-transaction_date', '-created_at')
     )
+    if not is_admin:
+        transactions = transactions.filter(created_by=request.user)
 
     context = {
         'form': form,
         'transactions': transactions,
         'editing_transaction': editing_transaction,
+        'is_admin': is_admin,
         'expense_categories_json': json.dumps(EXPENSE_CATEGORIES, ensure_ascii=False),
         'panel_permissions': get_panel_permissions(request.user),
         'active_menu': 'expense_registration',
