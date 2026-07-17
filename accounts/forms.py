@@ -317,7 +317,7 @@ class ExpenseRegistrationForm(forms.ModelForm):
         }
         labels = {
             'category': 'Categoria',
-            'description': 'DescriÃ§Ã£o',
+            'description': 'Descrição',
             'amount': 'Valor',
             'transaction_date': 'Data',
             'receipt': 'Anexar comprovante',
@@ -342,4 +342,4 @@ class ExpenseRegistrationForm(forms.ModelForm):
         try:
             return Decimal(normalized_amount)
         except InvalidOperation:
-            raise forms.ValidationError('Informe um valor vÃ¡lido no formato 1.234,56.')
+            raise forms.ValidationError('Informe um valor válido no formato 1.234,56.')

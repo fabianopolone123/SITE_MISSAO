@@ -693,6 +693,19 @@ def expense_registration_dashboard(request):
     return render(request, 'registration/expense_registration_dashboard.html', context)
 
 
+@user_passes_test(can_register_expenses, login_url='login')
+@require_POST
+def expense_delete(request, transaction_id):
+    is_admin = request.user.is_superuser or can_manage_financial(request.user)
+    lookup = {'pk': transaction_id, 'transaction_type': 'saida'}
+    if not is_admin:
+        lookup['created_by'] = request.user
+    expense = get_object_or_404(FinancialTransaction, **lookup)
+    expense.delete()
+    messages.success(request, 'Despesa excluída com sucesso.')
+    return redirect('expense_registration_dashboard')
+
+
 @user_passes_test(can_review_submissions, login_url='login')
 def conference_dashboard(request):
     if request.method == 'POST' and request.POST.get('missionary_payment_id'):

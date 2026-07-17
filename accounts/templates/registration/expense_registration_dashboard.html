@@ -70,7 +70,13 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a class="table-button primary-link-button compact-link-button" href="{% url 'expense_registration_dashboard' %}?editar={{ transaction.id }}">Editar</a>
+                                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                        <a class="table-button primary-link-button compact-link-button" href="{% url 'expense_registration_dashboard' %}?editar={{ transaction.id }}">Editar</a>
+                                        <form method="post" action="{% url 'expense_delete' transaction.id %}" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta despesa?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="table-button primary-link-button compact-link-button" style="background:#b42318;border:none;cursor:pointer;">Excluir</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         {% empty %}
