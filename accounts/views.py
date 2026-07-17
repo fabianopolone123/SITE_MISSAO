@@ -640,7 +640,7 @@ def financial_dashboard(request):
 
 @user_passes_test(can_register_expenses, login_url='login')
 def expense_registration_dashboard(request):
-    is_admin = request.user.is_superuser
+    is_admin = request.user.is_superuser or can_manage_financial(request.user)
     editing_transaction = None
     edit_id = request.GET.get('editar')
 
