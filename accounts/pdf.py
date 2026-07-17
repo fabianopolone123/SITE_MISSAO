@@ -92,6 +92,52 @@ def proportional_image(path, max_width, max_height):
     return FlowImage(str(path), width=image_width * scale, height=image_height * scale)
 
 
+IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+
+
+def scaled_image_from_bytes(data, max_width, max_height):
+    image_width, image_height = ImageReader(BytesIO(data)).getSize()
+    scale = min(max_width / image_width, max_height / image_height)
+    return FlowImage(BytesIO(data), width=image_width * scale, height=image_height * scale)
+
+
+def receipt_flowables(receipt, styles, max_width, max_height):
+    """Transforma um comprovante (imagem ou PDF) em flowables do reportlab.
+
+    Imagens sao embutidas diretamente; PDFs sao rasterizados pagina a pagina
+    com o PyMuPDF, de modo que todo o comprovante fique dentro de um unico
+    documento e os links internos ("Abrir") funcionem em qualquer leitor.
+    """
+    ext = receipt.get('ext', '')
+    path = receipt['path']
+    flowables = []
+
+    try:
+        if ext == '.pdf':
+            import fitz
+
+            with fitz.open(path) as pdf:
+                for page_index, page in enumerate(pdf):
+                    pixmap = page.get_pixmap(dpi=150)
+                    flowables.append(scaled_image_from_bytes(pixmap.tobytes('png'), max_width, max_height))
+                    if page_index < len(pdf) - 1:
+                        flowables.append(PageBreak())
+        elif ext in IMAGE_EXTS:
+            flowables.append(proportional_image(path, max_width, max_height))
+        else:
+            flowables.append(Paragraph('Formato de arquivo nao suportado para exibicao.', styles['FormBody']))
+    except Exception:
+        flowables.append(Paragraph('Nao foi possivel exibir este comprovante.', styles['FormBody']))
+
+    return flowables
+
+
+def receipt_link(index):
+    if not index:
+        return '&#8212;'
+    return f'<a href="#rec_{index}" color="#2f6844"><b>Abrir &#9656;</b></a>'
+
+
 def first_page_header(styles):
     logo_path = Path(settings.BASE_DIR) / 'accounts' / 'static' / 'accounts' / 'images' / 'logo-full-transparent.png'
     logo = proportional_image(logo_path, 4.2 * cm, 3.6 * cm) if logo_path.exists() else Paragraph('', styles['HeaderText'])
@@ -141,6 +187,8 @@ def build_prestacao_contas_pdf(data):
     styles.add(ParagraphStyle(name='TableHeader', parent=styles['BodyText'], fontSize=9, leading=11, textColor=colors.white, alignment=1))
     styles.add(ParagraphStyle(name='TableCell', parent=styles['BodyText'], fontSize=8, leading=11, textColor=TEXT))
     styles.add(ParagraphStyle(name='TableCellRight', parent=styles['BodyText'], fontSize=8, leading=11, textColor=TEXT, alignment=2))
+    styles.add(ParagraphStyle(name='TableCellCenter', parent=styles['BodyText'], fontSize=8, leading=11, textColor=TEXT, alignment=1))
+    styles.add(ParagraphStyle(name='ReceiptCaption', parent=styles['Heading2'], fontSize=11, leading=14, textColor=colors.white, backColor=GREEN, borderPadding=6, spaceAfter=10))
     styles.add(ParagraphStyle(name='SummaryValue', parent=styles['BodyText'], fontSize=12, leading=14, textColor=GREEN_DARK, alignment=1))
     styles.add(ParagraphStyle(name='SummaryLabel', parent=styles['BodyText'], fontSize=8, leading=10, textColor=MUTED, alignment=1))
 
@@ -244,6 +292,7 @@ def build_prestacao_contas_pdf(data):
             Paragraph('CATEGORIA', styles['TableHeader']),
             Paragraph('DESCRIÇÃO', styles['TableHeader']),
             Paragraph('VALOR', styles['TableHeader']),
+            Paragraph('COMPROVANTE', styles['TableHeader']),
         ]]
         for entry in manual_expense_entries:
             date_str = entry.transaction_date.strftime('%d/%m/%Y') if entry.transaction_date else '-'
@@ -253,8 +302,9 @@ def build_prestacao_contas_pdf(data):
                 Paragraph(text(entry.category), styles['TableCell']),
                 Paragraph(text(entry.description), styles['TableCell']),
                 Paragraph(f'R$ {val}', styles['TableCellRight']),
+                Paragraph(receipt_link(getattr(entry, 'receipt_index', None)), styles['TableCellCenter']),
             ])
-        exp_table = Table(exp_rows, colWidths=[2.5 * cm, 3.5 * cm, 8 * cm, 3 * cm])
+        exp_table = Table(exp_rows, colWidths=[2.2 * cm, 3 * cm, 6.8 * cm, 2.5 * cm, 2.5 * cm], repeatRows=1)
         exp_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), GREEN),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, GREEN_SOFT]),
@@ -267,6 +317,40 @@ def build_prestacao_contas_pdf(data):
         ]))
     else:
         exp_table = Paragraph('Nenhuma saída registrada.', styles['FormBody'])
+
+    # Income receipts table (entradas com comprovante conferido)
+    income_receipt_rows = data.get('income_receipt_rows', [])
+    if income_receipt_rows:
+        inc_rows = [[
+            Paragraph('DATA', styles['TableHeader']),
+            Paragraph('MISSIONÁRIO', styles['TableHeader']),
+            Paragraph('TIPO', styles['TableHeader']),
+            Paragraph('VALOR', styles['TableHeader']),
+            Paragraph('COMPROVANTE', styles['TableHeader']),
+        ]]
+        for row in income_receipt_rows:
+            date_value = row.get('date')
+            date_str = date_value.strftime('%d/%m/%Y') if hasattr(date_value, 'strftime') else '-'
+            inc_rows.append([
+                Paragraph(date_str, styles['TableCell']),
+                Paragraph(text(row['name']), styles['TableCell']),
+                Paragraph(text(row['type']), styles['TableCell']),
+                Paragraph(f'R$ {row["amount_brl"]}', styles['TableCellRight']),
+                Paragraph(receipt_link(row.get('receipt_index')), styles['TableCellCenter']),
+            ])
+        inc_table = Table(inc_rows, colWidths=[2.5 * cm, 6.5 * cm, 2.5 * cm, 3 * cm, 2.5 * cm], repeatRows=1)
+        inc_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), GREEN),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, GREEN_SOFT]),
+            ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+            ('INNERGRID', (0, 0), (-1, -1), 0.4, LINE),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+    else:
+        inc_table = Paragraph('Nenhuma entrada com comprovante conferido.', styles['FormBody'])
 
     story = [
         first_page_header(styles),
@@ -293,7 +377,30 @@ def build_prestacao_contas_pdf(data):
         Spacer(1, 10),
         section_title('Detalhamento das Saídas', styles),
         exp_table,
+        Spacer(1, 10),
+        section_title('Comprovantes de Entradas', styles),
+        inc_table,
     ]
+
+    # Anexos: cada comprovante em sua propria pagina, com ancora para o link.
+    receipts = data.get('receipts', [])
+    if receipts:
+        story.append(PageBreak())
+        story.append(section_title('Comprovantes anexados', styles))
+        story.append(Paragraph(
+            f'Total de comprovantes anexados: {len(receipts)}. '
+            'Use os links "Abrir" nas tabelas acima para ir direto a cada comprovante.',
+            styles['FormBody'],
+        ))
+        receipt_max_width = 17 * cm
+        receipt_max_height = 23 * cm
+        for receipt in receipts:
+            story.append(PageBreak())
+            story.append(Paragraph(
+                f'<a name="rec_{receipt["index"]}"/>Comprovante {receipt["index"]} &#8212; {text(receipt["label"])}',
+                styles['ReceiptCaption'],
+            ))
+            story.extend(receipt_flowables(receipt, styles, receipt_max_width, receipt_max_height))
 
     document.build(story)
     buffer.seek(0)

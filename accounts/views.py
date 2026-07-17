@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import date
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import login
@@ -1071,6 +1072,65 @@ def prestacao_contas_pdf(request):
 
     manual_expense_entries = list(transactions.filter(transaction_type='saida').order_by('-transaction_date'))
 
+    # Coleta todos os comprovantes (saidas + entradas) e atribui um indice
+    # sequencial para permitir links clicaveis dentro do PDF.
+    receipts = []
+
+    def add_receipt(file_field, label):
+        if not file_field:
+            return None
+        try:
+            path = file_field.path
+        except (ValueError, NotImplementedError):
+            return None
+        if not Path(path).exists():
+            return None
+        index = len(receipts) + 1
+        receipts.append({
+            'index': index,
+            'label': label,
+            'path': path,
+            'ext': Path(file_field.name).suffix.lower(),
+        })
+        return index
+
+    for entry in manual_expense_entries:
+        description = (entry.description or '').strip()
+        short_description = (description[:60] + '…') if len(description) > 60 else description
+        entry.receipt_index = add_receipt(
+            entry.receipt,
+            f'Saída · {entry.category} · {short_description} · R$ {entry.amount_brl}',
+        )
+
+    income_receipt_rows = []
+    for payment in confirmed_missionary_payments:
+        payment_label = 'Inscrição' if payment.payment_type == 'participacao' else 'Cestas básicas'
+        index = add_receipt(
+            payment.receipt,
+            f'Entrada · {payment_label} · {payment.volunteer.full_name} · R$ {payment.amount_brl}',
+        )
+        income_receipt_rows.append({
+            'date': (payment.confirmed_at or payment.submitted_at),
+            'name': payment.volunteer.full_name,
+            'type': payment_label,
+            'amount_brl': payment.amount_brl,
+            'receipt_index': index,
+        })
+    for donation in confirmed_donation_receipts:
+        index = add_receipt(
+            donation.receipt,
+            f'Entrada · Doação · {donation.volunteer.full_name} · R$ {donation.amount_brl}',
+        )
+        income_receipt_rows.append({
+            'date': (donation.confirmed_at or donation.submitted_at),
+            'name': donation.volunteer.full_name,
+            'type': 'Doação',
+            'amount_brl': donation.amount_brl,
+            'receipt_index': index,
+        })
+
+    income_receipt_rows.sort(key=lambda row: str(row['date'] or ''), reverse=True)
+
     data = {
         'total_income': total_income,
         'total_expenses': total_expenses,
@@ -1082,6 +1142,8 @@ def prestacao_contas_pdf(request):
         'expense_by_category': expense_by_category,
         'volunteer_contributions': volunteer_contributions,
         'manual_expense_entries': manual_expense_entries,
+        'income_receipt_rows': income_receipt_rows,
+        'receipts': receipts,
     }
 
     pdf_bytes = build_prestacao_contas_pdf(data)
