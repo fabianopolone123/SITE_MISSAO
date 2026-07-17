@@ -151,7 +151,7 @@
         {% include "registration/partials/admin_menu.html" %}
 
         <div class="pc-actions">
-            <a href="{% url 'prestacao_contas_pdf' %}" class="pc-btn-pdf">
+            <a href="{% url 'prestacao_contas_pdf' %}" class="pc-btn-pdf" data-pdf-download>
                 &#8675; Baixar PDF
             </a>
             <a href="{% url 'financial_dashboard' %}" class="pc-btn-back">
@@ -300,5 +300,6 @@
         {% endif %}
 
     </main>
+    {% include "registration/partials/pdf_progress_modal.html" %}
 </body>
 </html>

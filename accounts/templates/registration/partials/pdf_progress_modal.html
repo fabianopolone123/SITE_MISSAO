@@ -1,0 +1,160 @@
+<div class="pdf-progress-overlay" id="pdfProgressOverlay" hidden>
+    <div class="pdf-progress-card" role="status" aria-live="polite">
+        <h3 class="pdf-progress-title" id="pdfProgressTitle">Gerando PDF...</h3>
+        <p class="pdf-progress-phase" id="pdfProgressPhase">Preparando dados</p>
+        <div class="pdf-progress-track">
+            <div class="pdf-progress-fill" id="pdfProgressFill"></div>
+        </div>
+        <p class="pdf-progress-count"><span id="pdfProgressPercent">0</span>%</p>
+        <div class="pdf-progress-actions">
+            <button type="button" class="pdf-progress-close" id="pdfProgressClose" hidden>Fechar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .pdf-progress-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(16, 21, 19, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 20px;
+    }
+    .pdf-progress-overlay[hidden] { display: none; }
+    .pdf-progress-card {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 26px 28px;
+        width: 100%;
+        max-width: 420px;
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
+        text-align: center;
+    }
+    .pdf-progress-title { margin: 0 0 6px; font-size: 1.15rem; color: #1d442c; }
+    .pdf-progress-phase { margin: 0 0 16px; font-size: 0.9rem; color: #647067; min-height: 1.1em; }
+    .pdf-progress-track {
+        height: 14px;
+        border-radius: 9px;
+        background: #e8f0eb;
+        overflow: hidden;
+    }
+    .pdf-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #2f6844, #4a9d68);
+        border-radius: 9px;
+        transition: width 0.35s ease;
+    }
+    .pdf-progress-count { margin: 12px 0 0; font-weight: 700; color: #2f6844; font-size: 1.05rem; }
+    .pdf-progress-actions { margin-top: 16px; }
+    .pdf-progress-close {
+        border: none;
+        background: #2f6844;
+        color: #fff;
+        padding: 9px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    .pdf-progress-card.is-error .pdf-progress-title { color: #b42318; }
+    .pdf-progress-card.is-error .pdf-progress-fill { background: #b42318; }
+</style>
+
+<script>
+(function () {
+    const startUrl = "{% url 'prestacao_contas_pdf_start' %}";
+    const csrftoken = "{{ csrf_token }}";
+    const overlay = document.getElementById('pdfProgressOverlay');
+    const card = overlay.querySelector('.pdf-progress-card');
+    const title = document.getElementById('pdfProgressTitle');
+    const phase = document.getElementById('pdfProgressPhase');
+    const fill = document.getElementById('pdfProgressFill');
+    const percentEl = document.getElementById('pdfProgressPercent');
+    const closeBtn = document.getElementById('pdfProgressClose');
+    let polling = null;
+    let running = false;
+
+    function resetUi() {
+        card.classList.remove('is-error');
+        title.textContent = 'Gerando PDF...';
+        phase.textContent = 'Preparando dados';
+        fill.style.width = '0%';
+        percentEl.textContent = '0';
+        closeBtn.hidden = true;
+    }
+
+    function show() { overlay.hidden = false; }
+    function hide() {
+        overlay.hidden = true;
+        if (polling) { clearInterval(polling); polling = null; }
+        running = false;
+    }
+
+    function setProgress(percent, phaseText) {
+        fill.style.width = percent + '%';
+        percentEl.textContent = percent;
+        if (phaseText) phase.textContent = phaseText;
+    }
+
+    function showError(message) {
+        card.classList.add('is-error');
+        title.textContent = 'Nao foi possivel gerar o PDF';
+        phase.textContent = message || 'Tente novamente em instantes.';
+        closeBtn.hidden = false;
+        running = false;
+        if (polling) { clearInterval(polling); polling = null; }
+    }
+
+    function poll(progressUrl) {
+        polling = setInterval(function () {
+            fetch(progressUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.status === 'error') {
+                        showError(data.error);
+                        return;
+                    }
+                    setProgress(data.percent || 0, data.phase);
+                    if (data.status === 'done' && data.download_url) {
+                        clearInterval(polling);
+                        polling = null;
+                        setProgress(100, 'Concluido');
+                        title.textContent = 'PDF pronto! Baixando...';
+                        window.location.href = data.download_url;
+                        setTimeout(hide, 1500);
+                    }
+                })
+                .catch(function () { showError('Falha de conexao ao acompanhar o progresso.'); });
+        }, 1000);
+    }
+
+    function start() {
+        if (running) return;
+        running = true;
+        resetUi();
+        show();
+        fetch(startUrl, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.progress_url) { showError('Resposta inesperada do servidor.'); return; }
+                phase.textContent = 'Gerando comprovantes...';
+                poll(data.progress_url);
+            })
+            .catch(function () { showError('Nao foi possivel iniciar a geracao.'); });
+    }
+
+    closeBtn.addEventListener('click', hide);
+    document.querySelectorAll('[data-pdf-download]').forEach(function (el) {
+        el.addEventListener('click', function (event) {
+            event.preventDefault();
+            start();
+        });
+    });
+})();
+</script>

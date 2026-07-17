@@ -163,7 +163,7 @@ def first_page_header(styles):
     return table
 
 
-def build_prestacao_contas_pdf(data):
+def build_prestacao_contas_pdf(data, progress_callback=None):
     buffer = BytesIO()
     document = SimpleDocTemplate(
         buffer,
@@ -394,13 +394,19 @@ def build_prestacao_contas_pdf(data):
         ))
         receipt_max_width = 17 * cm
         receipt_max_height = 23 * cm
-        for receipt in receipts:
+        total_receipts = len(receipts)
+        for position, receipt in enumerate(receipts, start=1):
             story.append(PageBreak())
             story.append(Paragraph(
                 f'<a name="rec_{receipt["index"]}"/>Comprovante {receipt["index"]} &#8212; {text(receipt["label"])}',
                 styles['ReceiptCaption'],
             ))
             story.extend(receipt_flowables(receipt, styles, receipt_max_width, receipt_max_height))
+            if progress_callback is not None:
+                progress_callback(position, total_receipts, 'Anexando comprovantes')
+
+    if progress_callback is not None:
+        progress_callback(len(receipts), len(receipts), 'Montando documento final')
 
     document.build(story)
     buffer.seek(0)

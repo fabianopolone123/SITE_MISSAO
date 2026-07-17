@@ -14,6 +14,7 @@ from django.db.models import Count, Q, Sum
 from django.forms import formset_factory, modelformset_factory
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
@@ -37,6 +38,7 @@ from .models import (
     MissionaryDonationReceipt,
     MissionaryPayment,
     PanelPermission,
+    PdfExportJob,
     Registration,
     Volunteer,
 )
@@ -1017,8 +1019,7 @@ def prestacao_contas(request):
     return render(request, 'registration/prestacao_contas.html', context)
 
 
-@user_passes_test(can_manage_financial, login_url='login')
-def prestacao_contas_pdf(request):
+def collect_prestacao_contas_data():
     from collections import defaultdict
     transactions = FinancialTransaction.objects.all()
     confirmed_missionary_payments = (
@@ -1131,7 +1132,7 @@ def prestacao_contas_pdf(request):
 
     income_receipt_rows.sort(key=lambda row: str(row['date'] or ''), reverse=True)
 
-    data = {
+    return {
         'total_income': total_income,
         'total_expenses': total_expenses,
         'balance': balance,
@@ -1146,8 +1147,101 @@ def prestacao_contas_pdf(request):
         'receipts': receipts,
     }
 
+
+@user_passes_test(can_manage_financial, login_url='login')
+def prestacao_contas_pdf(request):
+    data = collect_prestacao_contas_data()
     pdf_bytes = build_prestacao_contas_pdf(data)
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="prestacao-de-contas.pdf"'
+    return response
+
+
+def _run_prestacao_export(job_id):
+    """Gera o PDF em segundo plano, atualizando o progresso no banco."""
+    from django.core.files.base import ContentFile
+
+    try:
+        job = PdfExportJob.objects.get(pk=job_id)
+    except PdfExportJob.DoesNotExist:
+        return
+
+    try:
+        data = collect_prestacao_contas_data()
+        total = len(data.get('receipts', []))
+        PdfExportJob.objects.filter(pk=job_id).update(
+            status='running', total=total, processed=0, phase='Preparando dados',
+        )
+
+        last_saved = {'value': -1}
+
+        def on_progress(processed, total_count, phase):
+            # Evita escrever no banco a cada item (reduz lock no sqlite).
+            if processed == total_count or processed - last_saved['value'] >= 5:
+                last_saved['value'] = processed
+                PdfExportJob.objects.filter(pk=job_id).update(
+                    processed=processed, total=total_count, phase=phase,
+                )
+
+        pdf_bytes = build_prestacao_contas_pdf(data, progress_callback=on_progress)
+
+        job = PdfExportJob.objects.get(pk=job_id)
+        job.file.save(f'prestacao-de-contas-{job_id}.pdf', ContentFile(pdf_bytes), save=False)
+        job.status = 'done'
+        job.processed = job.total
+        job.phase = 'Concluido'
+        job.save(update_fields=['file', 'status', 'processed', 'phase', 'updated_at'])
+    except Exception as exc:  # noqa: BLE001 - registra qualquer falha no job
+        logger.exception('Falha ao gerar PDF da prestacao de contas (job %s)', job_id)
+        PdfExportJob.objects.filter(pk=job_id).update(
+            status='error', error_message=str(exc)[:300], phase='Erro',
+        )
+
+
+@user_passes_test(can_manage_financial, login_url='login')
+@require_POST
+def prestacao_contas_pdf_start(request):
+    import threading
+    from datetime import timedelta
+
+    # Remove exportacoes antigas (arquivos temporarios) para nao acumular no disco.
+    stale_jobs = PdfExportJob.objects.filter(created_at__lt=timezone.now() - timedelta(hours=6))
+    for stale in stale_jobs:
+        if stale.file:
+            stale.file.delete(save=False)
+    stale_jobs.delete()
+
+    job = PdfExportJob.objects.create(created_by=request.user, status='pending')
+    thread = threading.Thread(target=_run_prestacao_export, args=(job.id,), daemon=True)
+    thread.start()
+    return JsonResponse({
+        'job_id': job.id,
+        'progress_url': reverse('prestacao_contas_pdf_progress', args=[job.id]),
+    })
+
+
+@user_passes_test(can_manage_financial, login_url='login')
+def prestacao_contas_pdf_progress(request, job_id):
+    job = get_object_or_404(PdfExportJob, pk=job_id)
+    return JsonResponse({
+        'status': job.status,
+        'processed': job.processed,
+        'total': job.total,
+        'percent': job.percent,
+        'phase': job.phase,
+        'error': job.error_message,
+        'download_url': (
+            reverse('prestacao_contas_pdf_file', args=[job.id]) if job.status == 'done' else None
+        ),
+    })
+
+
+@user_passes_test(can_manage_financial, login_url='login')
+def prestacao_contas_pdf_file(request, job_id):
+    job = get_object_or_404(PdfExportJob, pk=job_id)
+    if job.status != 'done' or not job.file:
+        return redirect('prestacao_contas')
+    response = HttpResponse(job.file.read(), content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="prestacao-de-contas.pdf"'
     return response
 

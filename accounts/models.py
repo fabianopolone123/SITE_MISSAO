@@ -315,6 +315,48 @@ class FinancialTransaction(models.Model):
         return value.replace(',', 'X').replace('.', ',').replace('X', '.')
 
 
+class PdfExportJob(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Aguardando'),
+        ('running', 'Gerando'),
+        ('done', 'Concluido'),
+        ('error', 'Erro'),
+    ]
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pdf_export_jobs',
+    )
+    kind = models.CharField('Tipo', max_length=40, default='prestacao_contas')
+    status = models.CharField('Status', max_length=10, choices=STATUS_CHOICES, default='pending')
+    processed = models.IntegerField('Processados', default=0)
+    total = models.IntegerField('Total', default=0)
+    phase = models.CharField('Etapa', max_length=120, blank=True)
+    file = models.FileField('Arquivo gerado', upload_to='exports_tmp/', blank=True)
+    error_message = models.CharField('Mensagem de erro', max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Exportacao de PDF'
+        verbose_name_plural = 'Exportacoes de PDF'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.kind} - {self.status} ({self.processed}/{self.total})'
+
+    @property
+    def percent(self):
+        if self.status == 'done':
+            return 100
+        if not self.total:
+            return 0
+        return min(99, int(self.processed / self.total * 100))
+
+
 class MissionaryPayment(models.Model):
     volunteer = models.ForeignKey(Volunteer, on_delete=models.CASCADE, related_name='payments')
     payment_type = models.CharField('Tipo de pagamento', max_length=20, choices=MISSIONARY_PAYMENT_TYPES)

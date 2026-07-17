@@ -122,7 +122,7 @@
             </div>
             <div class="header-actions">
                 {% if has_financial_access %}
-                    <a class="pdf-btn" href="{% url 'prestacao_contas_pdf' %}">&#8675; Baixar PDF</a>
+                    <a class="pdf-btn" href="{% url 'prestacao_contas_pdf' %}" data-pdf-download>&#8675; Baixar PDF</a>
                 {% endif %}
                 <a class="primary-link-button compact-link-button" href="{% url 'volunteer_dashboard' %}">Minha inscri&ccedil;&atilde;o</a>
                 <a class="back-link" href="{% url 'login' %}">Voltar ao login</a>
@@ -141,7 +141,7 @@
         <div class="dash-section">
             <div class="dash-section-title">
                 <span>Presta&ccedil;&atilde;o de Contas</span>
-                <a href="{% url 'prestacao_contas_pdf' %}">&#8675; Baixar PDF</a>
+                <a href="{% url 'prestacao_contas_pdf' %}" data-pdf-download>&#8675; Baixar PDF</a>
             </div>
 
             <div class="hero-grid">
@@ -676,5 +676,6 @@
     }
     {% endif %}
     </script>
+    {% include "registration/partials/pdf_progress_modal.html" %}
 </body>
 </html>
