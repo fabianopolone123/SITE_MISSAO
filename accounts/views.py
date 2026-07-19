@@ -550,11 +550,12 @@ def financial_dashboard(request):
         .filter(is_confirmed=True)
         .order_by('-confirmed_at', '-submitted_at', 'volunteer__full_name')
     )
-    manual_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
+    manual_donations = transactions.filter(transaction_type='entrada', category='Doação').aggregate(total=Sum('amount'))['total'] or 0
+    manual_income = transactions.filter(transaction_type='entrada').exclude(category='Doação').aggregate(total=Sum('amount'))['total'] or 0
     total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
     participation_total = confirmed_missionary_payments.filter(payment_type='participacao').aggregate(total=Sum('amount'))['total'] or 0
     baskets_total = confirmed_missionary_payments.filter(payment_type='cestas').aggregate(total=Sum('amount'))['total'] or 0
-    donations_total = confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0
+    donations_total = (confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0) + manual_donations
     total_income = manual_income + participation_total + baskets_total + donations_total
     balance = total_income - total_expenses
     statement_entries = []
@@ -948,11 +949,12 @@ def prestacao_contas(request):
         .order_by('volunteer__full_name', '-submitted_at')
     )
 
-    manual_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
+    manual_donations = transactions.filter(transaction_type='entrada', category='Doação').aggregate(total=Sum('amount'))['total'] or 0
+    manual_income = transactions.filter(transaction_type='entrada').exclude(category='Doação').aggregate(total=Sum('amount'))['total'] or 0
     total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
     participation_total = confirmed_missionary_payments.filter(payment_type='participacao').aggregate(total=Sum('amount'))['total'] or 0
     baskets_total = confirmed_missionary_payments.filter(payment_type='cestas').aggregate(total=Sum('amount'))['total'] or 0
-    donations_total = confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0
+    donations_total = (confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0) + manual_donations
     total_income = manual_income + participation_total + baskets_total + donations_total
     balance = total_income - total_expenses
 
@@ -993,7 +995,7 @@ def prestacao_contas(request):
         key=lambda x: x['volunteer'].full_name,
     )
 
-    manual_entries = list(transactions.filter(transaction_type='entrada').order_by('-transaction_date'))
+    manual_entries = list(transactions.filter(transaction_type='entrada').exclude(category='Doação').order_by('-transaction_date'))
 
     context = {
         'total_income': total_income,
@@ -1035,11 +1037,12 @@ def collect_prestacao_contas_data():
         .order_by('volunteer__full_name', '-submitted_at')
     )
 
-    manual_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
+    manual_donations = transactions.filter(transaction_type='entrada', category='Doação').aggregate(total=Sum('amount'))['total'] or 0
+    manual_income = transactions.filter(transaction_type='entrada').exclude(category='Doação').aggregate(total=Sum('amount'))['total'] or 0
     total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
     participation_total = confirmed_missionary_payments.filter(payment_type='participacao').aggregate(total=Sum('amount'))['total'] or 0
     baskets_total = confirmed_missionary_payments.filter(payment_type='cestas').aggregate(total=Sum('amount'))['total'] or 0
-    donations_total = confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0
+    donations_total = (confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0) + manual_donations
     total_income = manual_income + participation_total + baskets_total + donations_total
     balance = total_income - total_expenses
 
@@ -1308,11 +1311,12 @@ def reports_dashboard(request):
             .order_by('volunteer__full_name', '-submitted_at')
         )
 
-        manual_income = transactions.filter(transaction_type='entrada').aggregate(total=Sum('amount'))['total'] or 0
+        manual_donations = transactions.filter(transaction_type='entrada', category='Doação').aggregate(total=Sum('amount'))['total'] or 0
+        manual_income = transactions.filter(transaction_type='entrada').exclude(category='Doação').aggregate(total=Sum('amount'))['total'] or 0
         total_expenses = transactions.filter(transaction_type='saida').aggregate(total=Sum('amount'))['total'] or 0
         participation_total = confirmed_missionary_payments.filter(payment_type='participacao').aggregate(total=Sum('amount'))['total'] or 0
         baskets_total = confirmed_missionary_payments.filter(payment_type='cestas').aggregate(total=Sum('amount'))['total'] or 0
-        donations_total = confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0
+        donations_total = (confirmed_donation_receipts.aggregate(total=Sum('amount'))['total'] or 0) + manual_donations
         total_income = manual_income + participation_total + baskets_total + donations_total
         balance = total_income - total_expenses
 
@@ -1373,10 +1377,13 @@ def reports_dashboard(request):
             'Doações': [
                 {'name': d.volunteer.full_name, 'amount': d.amount_brl, 'description': d.description or '—', 'date': d.submitted_at.strftime('%d/%m/%Y') if d.submitted_at else '-'}
                 for d in confirmed_donation_receipts
+            ] + [
+                {'name': t.description or 'Lançamento manual', 'amount': format_brl(t.amount), 'description': t.description or '—', 'date': t.transaction_date.strftime('%d/%m/%Y') if t.transaction_date else '-'}
+                for t in transactions.filter(transaction_type='entrada', category='Doação').order_by('-transaction_date')
             ],
             'Manuais': [
                 {'date': t.transaction_date.strftime('%d/%m/%Y') if t.transaction_date else '-', 'description': t.description, 'amount': format_brl(t.amount)}
-                for t in transactions.filter(transaction_type='entrada').order_by('-transaction_date')
+                for t in transactions.filter(transaction_type='entrada').exclude(category='Doação').order_by('-transaction_date')
             ],
         }
 
