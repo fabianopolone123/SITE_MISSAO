@@ -147,6 +147,7 @@
                             <th>Descri&ccedil;&atilde;o</th>
                             <th>Valor</th>
                             <th>Comprovante</th>
+                            <th>A&ccedil;&otilde;es</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -164,9 +165,16 @@
                                         -
                                     {% endif %}
                                 </td>
+                                <td>
+                                    {% if transaction.editable %}
+                                        <a href="?editar={{ transaction.pk }}">Editar</a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% empty %}
-                            <tr><td colspan="6">Nenhum lan&ccedil;amento financeiro cadastrado.</td></tr>
+                            <tr><td colspan="7">Nenhum lan&ccedil;amento financeiro cadastrado.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -179,13 +187,14 @@
         <div class="modal-header">
             <div>
                 <p class="eyebrow">Financeiro</p>
-                <h2 id="modal-lancamento-title">Novo lan&ccedil;amento</h2>
+                <h2 id="modal-lancamento-title">{% if editing_transaction %}Editar lan&ccedil;amento{% else %}Novo lan&ccedil;amento{% endif %}</h2>
             </div>
             <button type="button" class="modal-close" data-modal-close aria-label="Fechar">Fechar</button>
         </div>
         <div style="padding:0 4px 8px;">
             <form method="post" enctype="multipart/form-data" class="finance-form" novalidate>
                 {% csrf_token %}
+                {% if editing_transaction %}<input type="hidden" name="transaction_id" value="{{ editing_transaction.pk }}">{% endif %}
                 <div class="form-grid">
                     {% for field in form %}
                         <div class="field {% if field.name == 'description' or field.name == 'receipt' %}wide{% endif %}" data-field="{{ field.name }}">
@@ -213,7 +222,7 @@
                 </div>
                 <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
                     <button type="button" class="back-link" data-modal-close style="cursor:pointer;">Cancelar</button>
-                    <button type="submit" class="primary-link-button compact-link-button" style="border:none;cursor:pointer;">Cadastrar lan&ccedil;amento</button>
+                    <button type="submit" class="primary-link-button compact-link-button" style="border:none;cursor:pointer;">{% if editing_transaction %}Salvar altera&ccedil;&otilde;es{% else %}Cadastrar lan&ccedil;amento{% endif %}</button>
                 </div>
             </form>
         </div>
@@ -286,7 +295,9 @@
             const cats = type === 'entrada' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
             categorySelect.innerHTML = '<option value="">&#8212; Selecione a categoria &#8212;</option>';
-            cats.forEach(cat => {
+            const allCats = cats.slice();
+            if (currentValue && !allCats.includes(currentValue)) allCats.push(currentValue);
+            allCats.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = cat; opt.textContent = cat;
                 if (cat === currentValue) opt.selected = true;
@@ -332,9 +343,23 @@
             buildCategorySelect('{{ form.category.value|default:"" }}');
         }
 
+        /* ── Modo edição: abre o modal já preenchido ── */
+        const isEditing = {% if editing_transaction %}true{% else %}false{% endif %};
+        function openEditModal() {
+            // Em edição o tipo continua editável (entrada/saída), sem travar com badge.
+            if (transactionTypeSelect) transactionTypeSelect.style.display = 'block';
+            if (tipoBadge) tipoBadge.style.display = 'none';
+            document.getElementById('modal-lancamento-title').textContent = 'Editar lançamento';
+            voltarParaLista();
+            buildCategorySelect('{{ form.category.value|default:"" }}');
+            typeof modal.showModal === 'function' ? modal.showModal() : modal.setAttribute('open','open');
+        }
+
         /* ── Auto-abrir modal se houver erros ── */
         const hasErrors = document.querySelector('.form-error') !== null;
-        if (hasErrors) {
+        if (isEditing) {
+            openEditModal();
+        } else if (hasErrors) {
             typeof modal.showModal === 'function' ? modal.showModal() : modal.setAttribute('open','open');
         }
 

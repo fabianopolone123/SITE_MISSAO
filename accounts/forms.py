@@ -292,6 +292,11 @@ class FinancialTransactionForm(forms.ModelForm):
 
         self.fields['amount'].widget.attrs['class'] = 'form-control money-input'
 
+        if self.instance and self.instance.pk and not self.is_bound:
+            amount = Decimal(str(self.instance.amount))
+            value = f'{amount:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+            self.initial['amount'] = value
+
     def clean_amount(self):
         amount = str(self.cleaned_data['amount'])
         normalized_amount = amount.replace('.', '').replace(',', '.')
