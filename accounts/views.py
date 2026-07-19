@@ -525,31 +525,17 @@ def admin_dashboard(request):
 
 @user_passes_test(can_manage_financial, login_url='login')
 def financial_dashboard(request):
-    editing_transaction = None
-    edit_id = request.GET.get('editar')
-    if edit_id:
-        editing_transaction = get_object_or_404(FinancialTransaction, pk=edit_id)
-
     if request.method == 'POST':
-        transaction_id = request.POST.get('transaction_id')
-        if transaction_id:
-            editing_transaction = get_object_or_404(FinancialTransaction, pk=transaction_id)
-
-        form = FinancialTransactionForm(request.POST, request.FILES, instance=editing_transaction)
+        form = FinancialTransactionForm(request.POST, request.FILES)
 
         if form.is_valid():
             financial_transaction = form.save(commit=False)
-            if not transaction_id:
-                financial_transaction.created_by = request.user
+            financial_transaction.created_by = request.user
             financial_transaction.save()
-            messages.success(
-                request,
-                'Lançamento financeiro atualizado com sucesso.' if transaction_id
-                else 'Lançamento financeiro cadastrado com sucesso.',
-            )
+            messages.success(request, 'Lançamento financeiro cadastrado com sucesso.')
             return redirect('financial_dashboard')
     else:
-        form = FinancialTransactionForm(instance=editing_transaction)
+        form = FinancialTransactionForm()
 
     transactions = FinancialTransaction.objects.all()
     confirmed_missionary_payments = (
@@ -584,8 +570,6 @@ def financial_dashboard(request):
             'amount': signed_amount,
             'amount_brl': format_brl(entry.amount),
             'receipt': entry.receipt,
-            'editable': True,
-            'pk': entry.pk,
         })
 
     for payment in confirmed_missionary_payments:
@@ -648,7 +632,6 @@ def financial_dashboard(request):
         'confirmed_missionary_payments': confirmed_missionary_payments,
         'confirmed_donation_receipts': confirmed_donation_receipts,
         'statement_entries': statement_entries,
-        'editing_transaction': editing_transaction,
         'expense_by_category': expense_by_category,
         'expense_categories_json': json.dumps(EXPENSE_CATEGORIES, ensure_ascii=False),
         'income_categories_json': json.dumps(INCOME_CATEGORIES, ensure_ascii=False),
